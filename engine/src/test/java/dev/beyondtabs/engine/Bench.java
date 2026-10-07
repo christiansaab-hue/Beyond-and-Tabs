@@ -115,10 +115,10 @@ public final class Bench {
         for (int i = 0; i < 4; i++) plan.add(w.startConstruction(0, BuildingDef.AW_METAL_EXTRACTOR, w.metalSpots.get(i)[0], w.metalSpots.get(i)[1]));
         plan.add(w.startConstruction(0, BuildingDef.AW_ENERGY_GEN, 5, -5));
         plan.add(w.startConstruction(0, BuildingDef.AW_ENERGY_GEN, -5, -5));
-        for (int i = 0; i < 4; i++) plan.add(w.startConstruction(0, BuildingDef.AW_ENERGY_GEN, -12 + i * 4, -10));
-        Building barracks = w.startConstruction(0, BuildingDef.AW_BARRACKS, 0, 8); plan.add(barracks);
+        for (int i = 0; i < 4; i++) plan.add(w.startConstruction(0, BuildingDef.AW_ENERGY_GEN, -14 + i * 5, -11));
+        Building barracks = w.startConstruction(0, BuildingDef.AW_BARRACKS, 2, 20); plan.add(barracks);
         Building tech = w.startConstruction(0, BuildingDef.AW_TECH_CENTER, 14, -12); plan.add(tech);
-        check(w.startConstruction(0, BuildingDef.AW_STORAGE, 0, 8) == null, "overlapping placement refused");
+        check(w.startConstruction(0, BuildingDef.AW_STORAGE, 2, 20) == null, "overlapping placement refused");
         check(plan.stream().allMatch(b -> b != null), "all construction sites placed (extractors snapped to metal spots)");
         check(w.startConstruction(0, BuildingDef.AW_WAR_LODGE, 20, 20) == null, "T2 factory refused before T2 research");
         for (Building b : plan) w.order(cmd, Order.build(b), true);

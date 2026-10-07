@@ -83,6 +83,7 @@ public final class ServerEvents {
             .then(Commands.literal("battle").then(Commands.argument("perSide", IntegerArgumentType.integer(1, 400)).executes(this::battle)))
             .then(Commands.literal("clear").executes(c -> { MATCHES.remove(c.getSource().getLevel()); say(c, "Match cleared."); return 1; }))
             .then(Commands.literal("shove").executes(this::shove))
+            .then(Commands.literal("showcase").executes(this::showcase))
             .then(Commands.literal("stats").executes(this::stats)));
     }
 
@@ -113,16 +114,33 @@ public final class ServerEvents {
         w.spawn(1, theirCmd, bx - fx * 4, bz - fz * 4, yaw + (float) Math.PI);
         // the stand-in opponent starts with a small working base so there is something to fight
         String pre = enemy.equals("kingdoms") ? "kd" : "aw";
-        Building barracks = w.place(1, BuildingDef.byId(pre + "_barracks"), bx - fx * 14, bz - fz * 14, true);
-        barracks.repeat = true; barracks.rallyX = bx - fx * 20; barracks.rallyZ = bz - fz * 20;
-        for (UnitDef d : UnitDef.ALL) if (d.factory().equals(barracks.def.id()) && !"builder".equals(d.role()) && !"support".equals(d.role())) barracks.queue.add(d);
-        w.place(1, BuildingDef.byId(pre + "_watchtower"), bx - fx * 10 + fz * 6, bz - fz * 10 - fx * 6, true);
+        float rx = fz, rz = -fx;   // "right" of the player's facing
+        Building barracks = prebuild(w, 1, pre + "_barracks", bx - fx * 16, bz - fz * 16);
+        if (barracks != null) {
+            barracks.repeat = true; barracks.rallyX = bx - fx * 24; barracks.rallyZ = bz - fz * 24;
+            for (UnitDef d : UnitDef.ALL) if (d.factory().equals(barracks.def.id()) && !"builder".equals(d.role()) && !"support".equals(d.role())) barracks.queue.add(d);
+        }
+        prebuild(w, 1, pre + "_watchtower", bx - fx * 11 + rx * 8, bz - fz * 11 + rz * 8);
+        prebuild(w, 1, pre + "_watchtower", bx - fx * 11 - rx * 8, bz - fz * 11 - rz * 8);
         int placed = 0;
-        for (float[] s : w.metalSpots) if (placed < 3 && Math.abs(s[0] - bx) + Math.abs(s[1] - bz) < 30) { w.place(1, BuildingDef.byId(pre + "_metal_extractor"), s[0], s[1], true); placed++; }
-        w.place(1, BuildingDef.byId(pre + "_energy_gen"), bx + fz * 8, bz - fx * 8, true);
-        w.place(1, BuildingDef.byId(pre + "_energy_gen"), bx - fz * 8, bz + fx * 8, true);
+        for (float[] sp : w.metalSpots) if (placed < 3 && Math.abs(sp[0] - bx) + Math.abs(sp[1] - bz) < 30 && prebuild(w, 1, pre + "_metal_extractor", sp[0], sp[1]) != null) placed++;
+        prebuild(w, 1, pre + "_energy_gen", bx + rx * 9, bz + rz * 9);
+        prebuild(w, 1, pre + "_energy_gen", bx - rx * 9, bz - rz * 9);
+        prebuild(w, 1, pre + "_tech_center", bx + fx * 9, bz + fz * 9);
         say(c, "Match started: you are " + race + " (commander next to you), the enemy " + enemy + " base is 90 blocks ahead. Press V for the RTS view.");
         return 1;
+    }
+
+    /** Places a finished building at (x,z), or at the nearest free spot around it (footprints never overlap). */
+    static Building prebuild(World w, int team, String defId, float x, float z) {
+        BuildingDef def = BuildingDef.byId(defId);
+        for (int r = 0; r <= 12; r += 2)
+            for (int k = 0; k < (r == 0 ? 1 : 8); k++) {
+                double a = k * Math.PI / 4;
+                Building b = w.startConstruction(team, def, x + (float) Math.cos(a) * r, z + (float) Math.sin(a) * r);
+                if (b != null) { b.progress = 1; b.hp = b.maxHp(); return b; }
+            }
+        return null;
     }
 
     static UnitDef commander(String race) {
@@ -150,6 +168,34 @@ public final class ServerEvents {
             w.order(w.spawn(1, kd[i % kd.length], bx, bz, yaw + (float) Math.PI), Order.attackMove(ax, az), false);
         }
         say(c, "Spawned " + n + " Ancient World vs " + n + " Kingdoms units 30 blocks ahead.");
+        return 1;
+    }
+
+    /** Builds every building of the playable races at every level in rows ahead of the player (architecture preview). */
+    private int showcase(CommandContext<CommandSourceStack> c) {
+        ServerLevel level = c.getSource().getLevel();
+        Match m = new Match(level); MATCHES.put(level, m); World w = m.world;
+        w.addTeam("ancient_world"); w.addTeam("kingdoms");
+        if (c.getSource().getPlayer() != null) m.playerTeams.put(c.getSource().getPlayer().getUUID(), 0);
+        Vec3 p = c.getSource().getPosition();
+        float yaw = (float) Math.toRadians(-c.getSource().getRotation().y), fx = (float) Math.sin(yaw), fz = (float) Math.cos(yaw), rx = fz, rz = -fx;
+        float ahead = 14;
+        for (String race : List.of("ancient_world", "kingdoms")) {
+            float along = -40, rowDepth = 0;
+            for (BuildingDef d : BuildingDef.ALL) {
+                if (!d.race().equals(race)) continue;
+                String[] f = d.footprint().split("x"); int fw = Integer.parseInt(f[0]), fd = Integer.parseInt(f[1]);
+                for (int lv = 1; lv <= d.levels(); lv++) {
+                    if (along + fw > 60) { along = -40; ahead += rowDepth + 4; rowDepth = 0; }
+                    float cx = (float) p.x + fx * (ahead + fd / 2f) + rx * (along + fw / 2f), cz = (float) p.z + fz * (ahead + fd / 2f) + rz * (along + fw / 2f);
+                    Building b = w.place(race.equals("ancient_world") ? 0 : 1, d, Math.round(cx) + (fw % 2 == 1 ? .5f : 0), Math.round(cz) + (fd % 2 == 1 ? .5f : 0), true);
+                    b.level = lv; b.hp = b.maxHp();
+                    along += fw + 3; rowDepth = Math.max(rowDepth, fd);
+                }
+            }
+            ahead += rowDepth + 8;
+        }
+        say(c, "Showcase: every Ancient World and Kingdoms building at every level, in rows ahead of you.");
         return 1;
     }
 
