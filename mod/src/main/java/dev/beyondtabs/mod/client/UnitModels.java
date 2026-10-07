@@ -44,6 +44,11 @@ final class UnitModels {
         limb(m, c, Rig.KNEE_L, Rig.FOOT_L, .125f * k, .105f * k, c.trousers);
         limb(m, c, Rig.KNEE_R, Rig.FOOT_R, .125f * k, .105f * k, c.trousers);
         foot(m, c, Rig.FOOT_L, k); foot(m, c, Rig.FOOT_R, k);
+        if (c.near) for (int[] lg : new int[][]{{Rig.KNEE_L, Rig.FOOT_L}, {Rig.KNEE_R, Rig.FOOT_R}}) {   // boot cuffs
+            float t0 = .45f, bx = c.x(lg[0]) + (c.x(lg[1]) - c.x(lg[0])) * t0, by = c.y(lg[0]) + (c.y(lg[1]) - c.y(lg[0])) * t0, bz = c.z(lg[0]) + (c.z(lg[1]) - c.z(lg[0])) * t0;
+            m.prismW(bx, by, bz, c.x(lg[1]), c.y(lg[1]) + .02f * k, c.z(lg[1]), .125f * k, .12f * k, sd, Look.LEATHER);
+            m.prismW(bx, by - .02f * k, bz, bx, by + .05f * k, bz, .14f * k, .14f * k, sd, Look.darker(Look.LEATHER, .25f));
+        }
 
         // body: an egg from the hips to the neck
         float hx = c.x(Rig.HIP), hy = c.y(Rig.HIP), hz = c.z(Rig.HIP);
@@ -53,9 +58,16 @@ final class UnitModels {
         m.prismW(hx + dx * .35f, hy + dy * .35f, hz + dz * .35f, hx, hy, hz, .2f * k, .34f * k, sd, c.shirt, c.rx, 0, c.rz, .85f);
         m.prismW(hx, hy, hz, tx, ty, tz, .34f * k, .37f * k, sd, c.shirt, c.rx, 0, c.rz, .85f);
         m.prismW(tx, ty, tz, nx, ny - .02f * k, nz, .37f * k, .2f * k, sd, c.shirt, c.rx, 0, c.rz, .85f);
-        if (c.near) {   // belt
+        // tunic skirt flaring over the thighs
+        m.prismW(hx, hy + .02f * k, hz, hx, hy - .3f * k, hz, .33f * k, .38f * k, sd, Look.darker(c.shirt, .12f), c.rx, 0, c.rz, .85f);
+        if (c.near) {   // belt with a buckle, collar, chest emblem
             float bx = hx + (tx - hx) * .25f, by = hy + (ty - hy) * .25f, bz = hz + (tz - hz) * .25f;
-            m.prismW(bx, by - .03f * k, bz, bx, by + .04f * k, bz, .35f * k, .35f * k, sd, Look.LEATHER, c.rx, 0, c.rz, .87f);
+            m.prismW(bx, by - .04f * k, bz, bx, by + .05f * k, bz, .36f * k, .36f * k, sd, Look.LEATHER, c.rx, 0, c.rz, .87f);
+            float fx = bx + c.fx * .32f * k, fz = bz + c.fz * .32f * k;
+            m.prismW(fx - c.fx * .02f * k, by, fz - c.fz * .02f * k, fx + c.fx * .03f * k, by, fz + c.fz * .03f * k, .07f * k, .07f * k, 4, Look.GOLD);
+            m.prismW(nx, ny - .08f * k, nz, nx, ny + .02f * k, nz, .23f * k, .2f * k, sd, Look.darker(c.shirt, .25f), c.rx, 0, c.rz, .9f);
+            float ex2 = tx + c.fx * .33f * k, ez2 = tz + c.fz * .33f * k;
+            m.prismW(ex2, ty + .02f * k, ez2, ex2 + c.fx * .03f * k, ty + .02f * k, ez2 + c.fz * .03f * k, .1f * k, .1f * k, 6, Look.lighter(c.shirt, .35f));
         }
         if (hero || commander) cape(m, c, k, Look.darker(c.shirt, .25f));
 
@@ -65,8 +77,8 @@ final class UnitModels {
         limb(m, c, Rig.ELBOW_L, Rig.HAND_L, .08f * k, .07f * k, c.skin);
         limb(m, c, Rig.ELBOW_R, Rig.HAND_R, .08f * k, .07f * k, c.skin);
         float fist = ("melee_push".equals(c.d.weaponClass()) ? .12f : .09f) * k;
-        m.ballW(c.x(Rig.HAND_L), c.y(Rig.HAND_L), c.z(Rig.HAND_L), fist, fist, fist, Math.max(4, sd - 2), 3, c.skin, 1, 0);
-        m.ballW(c.x(Rig.HAND_R), c.y(Rig.HAND_R), c.z(Rig.HAND_R), fist, fist, fist, Math.max(4, sd - 2), 3, c.skin, 1, 0);
+        m.ballW(c.x(Rig.HAND_L), c.y(Rig.HAND_L), c.z(Rig.HAND_L), fist, fist, fist, sd, 5, c.skin, 1, 0);
+        m.ballW(c.x(Rig.HAND_R), c.y(Rig.HAND_R), c.z(Rig.HAND_R), fist, fist, fist, sd, 5, c.skin, 1, 0);
         if (c.d.tier() >= 2 && c.near) {   // pauldrons for veterans
             for (int s : new int[]{Rig.SHOULDER_L, Rig.SHOULDER_R})
                 m.ballW(c.x(s), c.y(s) + .02f * k, c.z(s), .13f * k, .09f * k, .13f * k, 6, 3, Look.IRON, c.fz, c.fx);
@@ -79,10 +91,11 @@ final class UnitModels {
         float fwd = hr * .93f, side = hr * .36f;
         for (int s = -1; s <= 1; s += 2) {
             float px = ex + c.fx * fwd + c.rx * side * s, pz = ez + c.fz * fwd + c.rz * side * s;
-            m.ballW(px, ey + hr * .1f, pz, .045f * k, .06f * k, .045f * k, 4, 2, Look.EYE, c.fz, c.fx);
+            m.ballW(px, ey + hr * .1f, pz, .05f * k, .065f * k, .04f * k, 8, 5, Look.EYE, c.fz, c.fx);
+            if (c.near) m.ballW(px + c.fx * .03f * k - c.rx * .015f * k, ey + hr * .17f, pz + c.fz * .03f * k - c.rz * .015f * k, .016f * k, .016f * k, .012f * k, 5, 3, Look.EYE_SHINE, c.fz, c.fx);
             if (c.near) {
                 float bx = ex + c.fx * hr * .82f + c.rx * hr * .55f * s, bz = ez + c.fz * hr * .82f + c.rz * hr * .55f * s;
-                m.ballW(bx, ey - hr * .2f, bz, .05f * k, .035f * k, .05f * k, 4, 2, Look.BLUSH, c.fz, c.fx);
+                m.ballW(bx, ey - hr * .22f, bz, .055f * k, .03f * k, .04f * k, 6, 3, Look.mix(c.skin, Look.BLUSH, .6f), c.fz, c.fx);
             }
         }
         headgear(m, c, ex, ey, ez, hr, commander);
@@ -132,11 +145,11 @@ final class UnitModels {
                 m.prismW(x, y + r * .55f, z, x, y + r * 1.0f, z, r * .75f, r * .6f, sd, Look.THATCH_DARK);
             }
             case "ANCIENT" -> {   // bronze helmet with a crest
-                m.ballW(x, y + r * .12f, z, r * 1.06f, r * .95f, r * 1.06f, c.headSl, 3, 0xC9973F, c.fz, c.fx);
+                m.ballW(x, y + r * .12f, z, r * 1.06f, r * .95f, r * 1.06f, c.headSl, c.headSt, 0xC9973F, c.fz, c.fx);
                 m.prismW(x - c.fx * r * .9f, y + r * 1.05f, z - c.fz * r * .9f, x + c.fx * r * .5f, y + r * 1.05f, z + c.fz * r * .5f, r * .28f, r * .2f, 4, Look.TILE_RED, 0, 1, 0, .25f);
             }
             case "VIKING" -> {   // iron cap with horns
-                m.ballW(x, y + r * .15f, z, r * 1.05f, r * .9f, r * 1.05f, c.headSl, 3, Look.IRON, c.fz, c.fx);
+                m.ballW(x, y + r * .15f, z, r * 1.05f, r * .9f, r * 1.05f, c.headSl, c.headSt, Look.IRON, c.fz, c.fx);
                 if (c.near) for (int s = -1; s <= 1; s += 2) {
                     float bx = x + c.rx * r * .85f * s, bz = z + c.rz * r * .85f * s;
                     float mx = x + c.rx * r * 1.35f * s, mz = z + c.rz * r * 1.35f * s;
@@ -146,22 +159,22 @@ final class UnitModels {
             }
             case "MEDIEVAL" -> {
                 if (key.contains("PRIEST") || key.contains("BANJO")) {   // soft hood / cap
-                    m.ballW(x, y + r * .25f, z, r * 1.05f, r * .85f, r * 1.05f, c.headSl, 3, Look.darker(c.shirt, .15f), c.fz, c.fx);
+                    m.ballW(x, y + r * .25f, z, r * 1.05f, r * .85f, r * 1.05f, c.headSl, c.headSt, Look.darker(c.shirt, .15f), c.fz, c.fx);
                 } else {   // kettle helmet
-                    m.ballW(x, y + r * .2f, z, r * 1.05f, r * .9f, r * 1.05f, c.headSl, 3, Look.IRON, c.fz, c.fx);
+                    m.ballW(x, y + r * .2f, z, r * 1.05f, r * .9f, r * 1.05f, c.headSl, c.headSt, Look.IRON, c.fz, c.fx);
                     m.prismW(x, y + r * .25f, z, x, y + r * .33f, z, r * 1.4f, r * 1.35f, sd, Look.IRON_DARK);
                 }
             }
             case "ASIA" -> {
-                if (key.contains("NINJA")) m.ballW(x, y + r * .05f, z, r * 1.05f, r * 1.0f, r * 1.05f, c.headSl, 3, 0x2B2B33, c.fz, c.fx);
+                if (key.contains("NINJA")) m.ballW(x, y + r * .05f, z, r * 1.05f, r * 1.0f, r * 1.05f, c.headSl, c.headSt, 0x2B2B33, c.fz, c.fx);
                 else if (key.contains("SAMURAI")) {
-                    m.ballW(x, y + r * .2f, z, r * 1.07f, r * .9f, r * 1.07f, c.headSl, 3, 0x3A3A44, c.fz, c.fx);
+                    m.ballW(x, y + r * .2f, z, r * 1.07f, r * .9f, r * 1.07f, c.headSl, c.headSt, 0x3A3A44, c.fz, c.fx);
                     m.prismW(x + c.fx * r * .7f, y + r * .7f, z + c.fz * r * .7f, x + c.fx * r * .9f, y + r * 1.3f, z + c.fz * r * .9f, r * .3f, r * .02f, 4, Look.GOLD, c.rx, 0, c.rz, .2f);
                 } else if (key.contains("MONK")) { /* shaved head */ }
                 else m.prismW(x, y + r * .4f, z, x, y + r * 1.2f, z, r * 1.7f, 0, sd, Look.THATCH);   // conical hat
             }
             case "RENAISSANCE" -> {   // beret with a feather
-                m.ballW(x - c.rx * r * .15f, y + r * .65f, z - c.rz * r * .15f, r * 1.05f, r * .35f, r * 1.05f, c.headSl, 3, Look.darker(c.shirt, .35f), c.fz, c.fx);
+                m.ballW(x - c.rx * r * .15f, y + r * .65f, z - c.rz * r * .15f, r * 1.05f, r * .35f, r * 1.05f, c.headSl, c.headSt, Look.darker(c.shirt, .35f), c.fz, c.fx);
                 if (c.near) m.prismW(x + c.rx * r * .5f, y + r * .8f, z + c.rz * r * .5f, x + c.rx * r * .7f - c.fx * r * .7f, y + r * 1.5f, z + c.rz * r * .7f - c.fz * r * .7f, r * .14f, .01f, 4, Look.CLOTH, c.rx, 0, c.rz, .3f);
             }
             default -> { }
@@ -217,10 +230,10 @@ final class UnitModels {
         int fur = 0x8A5E3C, furDark = 0x6E4A2E;
         float h = .9f * k, L = .95f * k, W = .62f * k;
         legs4(m, c, x, g, z, L * .55f, W * .55f, h * 1.15f, .2f * k, ph, walk, furDark, Look.STONE_DARK);
-        m.ballW(x, g + h * 1.5f, z, W, h * .75f, L, c.headSl, 4, fur, c.fz, c.fx);
+        m.ballW(x, g + h * 1.5f, z, W, h * .75f, L, c.headSl, c.headSt, fur, c.fz, c.fx);
         m.prismW(wx(c, x, -L * .2f, 0), g + h * 2.1f, wz(c, z, -L * .2f, 0), wx(c, x, L * .5f, 0), g + h * 2.05f, wz(c, z, L * .5f, 0), W * .75f, W * .7f, c.sides, c.shirt, c.rx, 0, c.rz, .25f);
         float hx = wx(c, x, L * 1.05f, 0), hz = wz(c, z, L * 1.05f, 0), hy = g + h * 1.85f;
-        m.ballW(hx, hy, hz, W * .6f, h * .5f, W * .55f, c.headSl, 4, fur, c.fz, c.fx);
+        m.ballW(hx, hy, hz, W * .6f, h * .5f, W * .55f, c.headSl, c.headSt, fur, c.fz, c.fx);
         float tx = wx(c, x, L * 1.45f, 0), tz = wz(c, z, L * 1.45f, 0);
         m.prismW(hx, hy - h * .1f, hz, tx, hy - h * .6f, tz, .14f * k, .1f * k, c.sides, furDark);
         m.prismW(tx, hy - h * .6f, tz, wx(c, x, L * 1.5f, 0), g + .25f * k, wz(c, z, L * 1.5f, 0), .1f * k, .08f * k, c.sides, furDark);
@@ -237,9 +250,9 @@ final class UnitModels {
         int coat = 0xE8E2D6, mane = 0x6E5A48;
         float h = .62f * k, L = .65f * k, W = .28f * k;
         legs4(m, c, x, g, z, L * .6f, W * .7f, h * 1.25f, .08f * k, ph, walk, coat, 0x3A3030);
-        m.ballW(x, g + h * 1.55f, z, W, h * .45f, L, c.headSl, 4, coat, c.fz, c.fx);
+        m.ballW(x, g + h * 1.55f, z, W, h * .45f, L, c.headSl, c.headSt, coat, c.fz, c.fx);
         // caparison in team colour
-        m.ballW(x, g + h * 1.5f, z, W * 1.12f, h * .38f, L * .8f, c.headSl, 3, c.shirt, c.fz, c.fx);
+        m.ballW(x, g + h * 1.5f, z, W * 1.12f, h * .38f, L * .8f, c.headSl, c.headSt, c.shirt, c.fz, c.fx);
         float nx = wx(c, x, L * .8f, 0), nz = wz(c, z, L * .8f, 0), hx = wx(c, x, L * 1.15f, 0), hz = wz(c, z, L * 1.15f, 0);
         m.prismW(nx, g + h * 1.7f, nz, hx, g + h * 2.45f, hz, .16f * k, .12f * k, c.sides, coat);
         m.prismW(hx, g + h * 2.45f, hz, wx(c, x, L * 1.5f, 0), g + h * 2.2f, wz(c, z, L * 1.5f, 0), .13f * k, .09f * k, c.sides, coat);
@@ -249,7 +262,7 @@ final class UnitModels {
         float ry = g + h * 2f;
         m.prismW(x, ry, z, x, ry + .55f * k, z, .26f * k, .2f * k, c.sides, c.shirt, c.rx, 0, c.rz, .85f);
         m.ballW(x, ry + .78f * k, z, .24f * k, .23f * k, .24f * k, c.headSl, c.headSt, c.skin, c.fz, c.fx);
-        m.ballW(x, ry + .82f * k, z, .26f * k, .22f * k, .26f * k, c.headSl, 3, Look.IRON, c.fz, c.fx);
+        m.ballW(x, ry + .82f * k, z, .26f * k, .22f * k, .26f * k, c.headSl, c.headSt, Look.IRON, c.fz, c.fx);
         float lx = wx(c, x, -.2f * k, .25f * k), lz = wz(c, z, -.2f * k, .25f * k);
         m.prismW(lx, ry + .35f * k, lz, wx(c, x, 2.4f * k, .3f * k), ry + .6f * k, wz(c, z, 2.4f * k, .3f * k), .07f * k, .02f * k, c.sides, Look.WOOD_LIGHT);
         float sx = wx(c, x, .05f * k, -.3f * k), sz = wz(c, z, .05f * k, -.3f * k);
@@ -361,7 +374,7 @@ final class UnitModels {
             }
             px = qx; py = qy; pz = qz;
         }
-        m.ballW(px + c.fx * .25f * k, py + .1f * k, pz + c.fz * .25f * k, .32f * k, .25f * k, .45f * k, c.headSl, 4, scale, c.fz, c.fx);
+        m.ballW(px + c.fx * .25f * k, py + .1f * k, pz + c.fz * .25f * k, .32f * k, .25f * k, .45f * k, c.headSl, c.headSt, scale, c.fz, c.fx);
         for (int s = -1; s <= 1; s += 2) {
             m.prismW(px + c.rx * s * .15f * k, py + .25f * k, pz + c.rz * s * .15f * k, px + c.rx * s * .3f * k - c.fx * .4f * k, py + .65f * k, pz + c.rz * s * .3f * k - c.fz * .4f * k, .07f * k, 0, 4, belly);
             m.ballW(px + c.fx * .5f * k + c.rx * s * .14f * k, py + .2f * k, pz + c.fz * .5f * k + c.rz * s * .14f * k, .05f * k, .06f * k, .05f * k, 4, 2, Look.GOLD, c.fz, c.fx);

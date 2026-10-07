@@ -1,5 +1,6 @@
 package dev.beyondtabs.mod.client;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -44,6 +45,9 @@ public final class MatchRenderer {
     static final Map<String, VertexBuffer> cache = new HashMap<>();
     static final Map<String, float[]> measures = new HashMap<>();   // def|level -> {parts, height}
     static final int SHADOW = 0x000000;
+    static final MultiBufferSource.BufferSource SOLID_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 20));
+    static final MultiBufferSource.BufferSource TRANS_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 18));
+    static final float INK_BUILDING = .035f;
 
     record Ruin(short def, int level, int team, float x, float z, long at, int id) { }
     static final List<Ruin> ruins = new ArrayList<>();
@@ -64,7 +68,7 @@ public final class MatchRenderer {
         Matrix4f pose = ps.last().pose();
 
         // 1) finished buildings straight from their GPU buffers
-        RenderType quads = RenderType.debugQuads();
+        RenderType quads = BTRender.SOLID;
         List<Snapshot.B> building = new ArrayList<>();
         quads.setupRenderState();
         for (Snapshot.B b : s.buildings) {
@@ -83,8 +87,8 @@ public final class MatchRenderer {
 
         // 2) everything that moves, in one batch
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
-        VertexConsumer vc = buf.getBuffer(quads);
-        Mesh m = M.to(vc, pose);
+        VertexConsumer vc = SOLID_SRC.getBuffer(BTRender.SOLID);
+        Mesh m = M.to(vc, pose); m.vt = TRANS_SRC.getBuffer(BTRender.TRANSLUCENT);
         float camX = (float) cam.x, camY = (float) cam.y, camZ = (float) cam.z;
 
         for (Snapshot.B b : s.buildings) {   // animated parts + soft shadows of all buildings
@@ -93,7 +97,7 @@ public final class MatchRenderer {
             if (fr != null && !fr.isVisible(new AABB(x0 - 3, gy - 1, z0 - 3, x0 + sz[0] + 3, gy + h + 2, z0 + sz[1] + 3))) continue;
             buildingShadow(m, x0, gy, z0, sz[0], sz[1], h * Math.min(1, b.progress));
             if (b.progress >= 1) {
-                m.reset(); m.frame(x0, gy, z0, 0, 1); m.ground(gy, 1.2f, .22f);
+                m.reset(); m.frame(x0, gy, z0, 0, 1); m.ground(gy, 1.2f, .22f); m.ow = INK_BUILDING;
                 BuildingModels.build(SINK.reset(), m, d, b.level, Look.team(b.team, s.myTeam), t);
             }
         }
@@ -107,7 +111,8 @@ public final class MatchRenderer {
         }
         if (RtsCamera.active && RtsScreen.placing != null && RtsScreen.ghost != null) placementPreview(m, s, t, ghosts);
         for (Runnable g : ghosts) g.run();
-        buf.endBatch(quads);
+        SOLID_SRC.endBatch();
+        TRANS_SRC.endBatch();
 
         // 3) thin overlay lines
         VertexConsumer lines = buf.getBuffer(RenderType.lines());
@@ -131,7 +136,7 @@ public final class MatchRenderer {
         return cache.computeIfAbsent(d.id() + "|" + level + "|" + team, k -> {
             BufferBuilder bb = new BufferBuilder(1 << 16);
             bb.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
-            Mesh m = new Mesh().to(bb, new Matrix4f()); m.reset(); m.ground(0, 1.2f, .22f);
+            Mesh m = new Mesh().to(bb, new Matrix4f()); m.reset(); m.ground(0, 1.2f, .22f); m.ow = INK_BUILDING;
             BuildingModels.build(m, SINK.reset(), d, level, team, 0);
             VertexBuffer vb = new VertexBuffer(VertexBuffer.Usage.STATIC);
             vb.bind(); vb.upload(bb.end()); VertexBuffer.unbind();
@@ -152,7 +157,7 @@ public final class MatchRenderer {
         float gy = RtsCamera.ground(b.x, b.z), x0 = b.x - sz[0] / 2f, z0 = b.z - sz[1] / 2f;
         float[] me = measure(d, b.level); int team = Look.team(b.team, s.myTeam);
         int limit = (int) (me[0] * Math.max(0, Math.min(1, b.progress)));
-        m.reset(); m.frame(x0, gy, z0, 0, 1); m.ground(gy, 1.2f, .22f); m.limit = limit;
+        m.reset(); m.frame(x0, gy, z0, 0, 1); m.ground(gy, 1.2f, .22f); m.limit = limit; m.ow = INK_BUILDING;
         BuildingModels.build(m, SINK.reset(), d, b.level, team, t);
         // scaffolding
         float h = me[1] * Math.min(1, b.progress + .15f);
@@ -166,7 +171,7 @@ public final class MatchRenderer {
             }
         }
         ghosts.add(() -> {
-            GHOST.vc = m.vc; GHOST.m = m.m;
+            GHOST.vc = m.vc; GHOST.vt = m.vt; GHOST.m = m.m;
             GHOST.reset(); GHOST.frame(x0, gy, z0, 0, 1); GHOST.from = limit; GHOST.alpha = .22f; GHOST.tint = 0xBFE4FF; GHOST.tintAmt = .65f;
             BuildingModels.build(GHOST, SINK.reset(), d, b.level, team, t);
         });
@@ -177,7 +182,7 @@ public final class MatchRenderer {
         float x0 = RtsScreen.ghost[0] - sz[0] / 2f, z0 = RtsScreen.ghost[1] - sz[1] / 2f, gy = RtsCamera.ground(RtsScreen.ghost[0], RtsScreen.ghost[1]);
         boolean ok = RtsScreen.ghostValid;
         ghosts.add(() -> {
-            GHOST.vc = m.vc; GHOST.m = m.m;
+            GHOST.vc = m.vc; GHOST.vt = m.vt; GHOST.m = m.m;
             GHOST.reset(); GHOST.frame(x0, gy, z0, 0, 1); GHOST.alpha = .45f; GHOST.tint = ok ? 0x7CFF8C : 0xFF6A5A; GHOST.tintAmt = .45f;
             BuildingModels.build(GHOST, SINK.reset(), d, 1, Look.team(s.myTeam, s.myTeam), t);
         });
@@ -225,7 +230,7 @@ public final class MatchRenderer {
             float x = spots[i], z = spots[i + 1];
             for (Snapshot.B b : s.buildings) if (Math.abs(b.x - x) < 1.6f && Math.abs(b.z - z) < 1.6f) continue outer;
             float gy = RtsCamera.ground(x, z);
-            m.reset(); m.frame(x, gy, z, (x * 3 + z) % 6.28f, 1); m.ground(gy, .8f, .2f);
+            m.reset(); m.frame(x, gy, z, (x * 3 + z) % 6.28f, 1); m.ground(gy, .8f, .2f); m.ow = .03f;
             BuildingModels.rocks(m, 0, 0, 1.3f, 4, Look.STONE_DARK, (int) (x * 7 + z));
             BuildingModels.crystals(m, .1f, .05f, .55f, 5, Look.ORE);
         }
@@ -256,7 +261,8 @@ public final class MatchRenderer {
             if (fr != null && !fr.isVisible(new AABB(xz[0] - 2 * k - 1, gy - 2, xz[1] - 2 * k - 1, xz[0] + 2 * k + 1, gy + 3 * k + 2, xz[1] + 2 * k + 1))) continue;
             float[] pts = parts(u, a);
             float ddx = xz[0] - camX, ddy = gy - camY, ddz = xz[1] - camZ, dist = (float) Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
-            c.near = dist < 30; c.sides = dist < 30 ? 7 : 4; c.headSl = dist < 30 ? 8 : 6; c.headSt = dist < 30 ? 5 : 3;
+            c.near = dist < 32; boolean mid = dist < 75;
+            c.sides = c.near ? 10 : mid ? 6 : 4; c.headSl = c.near ? 14 : mid ? 9 : 6; c.headSt = c.near ? 9 : mid ? 6 : 4;
             c.p = pts; c.d = d; c.team = u.team; c.scale = k; c.key = d.tabsKey(); c.faction = UnitModels.faction(d.tabsKey());
             int team = Look.team(u.team, s.myTeam);
             int skin = Look.mix(Look.SKIN, Look.SKIN_DARK, (u.id * 37 % 10) / 14f);
@@ -269,7 +275,7 @@ public final class MatchRenderer {
             boolean fly = d.body().startsWith("flyer");
             m.frame(xz[0] + (fly ? 0 : sox), gy, xz[1] + (fly ? 0 : soz), 0, 1);
             m.disc(0, .06f, 0, fly ? sr * .8f : sr, 10, SHADOW);
-            m.reset(); m.ground(gy, .5f * k, .18f);
+            m.reset(); m.ground(gy, .5f * k, .18f); m.ow = c.near ? .022f * k : mid ? .035f : 0;
             if (pts.length / 3 == Rig.HUMANOID_PARTICLES) UnitModels.humanoid(m, c);
             else UnitModels.hull(m, c, gy, u.yaw, u.walkPhase, u.walkAmount);
             if (u.knocked && u.alive && c.near) {   // dizzy stars

@@ -1,8 +1,9 @@
 package dev.beyondtabs.mod.client;
 
 /**
- * The shared art direction: one soft sun, one ambient, pastel flat colours. Units, buildings, props and shadows all
- * shade through here so they read as one low-poly toy world sitting on the Minecraft terrain.
+ * The shared art direction. One warm sun, a cool sky and a warm ground bounce; shadow sides drift towards blue, lit
+ * sides towards warm white; every model gets a thin ink outline. Colours are rich but not pastel, so units and
+ * buildings sit well on Minecraft's textured ground and still read at RTS zoom.
  */
 final class Look {
     private Look() { }
@@ -10,18 +11,20 @@ final class Look {
     /** Sun from the upper left-front, like a late-morning battlefield. */
     static final float SUN_X, SUN_Y, SUN_Z;
     static {
-        float x = -.45f, y = .82f, z = .36f, l = (float) Math.sqrt(x * x + y * y + z * z);
+        float x = -.5f, y = .75f, z = .42f, l = (float) Math.sqrt(x * x + y * y + z * z);
         SUN_X = x / l; SUN_Y = y / l; SUN_Z = z / l;
     }
 
     // ---- palette (0xRRGGBB) ----
-    static final int TEAM_BLUE = 0x4A7FE0, TEAM_RED = 0xE0524A, TEAM_GREY = 0x9A9A9A;
-    static final int SKIN = 0xF1C9A1, SKIN_DARK = 0xC99872, EYE = 0x1E1A1A, BLUSH = 0xE8A08E;
-    static final int WOOD = 0x9C6B43, WOOD_DARK = 0x6E4A2E, WOOD_LIGHT = 0xC49466, THATCH = 0xDDB66A, THATCH_DARK = 0xB88E4A;
-    static final int STONE = 0xC9C1AE, STONE_DARK = 0x9C9483, STONE_COOL = 0xB6BAC4, STONE_COOL_DARK = 0x8C909C;
-    static final int PLASTER = 0xF0E7D3, SLATE = 0x5F6F9C, TILE_RED = 0xB9553D, CLAY = 0xC8763A, GOLD = 0xE8C24A;
-    static final int IRON = 0x8E949C, IRON_DARK = 0x5C6168, LEATHER = 0x8A5A3A, CLOTH = 0xE8DCC0, BONE = 0xEFE6CF;
-    static final int ROPE = 0xC9AE7C, DIRT = 0x8D6E4E, FIRE = 0xFFA43A, GLOW = 0x9FE6FF, GREEN = 0x6FBF5A, ORE = 0x7FC8D8;
+    static final int INK = 0x16141A;
+    static final int TEAM_BLUE = 0x3B6FD8, TEAM_RED = 0xD23F36, TEAM_GREY = 0x8A8A8A;
+    static final int SKIN = 0xF4CDA6, SKIN_DARK = 0xD3A27A, EYE = 0x17131A, EYE_SHINE = 0xFFFFFF, BLUSH = 0xE0907C;
+    static final int WOOD = 0x8A5C38, WOOD_DARK = 0x5A3A24, WOOD_LIGHT = 0xB7875A, THATCH = 0xCFA45A, THATCH_DARK = 0xA07C3E;
+    static final int STONE = 0xB9AE98, STONE_DARK = 0x857B6A, STONE_COOL = 0xA4A9B4, STONE_COOL_DARK = 0x6E7380;
+    static final int PLASTER = 0xEAE0CA, SLATE = 0x45506E, TILE_RED = 0xA4442F, CLAY = 0xB8693A, GOLD = 0xE2B43C;
+    static final int IRON = 0x8A919C, IRON_DARK = 0x4D525B, LEATHER = 0x7A4E31, CLOTH = 0xE4D6B8, BONE = 0xEDE3CB;
+    static final int ROPE = 0xC0A472, DIRT = 0x7A5C40, FIRE = 0xFF9A2E, GLOW = 0x9FE6FF, GREEN = 0x5FAF4A, ORE = 0x6FD0E6;
+    static final int WINDOW = 0xFFC66A, BRONZE = 0xB07A36, COPPER = 0x5FA08A, MARBLE = 0xEDE8DE;
 
     static int team(int team, int myTeam) {
         if (team < 0) return TEAM_GREY;
@@ -29,11 +32,18 @@ final class Look {
         return team == myTeam ? TEAM_BLUE : TEAM_RED;
     }
 
-    /** Light factor for a face normal: soft ambient + sun + a little sky fill from above. */
-    static float light(float nx, float ny, float nz) {
+    static final int SHADOW_TINT = 0x2E3A58, LIT_TINT = 0xFFF1D8;
+
+    /** Lit colour of a surface with normal n; `contact` (0..1) darkens near the ground. */
+    static int shade(int c, float nx, float ny, float nz, float contact) {
         float d = nx * SUN_X + ny * SUN_Y + nz * SUN_Z;
-        float l = .60f + .40f * Math.max(0, d) + .07f * Math.max(0, ny) - .06f * Math.max(0, -ny);
-        return Math.min(1.08f, l);
+        float diff = Math.max(0, (d + .2f) / 1.2f);
+        float sky = .5f + .5f * ny;
+        float l = (.44f + .52f * diff + .16f * sky) * contact;
+        int lit = mix(c, LIT_TINT, Math.max(0, d) * .10f);
+        int col = mix(lit, SHADOW_TINT, (1 - diff) * .20f);
+        int r = Math.min(255, Math.round(((col >> 16) & 255) * l)), g = Math.min(255, Math.round(((col >> 8) & 255) * l)), b = Math.min(255, Math.round((col & 255) * l));
+        return (r << 16) | (g << 8) | b;
     }
 
     static float r(int c) { return ((c >> 16) & 255) / 255f; }
@@ -50,4 +60,6 @@ final class Look {
     static int darker(int c, float f) { return mix(c, 0, f); }
     static int lighter(int c, float f) { return mix(c, 0xFFFFFF, f); }
     static int grey(int c, float f) { int l = Math.round(((c >> 16) & 255) * .3f + ((c >> 8) & 255) * .59f + (c & 255) * .11f); return mix(c, (l << 16) | (l << 8) | l, f); }
+    /** Small deterministic colour variation so repeated parts don't look copy-pasted. */
+    static int vary(int c, int seed, float amt) { float v = (float) Math.sin(seed * 12.9898) * 43758.5453f; v -= Math.floor(v); return v < .5f ? darker(c, (.5f - v) * amt * 2) : lighter(c, (v - .5f) * amt * 2); }
 }
