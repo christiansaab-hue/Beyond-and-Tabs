@@ -43,30 +43,11 @@ public final class ServerEvents {
         int before = w.winner;
         w.tick();
         if (level.getGameTime() % 5 == 0) m.structures.update();
-        waves(m);
         if (before < 0 && w.winner >= 0)
             for (ServerPlayer p : level.players()) p.sendSystemMessage(Component.literal(
                     m.teamOf(p.getUUID()) == w.winner ? "Victory! The enemy commander has fallen." : "Defeat. Your commander has fallen."));
         boolean spots = level.getGameTime() % 20 == 0;
         for (ServerPlayer p : level.players()) Network.sendSnapshot(p, m, spots);
-    }
-
-    /** Stand-in opponent until the full AI lands: enemy factories repeat their queue and idle troops attack in waves. */
-    static void waves(Match m) {
-        World w = m.world;
-        if (w.winner >= 0 || w.tick % (20 * 40) != 0) return;
-        for (Team t : w.teams) {
-            if (m.playerTeams.containsValue(t.id) || t.defeated) continue;
-            Unit target = null;
-            for (Unit u : w.units) if (u.alive && u.team != t.id && "commander".equals(u.def.role())) { target = u; break; }
-            if (target == null) continue;
-            int sent = 0;
-            for (Unit u : w.units)
-                if (u.alive && u.team == t.id && u.orders.isEmpty() && !"commander".equals(u.def.role()) && !"builder".equals(u.def.role())) {
-                    w.order(u, Order.attackMove(target.x, target.z), false); sent++;
-                }
-            if (sent >= 4) for (ServerPlayer p : m.level.players()) p.sendSystemMessage(Component.literal("An enemy wave of " + sent + " units is marching on your base!"));
-        }
     }
 
     @SubscribeEvent public void onBreak(BlockEvent.BreakEvent e) { invalidate(e.getLevel()); }
@@ -77,9 +58,12 @@ public final class ServerEvents {
     @SubscribeEvent
     public void onCommands(RegisterCommandsEvent e) {
         e.getDispatcher().register(Commands.literal("bt").requires(s -> s.hasPermission(2))
-            .then(Commands.literal("start").executes(c -> start(c, "ancient_world", "kingdoms"))
-                .then(Commands.argument("race", StringArgumentType.word()).executes(c -> start(c, StringArgumentType.getString(c, "race"), "kingdoms"))
-                    .then(Commands.argument("enemy", StringArgumentType.word()).executes(c -> start(c, StringArgumentType.getString(c, "race"), StringArgumentType.getString(c, "enemy"))))))
+            .then(Commands.literal("start").executes(c -> start(c, "ancient_world", "kingdoms", "normal", false))
+                .then(Commands.argument("race", StringArgumentType.word()).executes(c -> start(c, StringArgumentType.getString(c, "race"), "kingdoms", "normal", false))
+                    .then(Commands.argument("enemy", StringArgumentType.word()).executes(c -> start(c, StringArgumentType.getString(c, "race"), StringArgumentType.getString(c, "enemy"), "normal", false))
+                        .then(Commands.argument("difficulty", StringArgumentType.word()).executes(c -> start(c, StringArgumentType.getString(c, "race"), StringArgumentType.getString(c, "enemy"), StringArgumentType.getString(c, "difficulty"), false))))))
+            .then(Commands.literal("watch").executes(c -> start(c, "ancient_world", "kingdoms", "normal", true))
+                .then(Commands.argument("difficulty", StringArgumentType.word()).executes(c -> start(c, "ancient_world", "kingdoms", StringArgumentType.getString(c, "difficulty"), true))))
             .then(Commands.literal("battle").then(Commands.argument("perSide", IntegerArgumentType.integer(1, 400)).executes(this::battle)))
             .then(Commands.literal("clear").executes(c -> { MATCHES.remove(c.getSource().getLevel()); say(c, "Match cleared."); return 1; }))
             .then(Commands.literal("shove").executes(this::shove))
@@ -89,45 +73,37 @@ public final class ServerEvents {
 
     static Match match(ServerLevel l) { return MATCHES.computeIfAbsent(l, Match::new); }
 
-    private int start(CommandContext<CommandSourceStack> c, String race, String enemy) {
+    private int start(CommandContext<CommandSourceStack> c, String race, String enemy, String difficulty, boolean watch) {
         for (String r : List.of(race, enemy))
             if (RaceDef.ALL.stream().noneMatch(d -> d.id().equals(r) && d.firstPlayable())) {
                 say(c, "Playable races right now: ancient_world, kingdoms"); return 0;
             }
+        dev.beyondtabs.engine.Ai.Difficulty diff;
+        try { diff = dev.beyondtabs.engine.Ai.Difficulty.valueOf(difficulty.toUpperCase(java.util.Locale.ROOT)); }
+        catch (IllegalArgumentException e) { say(c, "Difficulty: easy, normal or hard"); return 0; }
         ServerLevel level = c.getSource().getLevel();
         ServerPlayer player = c.getSource().getPlayer();
         Match m = new Match(level); MATCHES.put(level, m);
         World w = m.world;
         w.addTeam(race); w.addTeam(enemy);
-        if (player != null) m.playerTeams.put(player.getUUID(), 0);
+        if (player != null && !watch) m.playerTeams.put(player.getUUID(), 0);
         Vec3 p = c.getSource().getPosition();
         float yaw = (float) Math.toRadians(-c.getSource().getRotation().y), fx = (float) Math.sin(yaw), fz = (float) Math.cos(yaw);
-        float ax = (float) p.x, az = (float) p.z, bx = ax + fx * 90, bz = az + fz * 90;
+        float ax = (float) p.x + (watch ? -fx * 50 : 0), az = (float) p.z + (watch ? -fz * 50 : 0);
+        float bx = ax + fx * 110, bz = az + fz * 110;
+        // metal spots: a ring around each start, plus a contested line in the middle
         for (float[] base : new float[][]{{ax, az}, {bx, bz}})
             for (int i = 0; i < 8; i++) {
-                double a = i * Math.PI / 4 + .3; float r = 13 + (i % 2) * 6;
-                w.metalSpots.add(new float[]{base[0] + (float) Math.cos(a) * r, base[1] + (float) Math.sin(a) * r});
+                double a2 = i * Math.PI / 4 + .3; float r = 13 + (i % 2) * 6;
+                w.metalSpots.add(new float[]{base[0] + (float) Math.cos(a2) * r, base[1] + (float) Math.sin(a2) * r});
             }
         for (int i = 0; i < 4; i++) w.metalSpots.add(new float[]{(ax + bx) / 2 + fz * (i - 1.5f) * 14, (az + bz) / 2 - fx * (i - 1.5f) * 14});
-        UnitDef myCmd = commander(race), theirCmd = commander(enemy);
-        w.spawn(0, myCmd, ax + fx * 4, az + fz * 4, yaw);
-        w.spawn(1, theirCmd, bx - fx * 4, bz - fz * 4, yaw + (float) Math.PI);
-        // the stand-in opponent starts with a small working base so there is something to fight
-        String pre = enemy.equals("kingdoms") ? "kd" : "aw";
-        float rx = fz, rz = -fx;   // "right" of the player's facing
-        Building barracks = prebuild(w, 1, pre + "_barracks", bx - fx * 16, bz - fz * 16);
-        if (barracks != null) {
-            barracks.repeat = true; barracks.rallyX = bx - fx * 24; barracks.rallyZ = bz - fz * 24;
-            for (UnitDef d : UnitDef.ALL) if (d.factory().equals(barracks.def.id()) && !"builder".equals(d.role()) && !"support".equals(d.role())) barracks.queue.add(d);
-        }
-        prebuild(w, 1, pre + "_watchtower", bx - fx * 11 + rx * 8, bz - fz * 11 + rz * 8);
-        prebuild(w, 1, pre + "_watchtower", bx - fx * 11 - rx * 8, bz - fz * 11 - rz * 8);
-        int placed = 0;
-        for (float[] sp : w.metalSpots) if (placed < 3 && Math.abs(sp[0] - bx) + Math.abs(sp[1] - bz) < 30 && prebuild(w, 1, pre + "_metal_extractor", sp[0], sp[1]) != null) placed++;
-        prebuild(w, 1, pre + "_energy_gen", bx + rx * 9, bz + rz * 9);
-        prebuild(w, 1, pre + "_energy_gen", bx - rx * 9, bz - rz * 9);
-        prebuild(w, 1, pre + "_tech_center", bx + fx * 9, bz + fz * 9);
-        say(c, "Match started: you are " + race + " (commander next to you), the enemy " + enemy + " base is 90 blocks ahead. Press V for the RTS view.");
+        w.spawn(0, commander(race), ax + fx * 4, az + fz * 4, yaw);
+        w.spawn(1, commander(enemy), bx - fx * 4, bz - fz * 4, yaw + (float) Math.PI);
+        w.ais.add(new dev.beyondtabs.engine.Ai(w, 1, diff));
+        if (watch) w.ais.add(new dev.beyondtabs.engine.Ai(w, 0, diff));
+        say(c, watch ? "AI vs AI (" + difficulty + "): Ancient World on your side, Kingdoms 110 blocks ahead. Press V to watch from above."
+                     : "Match started: you are " + race + " (commander next to you); the " + enemy + " AI (" + difficulty + ") starts 110 blocks ahead. Press V for the RTS view.");
         return 1;
     }
 

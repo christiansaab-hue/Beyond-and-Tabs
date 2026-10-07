@@ -24,6 +24,7 @@ public final class World {
     public final List<Building> buildings = new ArrayList<>();
     public final List<Projectile> projectiles = new ArrayList<>();
     public final List<float[]> metalSpots = new ArrayList<>();
+    public final List<Ai> ais = new ArrayList<>();
     final SpatialHash hash;
     final Random rng;
     /** Supplies the rig for a unit (Minecraft side: the one read from the player's TABS install). */
@@ -136,6 +137,7 @@ public final class World {
         tick++; time += DT;
         hash.clear();
         for (Unit u : units) if (u.alive) hash.add(u);
+        for (Ai ai : ais) ai.tick();
         economy();
         for (int i = 0, n = units.size(); i < n; i++) { Unit u = units.get(i); if (u.alive) think(u); }
         separation();

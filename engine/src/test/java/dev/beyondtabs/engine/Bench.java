@@ -9,7 +9,7 @@ public final class Bench {
     static void check(boolean ok, String what) { System.out.println((ok ? "  PASS " : "  FAIL ") + what); if (!ok) failures++; }
 
     public static void main(String[] a) {
-        ragdollStands(); ragdollKnockAndRecover(); wading(); battle(60, true); battle(200, false); battle(300, true); economy(); siege();
+        ragdollStands(); ragdollKnockAndRecover(); wading(); battle(60, true); battle(200, false); battle(300, true); economy(); siege(); aiMatch(Ai.Difficulty.NORMAL, Ai.Difficulty.NORMAL); aiMatch(Ai.Difficulty.HARD, Ai.Difficulty.EASY);
         System.out.println(failures == 0 ? "\nALL BENCHES PASS" : "\n" + failures + " FAILURES");
         System.exit(failures == 0 ? 0 : 1);
     }
@@ -104,6 +104,32 @@ public final class Bench {
         check(barracksFell && towerFell, "army destroyed the barracks and the watchtower");
         check(towerFired, "the watchtower shot at the attackers");
         check(w.winner == 0 && w.teams.get(1).defeated, "killing the commander won the game for Ancient World");
+    }
+
+    static void aiMatch(Ai.Difficulty a, Ai.Difficulty b) {
+        System.out.printf("AI vs AI: Ancient World (%s) vs Kingdoms (%s), 120 blocks apart%n", a, b);
+        World w = new World(Terrain.FLAT, 7); w.addTeam("ancient_world"); w.addTeam("kingdoms");
+        float[][] bases = {{0, 0}, {0, 120}};
+        for (float[] base : bases) for (int i = 0; i < 8; i++) { double ang = i * Math.PI / 4 + .3; float r = 13 + (i % 2) * 6;
+            w.metalSpots.add(new float[]{base[0] + (float) Math.cos(ang) * r, base[1] + (float) Math.sin(ang) * r}); }
+        for (int i = 0; i < 4; i++) w.metalSpots.add(new float[]{(i - 1.5f) * 14, 60});
+        w.spawn(0, UnitDef.AW_COMMANDER, 0, 4, 0); w.spawn(1, UnitDef.KD_COMMANDER, 0, 116, (float) Math.PI);
+        w.ais.add(new Ai(w, 0, a)); w.ais.add(new Ai(w, 1, b));
+        w.cameras.add(new float[]{0, 60, 60});
+        double total = 0, worst = 0; int t = 0, maxUnits = 0, maxBuildings = 0;
+        while (w.winner < 0 && t < 20 * 60 * 25) {
+            w.tick(); t++; total += w.lastTickMs; worst = Math.max(worst, w.lastTickMs);
+            maxUnits = Math.max(maxUnits, (int) (w.aliveCount(0) + w.aliveCount(1))); maxBuildings = Math.max(maxBuildings, w.buildings.size());
+            if (t % (20 * 180) == 0) System.out.printf("  %4.0fs  AW: %3d units %2d bldg %.0f m/s tech %s | KD: %3d units %2d bldg %.0f m/s tech %s%n", t / 20f,
+                    w.aliveCount(0), w.buildings.stream().filter(x -> x.team == 0).count(), w.teams.get(0).metalIncome, w.teams.get(0).researched,
+                    w.aliveCount(1), w.buildings.stream().filter(x -> x.team == 1).count(), w.teams.get(1).metalIncome, w.teams.get(1).researched);
+        }
+        System.out.printf("  result after %.0f s: winner %s | peak %d units, %d buildings | avg %.2f ms/tick, worst %.1f ms%n", t / 20f,
+                w.winner < 0 ? "none" : w.teams.get(w.winner).race, maxUnits, maxBuildings, total / t, worst);
+        check(maxBuildings >= 12, "both AIs built bases");
+        check(w.teams.stream().anyMatch(x -> x.researched.stream().anyMatch(r -> r.endsWith("_t2"))), "an AI reached tech 2");
+        check(w.winner >= 0, "the match ended with a winner");
+        check(total / t < 10, "AI match runs fast (avg < 10 ms/tick)");
     }
 
     static void economy() {
