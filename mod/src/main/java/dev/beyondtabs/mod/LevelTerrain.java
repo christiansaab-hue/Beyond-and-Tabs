@@ -16,6 +16,9 @@ public final class LevelTerrain implements Terrain {
     private final boolean[] used = new boolean[SIZE];
     private final BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
+    /** Columns under building structures report their original ground (see Structures). */
+    java.util.Map<Long, Float> overrides = java.util.Map.of();
+
     public LevelTerrain(ServerLevel level) { this.level = level; }
 
     public void invalidate() { java.util.Arrays.fill(used, false); }
@@ -26,7 +29,9 @@ public final class LevelTerrain implements Terrain {
         int h = (int) (k ^ (k >>> 29) ^ (k >>> 13)) & MASK;
         if (used[h] && keys[h] == k) return h;
         float top, depth = 0;
-        if (!level.hasChunk(bx >> 4, bz >> 4)) top = level.getSeaLevel();
+        Float o = overrides.get(k);
+        if (o != null) top = o;
+        else if (!level.hasChunk(bx >> 4, bz >> 4)) top = level.getSeaLevel();
         else {
             int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
             int surface = y, minY = level.getMinBuildHeight();

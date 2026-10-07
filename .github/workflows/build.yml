@@ -24,7 +24,20 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: '8.8' }
       - name: Build the Forge mod
-        run: gradle -p mod build --stacktrace
+        run: |
+          set -o pipefail
+          gradle -p mod build --stacktrace 2>&1 | tee build.log || {
+            # surface compiler errors as annotations (readable through the GitHub API)
+            grep -E "\.java:[0-9]+: error:" build.log | head -40 | while IFS= read -r line; do
+              f=$(echo "$line" | sed -E 's#^.*/(mod|engine)/(src/[^:]+):([0-9]+): error: (.*)$#\1/\2#')
+              l=$(echo "$line" | sed -E 's#^.*\.java:([0-9]+): error: .*$#\1#')
+              m=$(echo "$line" | sed -E 's#^.*: error: (.*)$#\1#')
+              echo "::error file=$f,line=$l::$m"
+            done
+            grep -E "^\s+(symbol|location):" build.log | head -40 | sed 's/^/::warning::/'
+            grep -E "FAILURE|What went wrong|> " build.log | head -20 | sed 's/^/::warning::/'
+            exit 1
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: beyondandtabs-mod

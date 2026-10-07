@@ -1,0 +1,449 @@
+package dev.beyondtabs.mod.client;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import dev.beyondtabs.engine.Order;
+import dev.beyondtabs.engine.gen.BuildingDef;
+import dev.beyondtabs.engine.gen.TechDef;
+import dev.beyondtabs.engine.gen.UnitDef;
+import dev.beyondtabs.mod.Network;
+import dev.beyondtabs.mod.RtsAction;
+import dev.beyondtabs.mod.Snapshot;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
+
+/**
+ * The RTS view's input and HUD. Stays open while the RTS camera is active (the game keeps running behind it).
+ * BAR-style: left-drag box select, right-click orders, A for attack-move, Shift to queue, S stop, Ctrl+1-9 groups,
+ * B build menu, U upgrade, R factory repeat, wheel zoom, WASD/edges pan, Q/E rotate, V or Esc to leave.
+ */
+public final class RtsScreen extends Screen {
+    static final Set<Integer> selected = new LinkedHashSet<>();
+    static int selectedBuilding = -1;
+    static final Map<Integer, Set<Integer>> groups = new HashMap<>();
+    static BuildingDef placing; static boolean attackMode, buildMenu;
+    static float[] ghost;            // x,z under the cursor while placing
+    static boolean ghostValid;
+
+    double dragX = -1, dragY; boolean dragging; long lastClick; int lastGroupKey = -1; long lastGroupAt;
+    final List<Btn> buttons = new ArrayList<>();
+    record Btn(int x, int y, int w, int h, String label, String tip, Runnable left, Runnable right, boolean on) { }
+
+    public RtsScreen() { super(Component.literal("RTS")); }
+
+    @Override public boolean isPauseScreen() { return false; }
+
+    static void pruneSelection(Snapshot s) {
+        Set<Integer> alive = new java.util.HashSet<>();
+        for (Snapshot.U u : s.units) if (u.alive && u.team == s.myTeam) alive.add(u.id);
+        selected.retainAll(alive);
+        if (selectedBuilding >= 0 && s.buildings.stream().noneMatch(b -> b.id == selectedBuilding)) selectedBuilding = -1;
+    }
+
+    // ---------------------------------------------------------------- input
+    @Override public void tick() {
+        Minecraft mc = Minecraft.getInstance(); long w = mc.getWindow().getWindow();
+        float dt = .05f, right = 0, fwd = 0;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_UP)) fwd += 1;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_DOWN)) fwd -= 1;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_RIGHT)) right += 1;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_LEFT)) right -= 1;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_Q)) RtsCamera.yaw -= 90 * dt;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_E)) RtsCamera.yaw += 90 * dt;
+        // screen-edge panning (BAR style)
+        double mx = mc.mouseHandler.xpos() * width / Math.max(1, mc.getWindow().getScreenWidth());
+        double my = mc.mouseHandler.ypos() * height / Math.max(1, mc.getWindow().getScreenHeight());
+        if (mx <= 2) right -= 1;
+        if (mx >= width - 3) right += 1;
+        if (my <= 2) fwd += 1;
+        if (my >= height - 3) fwd -= 1;
+        if (right != 0 || fwd != 0) RtsCamera.pan(right, fwd, dt);
+    }
+
+    /** Middle-drag pans the map. */
+    @Override public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (button == 2) { RtsCamera.pan((float) -dx * .05f, (float) dy * .05f, .5f); return true; }
+        return super.mouseDragged(mx, my, button, dx, dy);
+    }
+
+    @Override public boolean mouseScrolled(double mx, double my, double delta) { RtsCamera.zoom(delta); return true; }
+
+    @Override public boolean mouseClicked(double mx, double my, int button) {
+        for (Btn b : buttons) if (mx >= b.x && my >= b.y && mx < b.x + b.w && my < b.y + b.h) {
+            if (button == 0 && b.left != null) b.left.run(); if (button == 1 && b.right != null) b.right.run();
+            return true;
+        }
+        Snapshot s = ClientMatch.cur;
+        if (button == 0) {
+            if (placing != null) { placeBuilding(); return true; }
+            dragX = mx; dragY = my; dragging = true; return true;
+        }
+        if (button == 1) {
+            if (placing != null) { placing = null; return true; }
+            if (s == null) return true;
+            Proj p = Proj.now(); float[] g = p.toGround(mx, my);
+            boolean queue = hasShiftDown();
+            if (!selected.isEmpty()) {
+                Snapshot.U enemy = unitAt(s, p, mx, my, false);
+                Snapshot.B eb = enemy == null && g != null ? buildingAt(s, g[0], g[2], false) : null;
+                RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.ORDER; a.queue = queue; a.ids = ids();
+                if (enemy != null) { a.orderType = Order.Type.ATTACK.ordinal(); a.targetUnit = enemy.id; }
+                else if (eb != null) { a.orderType = Order.Type.ATTACK.ordinal(); a.targetBuilding = eb.id; }
+                else if (g != null) { a.orderType = (patrolNext ? Order.Type.PATROL : attackMode ? Order.Type.ATTACK_MOVE : Order.Type.MOVE).ordinal(); a.x = g[0]; a.z = g[2]; }
+                else return true;
+                Network.send(a); attackMode = false; patrolNext = false;
+                if (g != null) DebugRenderer.pingAt(g[0], g[1], g[2], a.orderType == Order.Type.ATTACK_MOVE.ordinal() || a.orderType == Order.Type.ATTACK.ordinal());
+            } else if (selectedBuilding >= 0 && g != null) {
+                RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.RALLY; a.targetBuilding = selectedBuilding; a.x = g[0]; a.z = g[2];
+                Network.send(a); DebugRenderer.pingAt(g[0], g[1], g[2], false);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override public boolean mouseReleased(double mx, double my, int button) {
+        if (button != 0 || !dragging) return false;
+        dragging = false;
+        Snapshot s = ClientMatch.cur; if (s == null) return true;
+        Proj p = Proj.now(); boolean add = hasShiftDown();
+        if (Math.abs(mx - dragX) < 4 && Math.abs(my - dragY) < 4) {   // click
+            Snapshot.U u = unitAt(s, p, mx, my, true);
+            long now = System.currentTimeMillis(); boolean dbl = now - lastClick < 300; lastClick = now;
+            if (u != null) {
+                if (!add) { selected.clear(); selectedBuilding = -1; }
+                if (dbl) for (Snapshot.U o : s.units) { if (o.alive && o.team == s.myTeam && o.def == u.def && onScreen(p, o)) selected.add(o.id); }
+                else if (add && selected.contains(u.id)) selected.remove(u.id); else selected.add(u.id);
+            } else {
+                float[] g = p.toGround(mx, my);
+                Snapshot.B b = g == null ? null : buildingAt(s, g[0], g[2], true);
+                if (!add) selected.clear();
+                selectedBuilding = b == null ? -1 : b.id;
+            }
+        } else {   // box
+            double x0 = Math.min(dragX, mx), x1 = Math.max(dragX, mx), y0 = Math.min(dragY, my), y1 = Math.max(dragY, my);
+            if (!add) { selected.clear(); }
+            selectedBuilding = -1;
+            for (Snapshot.U u : s.units) {
+                if (!u.alive || u.team != s.myTeam) continue;
+                float[] q = screenOf(p, u);
+                if (q != null && q[0] >= x0 && q[0] <= x1 && q[1] >= y0 && q[1] <= y1) selected.add(u.id);
+            }
+        }
+        buildMenu = canBuild(s);
+        return true;
+    }
+
+    @Override public boolean keyPressed(int key, int scan, int mods) {
+        Snapshot s = ClientMatch.cur;
+        if (key == GLFW.GLFW_KEY_ESCAPE || key == GLFW.GLFW_KEY_V) {
+            if (placing != null && key == GLFW.GLFW_KEY_ESCAPE) { placing = null; return true; }
+            RtsClient.toggle(); return true;
+        }
+        if (key == GLFW.GLFW_KEY_A) { attackMode = true; return true; }
+        if (key == GLFW.GLFW_KEY_S) { order(Order.Type.STOP); return true; }
+        if (key == GLFW.GLFW_KEY_P) { attackMode = false; patrolNext = true; return true; }
+        if (key == GLFW.GLFW_KEY_B) { buildMenu = s != null && canBuild(s); return true; }
+        if (key == GLFW.GLFW_KEY_U && selectedBuilding >= 0) { act(RtsAction.Kind.UPGRADE, -1, 1); return true; }
+        if (key == GLFW.GLFW_KEY_R && selectedBuilding >= 0) { act(RtsAction.Kind.REPEAT, -1, 1); return true; }
+        if (key >= GLFW.GLFW_KEY_1 && key <= GLFW.GLFW_KEY_9) {
+            int g = key - GLFW.GLFW_KEY_0;
+            if (hasControlDown()) { groups.put(g, new LinkedHashSet<>(selected)); return true; }
+            Set<Integer> grp = groups.get(g);
+            if (grp != null) {
+                selected.clear(); selected.addAll(grp); selectedBuilding = -1;
+                long now = System.currentTimeMillis();
+                if (lastGroupKey == g && now - lastGroupAt < 400 && s != null) centerOnSelection(s);
+                lastGroupKey = g; lastGroupAt = now;
+                if (s != null) buildMenu = canBuild(s);
+            }
+            return true;
+        }
+        return super.keyPressed(key, scan, mods);
+    }
+    static boolean patrolNext;
+
+    @Override public void onClose() { if (RtsCamera.active) RtsClient.toggle(); else super.onClose(); }
+
+    // ---------------------------------------------------------------- actions
+    static int[] ids() { return selected.stream().mapToInt(Integer::intValue).toArray(); }
+
+    static void order(Order.Type t) {
+        if (selected.isEmpty()) return;
+        RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.ORDER; a.orderType = t.ordinal(); a.ids = ids(); a.queue = hasShiftDown();
+        Network.send(a);
+    }
+
+    static void act(RtsAction.Kind k, int defIndex, int count) {
+        RtsAction a = new RtsAction(); a.kind = k; a.targetBuilding = selectedBuilding; a.defIndex = defIndex; a.count = count;
+        Network.send(a);
+    }
+
+    void placeBuilding() {
+        if (ghost == null || !ghostValid) return;
+        RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.BUILD; a.defIndex = BuildingDef.ALL.indexOf(placing);
+        a.x = ghost[0]; a.z = ghost[1]; a.ids = ids(); a.queue = hasShiftDown();
+        Network.send(a);
+        if (!hasShiftDown()) placing = null;
+    }
+
+    void centerOnSelection(Snapshot s) {
+        float sx = 0, sz = 0; int n = 0;
+        for (Snapshot.U u : s.units) if (selected.contains(u.id)) { sx += u.x; sz += u.z; n++; }
+        if (n > 0) { RtsCamera.focusX = sx / n; RtsCamera.focusZ = sz / n; }
+    }
+
+    static boolean canBuild(Snapshot s) {
+        for (Snapshot.U u : s.units)
+            if (selected.contains(u.id)) { String r = UnitDef.ALL.get(u.def).role(); if (r.equals("builder") || r.equals("commander")) return true; }
+        return false;
+    }
+
+    // ---------------------------------------------------------------- picking helpers
+    static float[] screenOf(Proj p, Snapshot.U u) {
+        float[] xz = ClientMatch.pos(u);
+        return p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]) + 1, xz[1]);
+    }
+    static boolean onScreen(Proj p, Snapshot.U u) { float[] q = screenOf(p, u); return q != null && q[0] >= 0 && q[1] >= 0 && q[0] <= p.gw && q[1] <= p.gh; }
+
+    static Snapshot.U unitAt(Snapshot s, Proj p, double mx, double my, boolean mine) {
+        Snapshot.U best = null; double bd = 12 * 12;
+        for (Snapshot.U u : s.units) {
+            if (!u.alive || (u.team == s.myTeam) != mine) continue;
+            float[] q = screenOf(p, u); if (q == null) continue;
+            double d = (q[0] - mx) * (q[0] - mx) + (q[1] - my) * (q[1] - my);
+            if (d < bd) { bd = d; best = u; }
+        }
+        return best;
+    }
+
+    static Snapshot.B buildingAt(Snapshot s, float x, float z, boolean mine) {
+        for (Snapshot.B b : s.buildings) {
+            if ((b.team == s.myTeam) != mine) continue;
+            BuildingDef d = BuildingDef.ALL.get(b.def); String[] f = d.footprint().split("x");
+            if (Math.abs(x - b.x) <= Integer.parseInt(f[0]) / 2f + .5f && Math.abs(z - b.z) <= Integer.parseInt(f[1]) / 2f + .5f) return b;
+        }
+        return null;
+    }
+
+    static boolean validPlacement(Snapshot s, BuildingDef d, float x, float z) {
+        String[] f = d.footprint().split("x"); float hw = Integer.parseInt(f[0]) / 2f, hh = Integer.parseInt(f[1]) / 2f;
+        for (Snapshot.B b : s.buildings) {
+            String[] g = BuildingDef.ALL.get(b.def).footprint().split("x");
+            if (Math.abs(b.x - x) < Integer.parseInt(g[0]) / 2f + hw + .5f && Math.abs(b.z - z) < Integer.parseInt(g[1]) / 2f + hh + .5f) return false;
+        }
+        if (d.effect().equals("metal_per_s")) {
+            for (int i = 0; i + 1 < ClientMatch.metalSpots.length; i += 2)
+                if (Math.abs(ClientMatch.metalSpots[i] - x) < 3 && Math.abs(ClientMatch.metalSpots[i + 1] - z) < 3) return true;
+            return false;
+        }
+        return true;
+    }
+
+    static String name(String id) {
+        String n = id.contains("_") ? id.substring(id.indexOf('_') + 1) : id;
+        StringBuilder b = new StringBuilder();
+        for (String w : n.split("_")) if (!w.isEmpty()) b.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1)).append(' ');
+        return b.toString().trim().replace("T1", "").replace("T2", "II").replace("Davinci", "Da Vinci").trim();
+    }
+
+    // ---------------------------------------------------------------- HUD
+    static final int BG = 0xC0101418, PANEL = 0xD0181E24, EDGE = 0xFF3A4652, TXT = 0xFFE8E2D4, DIM = 0xFF9AA4AE, METAL = 0xFFB8C4D0, ENERGY = 0xFFF2C94C;
+
+    @Override public void render(GuiGraphics g, int mx, int my, float partial) {
+        buttons.clear();
+        Snapshot s = ClientMatch.cur;
+        Proj p = Proj.now();
+        if (s == null) { g.drawCenteredString(font, "No match running — type /bt start in chat first (press V to leave)", width / 2, 20, TXT); return; }
+        if (RtsCamera.strategic()) drawIcons(g, s, p);
+        else drawSelectionMarkers(g, s, p);
+        // placement ghost
+        if (placing != null) {
+            float[] gr = p.toGround(mx, my);
+            if (gr != null) { ghost = new float[]{Math.round(gr[0]) + (sizeOdd(placing, 0) ? .5f : 0), Math.round(gr[2]) + (sizeOdd(placing, 1) ? .5f : 0)}; ghostValid = validPlacement(s, placing, ghost[0], ghost[1]); }
+        } else ghost = null;
+        // box
+        if (dragging && (Math.abs(mx - dragX) > 3 || Math.abs(my - dragY) > 3)) {
+            int x0 = (int) Math.min(dragX, mx), x1 = (int) Math.max(dragX, mx), y0 = (int) Math.min(dragY, my), y1 = (int) Math.max(dragY, my);
+            g.fill(x0, y0, x1, y1, 0x2040FF60); outline(g, x0, y0, x1 - x0, y1 - y0, 0xFF60FF80);
+        }
+        drawTopBar(g, s);
+        drawBottomPanel(g, s, mx, my);
+        if (attackMode || patrolNext) g.drawCenteredString(font, (patrolNext ? "Patrol" : "Attack-move") + ": right-click a destination", width / 2, height - 118, 0xFFFF7060);
+        if (s.winner >= 0) {
+            String msg = s.winner == s.myTeam ? "VICTORY" : "DEFEAT";
+            g.fill(width / 2 - 90, height / 2 - 22, width / 2 + 90, height / 2 + 22, BG);
+            g.drawCenteredString(font, msg, width / 2, height / 2 - 4, s.winner == s.myTeam ? 0xFF7CFF7C : 0xFFFF6A6A);
+        }
+        // tooltips
+        for (Btn b : buttons) if (b.tip != null && mx >= b.x && my >= b.y && mx < b.x + b.w && my < b.y + b.h) {
+            int tw = font.width(b.tip) + 8;
+            g.fill(mx + 8, my - 14, mx + 8 + tw, my - 1, BG); g.drawString(font, b.tip, mx + 12, my - 11, TXT);
+        }
+    }
+
+    static boolean sizeOdd(BuildingDef d, int axis) { return Integer.parseInt(d.footprint().split("x")[axis]) % 2 == 1; }
+
+    void drawTopBar(GuiGraphics g, Snapshot s) {
+        int w = 420, x = width / 2 - w / 2;
+        g.fill(x, 0, x + w, 22, BG); g.hLine(x, x + w, 22, EDGE);
+        bar(g, x + 8, 4, 150, "Metal", s.metal, s.metalMax, s.metalIncome, s.metalSpend, METAL);
+        bar(g, x + 166, 4, 150, "Energy", s.energy, s.energyMax, s.energyIncome, s.energySpend, ENERGY);
+        g.drawString(font, "Supply " + s.supplyUsed + "/" + s.supplyCap, x + 326, 4, s.supplyUsed >= s.supplyCap ? 0xFFFF6A6A : TXT);
+        if (s.efficiency < .99f) g.drawString(font, String.format("Build %d%%", Math.round(s.efficiency * 100)), x + 326, 13, 0xFFFF9A4A);
+    }
+
+    void bar(GuiGraphics g, int x, int y, int w, String label, float v, float max, float inc, float spend, int color) {
+        g.fill(x, y + 9, x + w, y + 14, 0xFF2A323A);
+        g.fill(x, y + 9, x + (int) (w * Math.min(1, v / Math.max(1, max))), y + 14, color);
+        g.drawString(font, String.format("%s %d/%d", label, Math.round(v), Math.round(max)), x, y - 1, TXT);
+        String rate = String.format("+%.1f -%.1f", inc, spend);
+        g.drawString(font, rate, x + w - font.width(rate), y - 1, inc >= spend ? 0xFF7CDC7C : 0xFFFF8A6A);
+    }
+
+    void drawBottomPanel(GuiGraphics g, Snapshot s, int mx, int my) {
+        int h = 96, y = height - h;
+        g.fill(0, y, width, height, PANEL); g.hLine(0, width, y, EDGE);
+        // selection summary
+        Map<Short, Integer> counts = new LinkedHashMap<>();
+        for (Snapshot.U u : s.units) if (selected.contains(u.id)) counts.merge(u.def, 1, Integer::sum);
+        int x = 8, ty = y + 6;
+        if (!counts.isEmpty()) {
+            g.drawString(font, selected.size() + " selected", x, ty, TXT); ty += 11;
+            for (var e : counts.entrySet()) {
+                if (ty > height - 10) break;
+                g.drawString(font, e.getValue() + "x " + name(UnitDef.ALL.get(e.getKey()).id()), x, ty, DIM); ty += 10;
+            }
+        } else if (selectedBuilding >= 0) {
+            Snapshot.B b = s.buildings.stream().filter(q -> q.id == selectedBuilding).findFirst().orElse(null);
+            if (b != null) drawBuildingInfo(g, s, b, x, ty);
+        } else {
+            g.drawString(font, "Left-drag to select, right-click to order. A attack-move, S stop, B build, Ctrl+1-9 groups.", x, ty, DIM);
+            g.drawString(font, "Arrows / screen edge / middle-drag pan, wheel zoom, Q/E rotate, P patrol, V or Esc to leave.", x, ty + 11, DIM);
+        }
+        int bx = 230;
+        if (buildMenu && !selected.isEmpty()) drawBuildMenu(g, s, bx, y + 6);
+        if (selectedBuilding >= 0 && selected.isEmpty()) {
+            Snapshot.B b = s.buildings.stream().filter(q -> q.id == selectedBuilding).findFirst().orElse(null);
+            if (b != null && b.team == s.myTeam) drawBuildingActions(g, s, b, bx, y + 6);
+        }
+    }
+
+    void drawBuildingInfo(GuiGraphics g, Snapshot s, Snapshot.B b, int x, int y) {
+        BuildingDef d = BuildingDef.ALL.get(b.def);
+        g.drawString(font, name(d.id()) + "  (level " + b.level + "/" + d.levels() + ")", x, y, b.team == s.myTeam ? TXT : 0xFFFF8A8A);
+        g.drawString(font, String.format("HP %d%%", Math.round(b.hp * 100)), x, y + 11, DIM);
+        if (b.progress < 1) g.drawString(font, String.format("%s %d%%", b.upgrading ? "Upgrading" : "Building", Math.round(b.progress * 100)), x, y + 22, ENERGY);
+        if (b.producing >= 0) g.drawString(font, String.format("Training %s %d%%", name(UnitDef.ALL.get(b.producing).id()), Math.round(b.produceFrac * 100)), x, y + 33, METAL);
+        if (b.researching >= 0) g.drawString(font, String.format("Researching %s %d%%", name(TechDef.ALL.get(b.researching).id()), Math.round(b.researchFrac * 100)), x, y + 44, 0xFFB08CFF);
+    }
+
+    void drawBuildMenu(GuiGraphics g, Snapshot s, int x, int y) {
+        g.drawString(font, "Build (click, then place; Shift to place several, right-click to cancel)", x, y, DIM);
+        int cx = x, cy = y + 12;
+        for (BuildingDef d : BuildingDef.ALL) {
+            if (!d.race().equals(s.myRace)) continue;
+            boolean ok = d.requiresTech().equals("none") || s.researched.contains(d.requiresTech());
+            String label = name(d.id());
+            int w = Math.max(70, font.width(label) + 10);
+            if (cx + w > width - 8) { cx = x; cy += 22; }
+            final BuildingDef fd = d;
+            String tip = String.format("%d metal, %d energy%s", d.metal(), d.energy(), ok ? "" : " — needs " + name(d.requiresTech()));
+            button(g, cx, cy, w, 18, label, tip, ok ? () -> { placing = fd; } : null, null, placing == d, ok);
+            cx += w + 4;
+        }
+    }
+
+    void drawBuildingActions(GuiGraphics g, Snapshot s, Snapshot.B b, int x, int y) {
+        BuildingDef d = BuildingDef.ALL.get(b.def);
+        int cx = x, cy = y;
+        if (d.kind().equals("factory") && b.progress >= 1) {
+            g.drawString(font, "Train (left +1, Shift +5, right-click remove)", cx, cy, DIM); cy += 12;
+            for (UnitDef u : UnitDef.ALL) {
+                if (!u.factory().equals(d.id())) continue;
+                int idx = UnitDef.ALL.indexOf(u); int queued = 0; for (short q : b.queue) if (q == idx) queued++;
+                boolean unlocked = u.tier() <= 1 || s.researched.stream().anyMatch(t -> t.endsWith("_tech_t" + u.tier()));
+                String label = name(u.id()) + (queued > 0 ? " [" + queued + "]" : "");
+                int w = Math.max(64, font.width(label) + 10);
+                if (cx + w > width - 8) { cx = x; cy += 20; }
+                button(g, cx, cy, w, 17, label, String.format("%d metal, %d energy, supply %d", u.metal(), u.energy(), u.supply()),
+                        unlocked ? () -> act(RtsAction.Kind.ENQUEUE, idx, hasShiftDown() ? 5 : 1) : null,
+                        () -> act(RtsAction.Kind.DEQUEUE, idx, 1), false, unlocked);
+                cx += w + 3;
+            }
+            cy += 20; cx = x;
+            button(g, cx, cy, 70, 17, b.repeat ? "Repeat: ON" : "Repeat: off", "R — loop the queue", () -> act(RtsAction.Kind.REPEAT, -1, 1), null, b.repeat, true);
+            cx += 74;
+        } else if (d.kind().equals("tech") && b.progress >= 1) {
+            g.drawString(font, "Research", cx, cy, DIM); cy += 12;
+            for (TechDef t : TechDef.ALL) {
+                if (!t.researchedAt().equals(d.id())) continue;
+                boolean done = s.researched.contains(t.id());
+                boolean ok = !done && b.level >= t.minBuildingLevel() && (t.requires().equals("none") || s.researched.contains(t.requires()));
+                int idx = TechDef.ALL.indexOf(t); String label = name(t.id()) + (done ? " ✓" : "");
+                int w = Math.max(70, font.width(label) + 10);
+                if (cx + w > width - 8) { cx = x; cy += 20; }
+                button(g, cx, cy, w, 17, label, String.format("%d metal, %d energy, %ds — needs level %d", t.metal(), t.energy(), t.seconds(), t.minBuildingLevel()),
+                        ok ? () -> act(RtsAction.Kind.RESEARCH, idx, 1) : null, null, done, ok);
+                cx += w + 3;
+            }
+            cy += 20; cx = x;
+        }
+        if (b.level < d.levels() && b.progress >= 1)
+            button(g, cx, cy, 90, 17, "Upgrade (U)", String.format("Level %d: %d metal, %d energy", b.level + 1, Math.round(d.metal() * .6), Math.round(d.energy() * .6)),
+                    () -> act(RtsAction.Kind.UPGRADE, -1, 1), null, false, true);
+    }
+
+    void button(GuiGraphics g, int x, int y, int w, int h, String label, String tip, Runnable left, Runnable right, boolean on, boolean enabled) {
+        g.fill(x, y, x + w, y + h, on ? 0xFF3E6A48 : enabled ? 0xFF2A3440 : 0xFF20262C);
+        outline(g, x, y, w, h, on ? 0xFF7CDC7C : EDGE);
+        g.drawString(font, label, x + 5, y + (h - 8) / 2, enabled ? TXT : 0xFF6A747E);
+        buttons.add(new Btn(x, y, w, h, label, tip, left, right, on));
+    }
+
+    static void outline(GuiGraphics g, int x, int y, int w, int h, int c) { g.hLine(x, x + w - 1, y, c); g.hLine(x, x + w - 1, y + h - 1, c); g.vLine(x, y, y + h - 1, c); g.vLine(x + w - 1, y, y + h - 1, c); }
+
+    /** Close up: small health bars and brackets over selected units. */
+    void drawSelectionMarkers(GuiGraphics g, Snapshot s, Proj p) {
+        for (Snapshot.U u : s.units) {
+            if (!u.alive || !selected.contains(u.id)) continue;
+            float[] xz = ClientMatch.pos(u);
+            float[] q = p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]) + 2.3f, xz[1]);
+            if (q == null) continue;
+            int x = (int) q[0], y = (int) q[1];
+            g.fill(x - 8, y, x + 8, y + 2, 0xFF303030); g.fill(x - 8, y, x - 8 + (int) (16 * u.hp), y + 2, 0xFF60E070);
+        }
+    }
+
+    /** Zoomed out (BAR strategic zoom): units become team-colored icons, buildings become outlined blocks. */
+    void drawIcons(GuiGraphics g, Snapshot s, Proj p) {
+        for (Snapshot.B b : s.buildings) {
+            float[] q = p.toScreen(b.x, RtsCamera.ground(b.x, b.z), b.z);
+            if (q == null) continue;
+            int c = b.team == s.myTeam ? 0xFF4A90E2 : 0xFFE24A4A, r = 5;
+            g.fill((int) q[0] - r, (int) q[1] - r, (int) q[0] + r, (int) q[1] + r, b.progress < 1 ? (c & 0x60FFFFFF) : c);
+            outline(g, (int) q[0] - r, (int) q[1] - r, 2 * r, 2 * r, b.id == selectedBuilding ? 0xFFFFFFFF : 0xFF000000);
+        }
+        for (Snapshot.U u : s.units) {
+            if (!u.alive) continue;
+            float[] xz = ClientMatch.pos(u);
+            float[] q = p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]), xz[1]);
+            if (q == null) continue;
+            String role = UnitDef.ALL.get(u.def).role();
+            int c = u.team == s.myTeam ? 0xFF6AB0FF : 0xFFFF6A6A, r = role.equals("commander") ? 4 : role.equals("hero") || role.equals("siege") ? 3 : 2;
+            int x = (int) q[0], y = (int) q[1];
+            if (role.equals("ranged") || role.equals("siege")) { for (int k = 0; k <= r; k++) g.hLine(x - k, x + k, y - r + k, c); }   // triangle
+            else g.fill(x - r, y - r, x + r, y + r, c);
+            if (selected.contains(u.id)) outline(g, x - r - 1, y - r - 1, 2 * r + 3, 2 * r + 3, 0xFFFFFFFF);
+        }
+    }
+}
