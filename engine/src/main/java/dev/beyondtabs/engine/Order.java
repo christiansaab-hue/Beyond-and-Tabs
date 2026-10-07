@@ -10,4 +10,5 @@ public record Order(Type type, float x, float z, float radius, Unit target, Buil
     public static Order guard(Unit t) { return new Order(Type.GUARD, t.x, t.z, 0, t, null); }
     public static Order areaAttack(float x, float z, float r) { return new Order(Type.AREA_ATTACK, x, z, r, null, null); }
     public static Order build(Building b) { return new Order(Type.BUILD, b.x, b.z, 0, null, b); }
+    public static Order attackBuilding(Building b) { return new Order(Type.ATTACK, b.x, b.z, 0, null, b); }
 }

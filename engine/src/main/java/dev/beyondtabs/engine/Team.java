@@ -15,6 +15,8 @@ public final class Team {
     public double efficiency = 1;                       // fraction of requested spending that could be paid last tick
     public final Set<String> researched = new HashSet<>();
     public int supplyUsed; public int supplyCap;
+    /** Lost its commander (BAR rule: the commander is your life). */
+    public boolean defeated;
 
     public Team(int id, String race) {
         this.id = id; this.race = race;

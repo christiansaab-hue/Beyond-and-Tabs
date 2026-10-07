@@ -9,7 +9,7 @@ public final class Bench {
     static void check(boolean ok, String what) { System.out.println((ok ? "  PASS " : "  FAIL ") + what); if (!ok) failures++; }
 
     public static void main(String[] a) {
-        ragdollStands(); ragdollKnockAndRecover(); wading(); battle(60, true); battle(200, false); battle(300, true); economy();
+        ragdollStands(); ragdollKnockAndRecover(); wading(); battle(60, true); battle(200, false); battle(300, true); economy(); siege();
         System.out.println(failures == 0 ? "\nALL BENCHES PASS" : "\n" + failures + " FAILURES");
         System.exit(failures == 0 ? 0 : 1);
     }
@@ -83,6 +83,29 @@ public final class Bench {
         check(maxKnocked > 0, "units got knocked over by hits");
     }
 
+    static void siege() {
+        System.out.println("siege: an army attacks a base (barracks + watchtower + commander); towers shoot, buildings fall, commander death ends the game");
+        World w = new World(Terrain.FLAT, 6); w.addTeam("ancient_world"); w.addTeam("kingdoms");
+        Building barracks = w.place(1, BuildingDef.KD_BARRACKS, 0, 40, true);
+        Building tower = w.place(1, BuildingDef.KD_WATCHTOWER, 6, 34, true);
+        Unit kdCmd = w.spawn(1, UnitDef.KD_COMMANDER, 0, 75, 0);
+        Unit awCmd = w.spawn(0, UnitDef.AW_COMMANDER, 0, -40, 0);
+        int start = 30;
+        for (int i = 0; i < start; i++) { Unit u = w.spawn(0, i % 3 == 0 ? UnitDef.AW_SPEAR_THROWER : UnitDef.AW_CLUBBER, (i % 6 - 3) * 1.6f, (i / 6) * 1.6f, 0); w.order(u, Order.attackMove(0, 80), false); }
+        w.cameras.add(new float[]{0, 20, 20});
+        int t = 0; boolean towerFell = false, towerFired = false, barracksFell = false;
+        while (w.winner < 0 && t < 20 * 240) {
+            w.tick(); t++; if (!tower.alive) towerFell = true; if (!barracks.alive) barracksFell = true;
+            for (Projectile p : w.projectiles) if (p.owner == null && p.team == 1) towerFired = true;
+        }
+        long awLeft = w.aliveCount(0) - 1;
+        System.out.printf("  %.1f s: barracks %s, tower %s, KD commander %s, AW units left %d/%d, winner %d%n", t / 20f,
+                barracks.alive ? "standing" : "destroyed", tower.alive ? "standing" : "destroyed", kdCmd.alive ? "alive" : "dead", awLeft, start, w.winner);
+        check(barracksFell && towerFell, "army destroyed the barracks and the watchtower");
+        check(towerFired, "the watchtower shot at the attackers");
+        check(w.winner == 0 && w.teams.get(1).defeated, "killing the commander won the game for Ancient World");
+    }
+
     static void economy() {
         System.out.println("economy: commander builds an economy, a barracks, researches T2 and trains units");
         World w = new World(Terrain.FLAT, 4); Team t = w.addTeam("ancient_world");
@@ -94,7 +117,8 @@ public final class Bench {
         plan.add(w.startConstruction(0, BuildingDef.AW_ENERGY_GEN, -5, -5));
         for (int i = 0; i < 4; i++) plan.add(w.startConstruction(0, BuildingDef.AW_ENERGY_GEN, -12 + i * 4, -10));
         Building barracks = w.startConstruction(0, BuildingDef.AW_BARRACKS, 0, 8); plan.add(barracks);
-        Building tech = w.startConstruction(0, BuildingDef.AW_TECH_CENTER, -8, 8); plan.add(tech);
+        Building tech = w.startConstruction(0, BuildingDef.AW_TECH_CENTER, 14, -12); plan.add(tech);
+        check(w.startConstruction(0, BuildingDef.AW_STORAGE, 0, 8) == null, "overlapping placement refused");
         check(plan.stream().allMatch(b -> b != null), "all construction sites placed (extractors snapped to metal spots)");
         check(w.startConstruction(0, BuildingDef.AW_WAR_LODGE, 20, 20) == null, "T2 factory refused before T2 research");
         for (Building b : plan) w.order(cmd, Order.build(b), true);
@@ -110,6 +134,10 @@ public final class Bench {
                 System.out.printf("  t=%3ds metal %6.0f/%5.0f (+%.1f/s, spend %.1f) energy %6.0f/%5.0f (+%.0f/s) eff %.2f units %d built %d/%d tech %s%n",
                         i / 20, t.metal, t.metalStorage, t.metalIncome, t.metalSpend, t.energy, t.energyStorage, t.energyIncome, t.efficiency,
                         w.aliveCount(0), plan.stream().filter(Building::done).count(), plan.size(), t.researched);
+        }
+        if (!plan.stream().allMatch(Building::done)) {
+            for (Building b : plan) System.out.printf("    %s at (%.0f,%.0f) progress %.2f%n", b.def.id(), b.x, b.z, b.progress);
+            System.out.printf("    commander at (%.1f,%.1f), orders %d, first %s%n", cmd.x, cmd.z, cmd.orders.size(), cmd.orders.peek() == null ? "-" : cmd.orders.peek().building().def.id());
         }
         check(plan.stream().allMatch(Building::done), "commander finished every building");
         check(t.metalIncome >= 2 + 4 * 2.0 - 1e-6, "income = commander + 4 extractors");

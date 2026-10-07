@@ -7,6 +7,8 @@ import java.util.ArrayDeque;
 
 public final class Building {
     public final int id; public final int team; public final BuildingDef def; public final float x, z;
+    /** Footprint in blocks (from the sheet, e.g. "5x5") and half extents. */
+    public final int fw, fh; public final float hw, hh; public float cooldown;
     public int level = 1; public float hp; public boolean alive = true;
     /** 0..1 while being constructed or upgraded; 1 = done. */
     public float progress; public boolean upgrading;
@@ -17,6 +19,9 @@ public final class Building {
     Building(int id, int team, BuildingDef def, float x, float z, boolean prebuilt) {
         this.id = id; this.team = team; this.def = def; this.x = x; this.z = z; this.hp = def.hp();
         this.progress = prebuilt ? 1 : 0; rallyX = x; rallyZ = z + 6;
+        String[] f = def.footprint().split("x"); fw = Integer.parseInt(f[0].trim()); fh = Integer.parseInt(f[1].trim());
+        hw = fw / 2f; hh = fh / 2f;
+        if (!prebuilt) hp = Math.max(1, def.hp() * .1f);   // a fresh site is fragile; hp grows with construction
     }
     public boolean done() { return progress >= 1 && !upgrading; }
     /** The sheet's per-level value (income, build power, dps...). */
@@ -25,4 +30,11 @@ public final class Building {
         return Double.parseDouble(v[Math.min(level, v.length) - 1].trim());
     }
     public boolean canUpgrade() { return done() && level < def.levels(); }
+    public float maxHp() { return (float) (def.hp() * (1 + .5 * (level - 1))); }
+    /** Distance from a point to this building's footprint edge (0 inside). */
+    public float distTo(float px, float pz) {
+        float dx = Math.max(0, Math.abs(px - x) - hw), dz = Math.max(0, Math.abs(pz - z) - hh);
+        return (float) Math.sqrt(dx * dx + dz * dz);
+    }
+    public boolean contains(float px, float pz, float pad) { return Math.abs(px - x) < hw + pad && Math.abs(pz - z) < hh + pad; }
 }

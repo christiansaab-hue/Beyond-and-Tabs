@@ -11,8 +11,9 @@ public final class Unit {
     public float hp; public final float maxHp;
     public boolean alive = true; public float deadFor;
     public final ArrayDeque<Order> orders = new ArrayDeque<>();
-    public Unit target; float retargetIn; float cooldown; public float attackAnim = -1; boolean hitDealt;
+    public Unit target; public Building targetB; float retargetIn; float cooldown; public float attackAnim = -1; boolean hitDealt;
     public float walkPhase; public float walkAmount;
+    float[] path; int pathIdx; float pathGx = Float.NaN, pathGz; float pathAge;
     public boolean knocked; public float downFor;
     public final Ragdoll ragdoll;
     public int lod;                           // 0 near, 1 mid, 2 far
