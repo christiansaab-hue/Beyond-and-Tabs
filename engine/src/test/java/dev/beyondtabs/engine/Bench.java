@@ -10,6 +10,7 @@ public final class Bench {
 
     public static void main(String[] a) {
         ragdollStands(); ragdollKnockAndRecover(); wading(); battle(60, true); battle(200, false); battle(300, true); economy(); siege(); aiMatch(Ai.Difficulty.NORMAL, Ai.Difficulty.NORMAL); aiMatch(Ai.Difficulty.HARD, Ai.Difficulty.EASY);
+        abilities(); learning();
         System.out.println(failures == 0 ? "\nALL BENCHES PASS" : "\n" + failures + " FAILURES");
         System.exit(failures == 0 ? 0 : 1);
     }
@@ -78,9 +79,70 @@ public final class Bench {
         double avg = Arrays.stream(m).average().orElse(0);
         System.out.printf("  %.1f s simulated, avg %.2f ms/tick, p99 %.2f ms, max %.2f ms | survivors %d vs %d | max knocked at once %d | max projectiles %d | lodNear %.0f%n",
                 ticks / 20f, avg, m[(int) (m.length * .99)], m[m.length - 1], w.aliveCount(0), w.aliveCount(1), maxKnocked, proj, w.lodNear());
+        System.out.printf("  combat: %d knockdowns (%.2f per unit), melee hit rate %.0f%% (%d hits, %d whiffs), %d dodges%n",
+                w.knockdowns, w.knockdowns / (2f * perSide), 100f * w.meleeHits / Math.max(1, w.meleeHits + w.meleeWhiffs), w.meleeHits, w.meleeWhiffs, w.dodges);
+        check(w.meleeHits > 3 * w.meleeWhiffs, "melee swings mostly connect (hit rate > 75%)");
         check(w.aliveCount(0) == 0 || w.aliveCount(1) == 0 || ticks == ms.length, "battle ran");
         check(avg < 25, "average tick fits in a 50 ms server tick with headroom (< 25 ms)");
         check(maxKnocked > 0, "units got knocked over by hits");
+    }
+
+    /** Every ability fires in a mixed brawl. */
+    static void abilities() {
+        System.out.println("abilities: every unit type with an ability fights a mixed enemy army");
+        World w = new World(Terrain.FLAT, 11); w.addTeam("ancient_world"); w.addTeam("kingdoms");
+        java.util.List<UnitDef> aw = new java.util.ArrayList<>(), kd = new java.util.ArrayList<>();
+        for (UnitDef d : UnitDef.ALL) if (!d.role().equals("builder")) (d.race().equals("ancient_world") ? aw : kd).add(d);
+        int i = 0;
+        for (UnitDef d : aw) for (int k = 0; k < 3; k++) { Unit u = w.spawn(0, d, (i++ % 12) * 2f - 12, -20 - (i / 12) * 2f, 0); w.order(u, Order.attackMove(u.x, 30), false); }
+        i = 0;
+        for (UnitDef d : kd) for (int k = 0; k < 3; k++) { Unit u = w.spawn(1, d, (i++ % 12) * 2f - 12, 20 + (i / 12) * 2f, (float) Math.PI); w.order(u, Order.attackMove(u.x, -30), false); }
+        w.cameras.add(new float[]{0, 18, 0});
+        java.util.Map<String, Integer> used = new java.util.TreeMap<>();
+        int t = 0;
+        while (t++ < 20 * 90 && w.aliveCount(0) > 0 && w.aliveCount(1) > 0) {
+            w.tick();
+            for (Unit u : w.units) if (u.alive && (u.charging || u.leaping || u.spinning || u.bracing || u.abilityCd > 0)) used.merge(u.ability.id(), 1, Integer::sum);
+        }
+        for (Unit u : w.units) if (u.slowFor > 0 || u.poisonFor > 0) used.merge("(effects seen)", 1, Integer::sum);
+        System.out.printf("  %.0f s, survivors %d vs %d, dodges %d | ability-ticks %s%n", t / 20f, w.aliveCount(0), w.aliveCount(1), w.dodges, used);
+        int kinds = 0; for (String k : used.keySet()) if (!k.startsWith("(")) kinds++;
+        check(kinds >= 12, "at least 12 different abilities were used");
+    }
+
+    /**
+     * Learning: the same matchups are fought over and over. One side keeps its combat memory between rounds (as a
+     * saved army would), the other starts fresh each time. The learning side should settle on styles that work.
+     */
+    static void learning() {
+        System.out.println("learning: 16 rounds of mirror skirmishes; team A remembers what worked, team B starts fresh each round");
+        UnitDef[] aw = {UnitDef.KD_SQUIRE, UnitDef.KD_ARCHER, UnitDef.KD_FENCER, UnitDef.KD_HALBERD, UnitDef.AW_CLUBBER, UnitDef.KD_JOUSTER};
+        UnitDef[] kd = aw;
+        String memory = "";
+        float early = 0, late = 0;
+        for (int round = 0; round < 16; round++) {
+            World w = new World(Terrain.FLAT, 100 + round); w.addTeam("ancient_world"); w.addTeam("kingdoms");
+            w.teams.get(0).tactics.load(memory);
+            for (int i = 0; i < 24; i++) {
+                float x = (i % 8) * 1.8f - 7;
+                Unit a = w.spawn(0, aw[i % aw.length], x, -18 - (i / 8) * 1.8f, 0); w.order(a, Order.attackMove(x, 30), false);
+                Unit b = w.spawn(1, kd[i % kd.length], x, 18 + (i / 8) * 1.8f, (float) Math.PI); w.order(b, Order.attackMove(x, -30), false);
+            }
+            w.cameras.add(new float[]{0, 18, 0});
+            int t = 0;
+            while (t++ < 20 * 120 && w.aliveCount(0) > 0 && w.aliveCount(1) > 0) w.tick();
+            for (Unit u : w.units) if (u.alive) w.closeEngagement(u, false);
+            memory = w.teams.get(0).tactics.save();
+            float hpA = 0, hpB = 0;
+            for (Unit u : w.units) if (u.alive) { if (u.team == 0) hpA += u.hp / u.maxHp; else hpB += u.hp / u.maxHp; }
+            float score = (hpA - hpB) / 24f;
+            if (round < 4) early += score / 4; if (round >= 12) late += score / 4;
+            System.out.printf("  round %2d: %4.0f s, survivors %2d vs %2d, health margin %+.2f%n", round + 1, t / 20f, w.aliveCount(0), w.aliveCount(1), score);
+            if (round == 15) { System.out.println("  learned (team A):"); w.teams.get(0).tactics.summary().forEach((k, v) -> System.out.println("    " + k + " -> " + v)); }
+        }
+        System.out.printf("  average health margin of the learning side: first 4 rounds %+.2f, last 4 rounds %+.2f%n", early, late);
+        check(!memory.isEmpty(), "tactics were learned and saved");
+        check(late > early, "the learning side does better after learning");
     }
 
     static void siege() {

@@ -17,9 +17,11 @@ public final class Team {
     public int supplyUsed; public int supplyCap;
     /** Lost its commander (BAR rule: the commander is your life). */
     public boolean defeated;
+    /** What this army has learned about fighting each kind of enemy. */
+    public final Tactics tactics;
 
     public Team(int id, String race) {
-        this.id = id; this.race = race;
+        this.id = id; this.race = race; this.tactics = new Tactics(id * 7919L + 17);
         metal = num("start_metal"); energy = num("start_energy");
         metalStorage = energyStorage = num("base_storage");
         supplyCap = (int) num("supply_cap");

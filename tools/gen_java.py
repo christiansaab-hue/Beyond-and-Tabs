@@ -40,5 +40,5 @@ for f in os.listdir(OUT):
     if f.endswith(".java"): os.remove(os.path.join(OUT, f))
 emit("units", "UnitDef"); emit("weapon_classes", "WeaponDef"); emit("bodies", "BodyDef"); emit("buildings", "BuildingDef")
 emit("tech", "TechDef"); emit("races", "RaceDef"); emit("economy", "EconomyDef", {"value": "String"})
-emit("performance", "PerfDef", {"value": "String"}); emit("controls", "ControlDef"); emit("ai", "AiDef"); emit("hooks", "HookDef")
+emit("performance", "PerfDef", {"value": "String"}); emit("controls", "ControlDef"); emit("ai", "AiDef"); emit("hooks", "HookDef"); emit("abilities", "AbilityDef"); emit("tactics", "TacticDef")
 print("generated", sorted(os.listdir(OUT)))

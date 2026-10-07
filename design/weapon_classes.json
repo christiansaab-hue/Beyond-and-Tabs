@@ -241,10 +241,10 @@
    "id": "thrown_heavy",
    "kind": "ranged",
    "range": 12,
-   "damage": 120,
-   "cooldown": 3.5,
+   "damage": 80,
+   "cooldown": 4.5,
    "aoe": 1.5,
-   "knockback": 10.0,
+   "knockback": 8.0,
    "projectile": "boulder",
    "unverified": [
     "damage",

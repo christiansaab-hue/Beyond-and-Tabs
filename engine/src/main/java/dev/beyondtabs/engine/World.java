@@ -41,6 +41,8 @@ public final class World {
     final int substepsNear;
     // stats
     public double lastTickMs, lastPhysicsMs; public int activeNear, activeMid, sleepingBodies;
+    /** Combat quality counters (benches): knockdowns, melee swings that connected / missed, dodges, abilities used. */
+    public int knockdowns, meleeHits, meleeWhiffs, dodges;
 
     public World(Terrain terrain, long seed) {
         this.terrain = terrain; this.rng = new Random(seed);
@@ -139,6 +141,7 @@ public final class World {
         for (Unit u : units) if (u.alive) hash.add(u);
         for (Ai ai : ais) ai.tick();
         economy();
+        for (Unit u : units) { u.attackersPrev = u.attackers; u.attackers = 0; }
         for (int i = 0, n = units.size(); i < n; i++) { Unit u = units.get(i); if (u.alive) think(u); }
         separation();
         towers();
@@ -256,17 +259,28 @@ public final class World {
     // ---------------- unit behaviour ----------------
     void think(Unit u) {
         Ragdoll r = u.ragdoll;
-        // knockdown state machine: balance is drained by hits and recovers over time
-        if (!u.knocked && (r.balance < .3f || (u.lod < 2 && r.poseError() > .9f * r.scale))) { u.knocked = true; r.down = true; u.downFor = 0; }
+        Abilities.effects(this, u);
+        if (!u.alive) return;
+        // knockdown state machine: balance is drained by hits and recovers over time. Only a real hit can trip a unit
+        // up: being jostled by friends or stepping off a ledge never does.
+        boolean recentlyHit = time - u.lastHit < .8f;
+        if (!u.knocked && !u.leaping && (r.balance < .3f || (recentlyHit && u.lod < 2 && r.poseError() > .9f * r.scale))) {
+            u.knocked = true; r.down = true; u.downFor = 0; u.charging = u.spinning = false; knockdowns++;
+        }
         if (u.knocked) {
             u.downFor += DT;
             if (u.lod < 2) { u.x += (r.hipX() - u.x) * .3f; u.z += (r.hipZ() - u.z) * .3f; }
             u.vx *= .85f; u.vz *= .85f; u.x += u.vx * DT; u.z += u.vz * DT;
-            if (r.down && r.balance > .65f && u.downFor > .8f) r.down = false;          // start getting up
+            if (r.down && r.balance > .55f && u.downFor > .6f) r.down = false;          // start getting up
             if (!r.down && (u.lod == 2 || r.poseError() < .45f * r.scale)) u.knocked = false;
             u.walkAmount = 0; u.attackAnim = -1;
             return;
         }
+        if (u.stunFor > 0) {   // dazed: stands there
+            u.stunFor -= DT; u.vx *= .8f; u.vz *= .8f; u.x += u.vx * DT; u.z += u.vz * DT; u.walkAmount = 0; u.attackAnim = -1;
+            return;
+        }
+        Abilities.passive(this, u);
         if (u.cooldown > 0) u.cooldown -= DT;
         // attack animation in progress
         if (u.attackAnim >= 0) {
@@ -289,9 +303,12 @@ public final class World {
             float acquire = u.range + (o == null ? 8f : 14f);
             if (o != null && o.type() == Order.Type.AREA_ATTACK) acquire = o.radius();
             float cx = o != null && o.type() == Order.Type.AREA_ATTACK ? o.x() : u.x, cz = o != null && o.type() == Order.Type.AREA_ATTACK ? o.z() : u.z;
-            u.target = u.isSupport() ? woundedAlly(u, acquire) : nearestEnemy(u, cx, cz, acquire);
+            u.target = u.isSupport() ? woundedAlly(u, acquire) : pickTarget(u, cx, cz, acquire);
             u.targetB = u.target == null && !u.isSupport() ? nearestEnemyBuilding(u.team, cx, cz, acquire) : null;
         }
+        if (u.target != null) u.target.attackers++;
+        track(u);
+        if (Abilities.act(this, u, u.target != null && !u.isSupport() ? u.target : null)) { u.inCombat = true; return; }
         float goalX = u.x, goalZ = u.z; boolean move = false; float stopAt = .6f;
         if ("builder".equals(u.def.role()) && (o == null || o.type() != Order.Type.ATTACK)) { u.target = null; u.targetB = null; }   // builders don't fight unless ordered
         if (u.target == null && u.targetB != null) {
@@ -302,12 +319,8 @@ public final class World {
                 if (u.cooldown <= 0 && u.attackAnim < 0) { u.attackAnim = 0; u.hitDealt = false; u.cooldown = (float) u.weapon.cooldown(); }
             }
         } else if (u.target != null) {
-            float d = dist(u.x, u.z, u.target.x, u.target.z), reach = u.range + u.radius + u.target.radius;
-            if (d > reach * .9f) { goalX = u.target.x; goalZ = u.target.z; move = true; stopAt = reach * .85f; }
-            else {
-                face(u, u.target.x, u.target.z);
-                if (u.cooldown <= 0 && u.attackAnim < 0) { u.attackAnim = 0; u.hitDealt = false; u.cooldown = (float) u.weapon.cooldown(); }
-            }
+            float[] g = engage(u, u.target);
+            if (g != null) { goalX = g[0]; goalZ = g[1]; move = true; stopAt = g[2]; }
         } else if (o != null) {
             switch (o.type()) {
                 case MOVE, ATTACK_MOVE, PATROL, AREA_ATTACK -> { goalX = o.x(); goalZ = o.z(); move = true; }
@@ -335,7 +348,9 @@ public final class World {
             if (wp[2] > 0) stopAt = 0;
         } else u.path = null;
         float dx = goalX - u.x, dz = goalZ - u.z, d = (float) Math.sqrt(dx * dx + dz * dz);
-        float speed = u.attackAnim >= 0 ? u.speed * .3f : u.speed;
+        float speed = u.speed * (u.slowFor > 0 ? u.slowMul : 1);
+        if (u.attackAnim >= 0) speed *= u.isMelee() && u.target != null ? .55f : .3f;   // melee lunges into the swing
+        if (u.bracing) speed = 0;
         float wd = terrain.waterDepth(u.x, u.z);
         if (wd > .3f) speed *= Math.max(.25f, 1f - wd * .45f);   // wading, TABS units walk along the bottom
         float wantVx = 0, wantVz = 0;
@@ -343,9 +358,131 @@ public final class World {
         u.vx += (wantVx - u.vx) * .25f; u.vz += (wantVz - u.vz) * .25f;
         u.x += u.vx * DT; u.z += u.vz * DT;
         float sp = (float) Math.sqrt(u.vx * u.vx + u.vz * u.vz);
-        if (sp > .2f && u.target == null) face(u, u.x + u.vx, u.z + u.vz);
+        if (sp > .2f && (u.target == null || !u.inCombat)) face(u, u.x + u.vx, u.z + u.vz);
         u.walkAmount = Math.min(1, sp / Math.max(.1f, u.speed));
         u.walkPhase += sp * DT * 3.2f / Math.max(.5f, u.ragdoll.scale);
+    }
+
+    /**
+     * Fighting a unit in the current style. Faces and attacks when in reach; otherwise returns where to go
+     * {x, z, stopAt} (null = stand still).
+     */
+    float[] engage(Unit u, Unit t) {
+        float d = dist(u.x, u.z, t.x, t.z), reach = u.range + u.radius + t.radius;
+        boolean melee = u.isMelee(), support = u.isSupport();
+        u.inCombat = d < reach + 3;
+        if (support) {   // healers follow whoever they're patching up
+            if (d > reach * .9f) return new float[]{t.x, t.z, reach * .8f};
+            faceFast(u, t.x, t.z); swing(u); return null;
+        }
+        Combat.Style st = u.style;
+        if (st == Combat.Style.HOLD && !t.isMelee()) st = Combat.Style.AGGRESSIVE;   // holding still under arrows is pointless
+        float dx = (t.x - u.x) / Math.max(.01f, d), dz = (t.z - u.z) / Math.max(.01f, d);
+        switch (st) {
+            case KITE -> {
+                Unit threat = nearestMeleeThreat(u, Math.max(3.5f, u.range * .4f));
+                if (threat != null && u.cooldown > .2f) {   // back off while reloading
+                    float ex = u.x - threat.x, ez = u.z - threat.z, el = Math.max(.01f, (float) Math.sqrt(ex * ex + ez * ez));
+                    return new float[]{u.x + ex / el * 3, u.z + ez / el * 3, 0};
+                }
+            }
+            case HOLD -> {
+                if (Float.isNaN(u.anchorX)) { u.anchorX = u.x; u.anchorZ = u.z; }
+                if (melee && d < reach * .45f && u.range > 2.5f) return new float[]{u.x - dx * 1.2f, u.z - dz * 1.2f, 0};   // keep them at the tip
+                if (d > reach * .95f) {
+                    if (dist(u.anchorX, u.anchorZ, t.x, t.z) < reach + 2.5f) return new float[]{t.x, t.z, reach * .85f};
+                    faceFast(u, t.x, t.z);
+                    return dist(u.x, u.z, u.anchorX, u.anchorZ) > .8f ? new float[]{u.anchorX, u.anchorZ, 0} : null;
+                }
+            }
+            case SKIRMISH -> {
+                if (melee && u.cooldown > u.weapon.cooldown() * .35f && u.attackAnim < 0 && d < reach + 1)
+                    return new float[]{u.x - dx * 2, u.z - dz * 2, 0};
+            }
+            case FLANK -> {
+                if (d > reach + 2.5f) {
+                    float side = (u.id & 1) == 0 ? 1 : -1, off = Math.min(3.5f, d * .45f);
+                    return new float[]{t.x - dz * side * off, t.z + dx * side * off, 0};
+                }
+            }
+            default -> { }
+        }
+        if (d > reach * (melee ? .9f : .95f)) return new float[]{t.x, t.z, reach * (melee ? .78f : .85f)};
+        faceFast(u, t.x, t.z);
+        swing(u);
+        if (melee && u.attackAnim >= 0 && d > reach * .7f) return new float[]{t.x, t.z, reach * .6f};   // step into the blow
+        return null;
+    }
+
+    void swing(Unit u) {
+        if (u.cooldown <= 0 && u.attackAnim < 0) { u.attackAnim = 0; u.hitDealt = false; u.cooldown = (float) u.weapon.cooldown(); }
+    }
+
+    Unit nearestMeleeThreat(Unit u, float r) {
+        bestFound = null; bestScore = r * r;
+        hash.query(u.x, u.z, r, o -> {
+            if (o.team == u.team || !o.alive || !o.isMelee() || o.knocked) return;
+            float d = (o.x - u.x) * (o.x - u.x) + (o.z - u.z) * (o.z - u.z);
+            if (d < bestScore) { bestScore = d; bestFound = o; }
+        });
+        return bestFound;
+    }
+
+    /** Target choice: near, wounded, not already swarmed, a threat to us, and what our style and ability favour. */
+    Unit pickTarget(Unit u, float cx, float cz, float r) {
+        bestFound = null; bestScore = 1e9f;
+        final Unit cur = u.target;
+        final boolean melee = u.isMelee();
+        final String ak = u.ability.kind();
+        hash.query(cx, cz, r, o -> {
+            if (o.team == u.team || !o.alive) return;
+            float d = dist(u.x, u.z, o.x, o.z), s = d, hpf = o.hp / o.maxHp;
+            if (o == cur) s -= 1.5f;                                   // don't flip-flop
+            if (o.knocked) s += 1f;
+            if (melee && o.attackersPrev > 2) s += (o.attackersPrev - 2) * 1.6f;
+            s -= (1 - hpf) * 2.5f;
+            if (o.target == u) s -= 1.5f;
+            if (!melee && d > u.range) s += 4;
+            switch (u.style) {
+                case FLANK -> { if (o.cls.equals("ranged") || o.cls.equals("support") || o.cls.equals("siege")) s -= 5; }
+                case FOCUS -> s -= o.attackersPrev * .8f + (1 - hpf) * 3;
+                default -> { }
+            }
+            if (ak.equals("brace") && (o.cls.equals("cavalry") || o.cls.equals("large"))) s -= 3;
+            if (ak.equals("shadowstep") && (o.cls.equals("ranged") || o.cls.equals("support"))) s -= 4;
+            if (s < bestScore) { bestScore = s; bestFound = o; }
+        });
+        return bestFound;
+    }
+
+    /** Opens and closes engagements and lets the team's tactics pick this unit's style. */
+    void track(Unit u) {
+        Unit t = u.target;
+        if (t != null && !u.isSupport()) {
+            u.noTargetFor = 0;
+            if (u.eng == null || !u.eng.enemyCls.equals(t.cls) || time - u.eng.start > 12) {
+                closeEngagement(u, false);
+                u.style = teams.get(u.team).tactics.choose(u, t.cls);
+                u.eng = new Combat.Engagement(t.cls, u.style, time, t.maxHp);
+                u.anchorX = Float.NaN;
+            }
+        } else {
+            u.inCombat = false; u.bracing = false;
+            if (u.eng != null && (u.noTargetFor += DT) > 2) closeEngagement(u, false);
+        }
+    }
+
+    void closeEngagement(Unit u, boolean died) {
+        if (u.eng == null) return;
+        teams.get(u.team).tactics.learn(u, u.eng, died);
+        u.eng = null; u.anchorX = Float.NaN;
+    }
+
+    void faceFast(Unit u, float tx, float tz) {
+        float want = (float) Math.atan2(tx - u.x, tz - u.z), diff = want - u.yaw;
+        while (diff > Math.PI) diff -= 2 * Math.PI;
+        while (diff < -Math.PI) diff += 2 * Math.PI;
+        u.yaw += diff * .5f;
     }
 
     /** Returns {x, z, isWaypoint} — the goal itself if the way is clear, else the next waypoint of an A* path. */
@@ -396,10 +533,12 @@ public final class World {
         var w = u.weapon;
         switch (w.kind()) {
             case "melee" -> {
-                if (dist(u.x, u.z, t.x, t.z) > u.range + u.radius + t.radius + .6f) return;   // whiffed: target moved away
-                float dmg = (float) w.damage();
-                if (w.aoe() > 0) areaDamage(u.team, t.x, t.z, (float) w.aoe(), dmg, (float) w.knockback(), u.x, u.z);
-                else damage(t, dmg, (float) w.knockback(), u.x, u.z, Rig.TORSO);
+                if (dist(u.x, u.z, t.x, t.z) > u.range + u.radius + t.radius + .6f) { meleeWhiffs++; return; }   // whiffed: target moved away
+                meleeHits++;
+                float dmg = (float) w.damage() * Abilities.strikeMul(this, u, t);
+                if (w.aoe() > 0) areaDamage(u.team, t.x, t.z, (float) w.aoe(), dmg, (float) w.knockback(), u.x, u.z, u);
+                else damage(t, dmg, (float) w.knockback(), u.x, u.z, Rig.TORSO, u);
+                Abilities.afterMelee(this, u, t, dmg);
             }
             case "support" -> {
                 if (w.damage() < 0) {
@@ -489,10 +628,11 @@ public final class World {
         float spread = .03f * d;
         lx += (rng.nextFloat() - .5f) * spread; lz += (rng.nextFloat() - .5f) * spread;
         float vx = (lx - sx) / T, vz = (lz - sz) / T, vy = (ty - sy - .5f * g * T * T) / T;
-        int volley = Math.max(1, w.count());
+        int volley = Math.max(Math.max(1, w.count()), u.volleyShots); u.volleyShots = 0;
+        float dmg = (float) w.damage() * Abilities.strikeMul(this, u, u.target);
         for (int i = 0; i < volley; i++) {
             float j = volley > 1 ? (rng.nextFloat() - .5f) * 3 : 0;
-            projectiles.add(new Projectile(u, sx, sy, sz, vx + j, vy, vz + j * .7f, (float) w.damage(), (float) w.aoe(), (float) w.knockback(), g, vis));
+            projectiles.add(new Projectile(u, sx, sy, sz, vx + j, vy, vz + j * .7f, dmg, (float) w.aoe(), (float) w.knockback(), g, vis));
         }
     }
 
@@ -506,7 +646,7 @@ public final class World {
             if (!hitGround) {
                 bestFound = null; bestScore = 1e9f;
                 hash.query(p.x, p.z, 1.6f, o -> {
-                    if (o.team == p.team || !o.alive) return;
+                    if (o.team == p.team || !o.alive || o == p.lastHit) return;
                     float oy = terrain.groundY(o.x, o.z) + 1f * o.ragdoll.scale;
                     float dx = o.x - p.x, dy = oy - p.y, dz = o.z - p.z, rr = o.radius + .35f;
                     float d2 = dx * dx + dz * dz;
@@ -519,42 +659,74 @@ public final class World {
                 if (b.alive && b.team != p.team && b.contains(p.x, p.z, .2f) && p.y < terrain.groundY(b.x, b.z) + 3.5f) { hitB = b; break; }
             if (hit != null || hitB != null || hitGround || p.life <= 0) {
                 float ox = p.x - p.vx * .1f, oz = p.z - p.vz * .1f;
+                boolean keep = false;
                 if (p.aoe > 0) {
-                    areaDamage(p.team, p.x, p.z, p.aoe, p.damage, p.knockback, ox, oz);
+                    areaDamage(p.team, p.x, p.z, p.aoe, p.damage, p.knockback, ox, oz, p.owner);
                     for (Building b : buildings) if (b.alive && b.team != p.team && b.distTo(p.x, p.z) < p.aoe) damageBuilding(b, p.damage);
+                    if (hit != null) Abilities.onProjectileHit(this, p, hit);
                 }
-                else if (hit != null) damage(hit, p.damage, p.knockback, ox, oz, Rig.TORSO);
+                else if (hit != null) { damage(hit, p.damage, p.knockback, ox, oz, Rig.TORSO, p.owner); keep = Abilities.onProjectileHit(this, p, hit); }
                 else if (hitB != null) damageBuilding(hitB, p.damage);
-                p.dead = true;
+                p.dead = !keep || hitGround || p.life <= 0;
             }
         }
         projectiles.removeIf(p -> p.dead);
     }
 
-    void areaDamage(int team, float x, float z, float r, float dmg, float kb, float fromX, float fromZ) {
+    void areaDamage(int team, float x, float z, float r, float dmg, float kb, float fromX, float fromZ) { areaDamage(team, x, z, r, dmg, kb, fromX, fromZ, null); }
+
+    void areaDamage(int team, float x, float z, float r, float dmg, float kb, float fromX, float fromZ, Unit src) {
+        areaHit = true;
         hash.query(x, z, r, o -> {
             if (o.team == team || !o.alive) return;
             float d = dist(x, z, o.x, o.z);
             if (d > r + o.radius) return;
             float f = 1f - .6f * Math.min(1, d / r);
-            damage(o, dmg * f, kb * f, x == fromX && z == fromZ ? fromX : x, z, Rig.HIP);
+            damage(o, dmg * f, kb * f, x == fromX && z == fromZ ? fromX : x, z, Rig.HIP, src);
         });
+        areaHit = false;
     }
 
+    boolean areaHit;
+
     /** Applies damage plus a physical knockback: the ragdoll is shoved, balance drops, the controller is pushed. */
-    public void damage(Unit t, float dmg, float knockback, float fromX, float fromZ, int part) {
+    public void damage(Unit t, float dmg, float knockback, float fromX, float fromZ, int part) { damage(t, dmg, knockback, fromX, fromZ, part, null); }
+
+    public void damage(Unit t, float dmg, float knockback, float fromX, float fromZ, int part, Unit src) {
+        if (!t.alive) return;
+        if (src != null && src.team != t.team && (dmg > 0 || knockback > 0)) {
+            float[] r = Abilities.onDamaged(this, t, src, dmg, knockback, fromX, fromZ, areaHit);
+            if (r == null) { dodges++; return; }
+            dmg = r[0]; knockback = r[1];
+        }
+        float before = t.hp;
         t.hp -= dmg;
+        if (dmg > 0) {
+            float dealt = Math.min(before, dmg);
+            if (t.eng != null) t.eng.taken += dealt;
+            if (src != null && src.eng != null && src.team != t.team) src.eng.dealt += dealt;
+        }
         float dx = t.x - fromX, dz = t.z - fromZ, d = Math.max(.01f, (float) Math.sqrt(dx * dx + dz * dz));
         dx /= d; dz /= d;
         float massK = 50f / (t.ragdoll.totalMass * t.ragdoll.scale * t.stats.mass());   // humanoid ~ 1.0
         float shove = knockback * massK;
-        t.ragdoll.impulse(Math.min(part, t.ragdoll.rig.n - 1), dx * shove * 40f, shove * 18f, dz * shove * 40f, DT);
-        t.ragdoll.balance = Math.max(0, t.ragdoll.balance - shove * .22f);
-        t.vx += dx * shove * .8f; t.vz += dz * shove * .8f;
-        if (t.hp <= 0 && t.alive) die(t, dx * shove, dz * shove);
+        // footing: units set for a fight, bracing or under a war cry are much harder to topple
+        float resist = Math.min(.75f, (t.inCombat ? .25f : 0) + (t.bracing ? .4f : 0) + t.buffStab * .6f);
+        if (knockback > 0) {
+            t.ragdoll.impulse(Math.min(part, t.ragdoll.rig.n - 1), dx * shove * 40f * (1 - resist * .5f), shove * 18f, dz * shove * 40f * (1 - resist * .5f), DT);
+            t.ragdoll.balance = Math.max(0, t.ragdoll.balance - shove * .22f * (1 - resist));
+            t.vx += dx * shove * .8f * (1 - resist * .5f); t.vz += dz * shove * .8f * (1 - resist * .5f);
+            t.lastHit = time;
+        }
+        if (t.hp <= 0 && t.alive) {
+            if (src != null && src.eng != null && src.team != t.team) src.eng.kills++;
+            die(t, dx * shove, dz * shove);
+        }
     }
 
     void die(Unit t, float kx, float kz) {
+        closeEngagement(t, true);
+        t.charging = t.spinning = t.leaping = t.bracing = false;
         t.alive = false; t.hp = 0; t.ragdoll.limp = true; t.ragdoll.down = true; t.ragdoll.sleeping = false; t.knocked = true;
         t.ragdoll.impulseAll(kx * 30, 40, kz * 30, DT, 1);
         teams.get(t.team).supplyUsed -= t.def.supply();
@@ -595,6 +767,7 @@ public final class World {
             Ragdoll r = u.ragdoll;
             float recovery = .35f;
             if (u.alive) {
+                r.stance = (u.inCombat || u.bracing ? 1f : 0f) + u.buffStab;
                 float atk = u.attackAnim;
                 r.pose(u.x, terrain.groundY(u.x, u.z), u.z, u.yaw, u.walkPhase, u.walkAmount, atk);
             }

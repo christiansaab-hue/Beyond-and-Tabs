@@ -18,6 +18,7 @@
   "physics_profile",
   "scale",
   "icon",
+  "ability",
   "unverified"
  ],
  "rows": [
@@ -38,7 +39,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "commander_t0",
-   "base_cost": 400
+   "base_cost": 400,
+   "ability": "rally"
   },
   {
    "id": "aw_builder_t1",
@@ -57,7 +59,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "builder_t1",
-   "base_cost": 60
+   "base_cost": 60,
+   "ability": "none"
   },
   {
    "id": "aw_builder_t2",
@@ -76,7 +79,8 @@
    "supply": 2,
    "physics_profile": "vehicle",
    "icon": "builder_t2",
-   "base_cost": 300
+   "base_cost": 300,
+   "ability": "none"
   },
   {
    "id": "aw_clubber",
@@ -95,7 +99,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
-   "base_cost": 70
+   "base_cost": 70,
+   "ability": "none"
   },
   {
    "id": "aw_protector",
@@ -114,7 +119,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
-   "base_cost": 80
+   "base_cost": 80,
+   "ability": "shield_block"
   },
   {
    "id": "aw_spear_thrower",
@@ -133,7 +139,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "ranged_t1",
-   "base_cost": 120
+   "base_cost": 120,
+   "ability": "none"
   },
   {
    "id": "aw_headbutter",
@@ -152,7 +159,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
-   "base_cost": 90
+   "base_cost": 90,
+   "ability": "headbutt"
   },
   {
    "id": "aw_hoplite",
@@ -171,7 +179,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
-   "base_cost": 180
+   "base_cost": 180,
+   "ability": "shield_block"
   },
   {
    "id": "aw_stoner",
@@ -190,7 +199,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "ranged_t2",
-   "base_cost": 160
+   "base_cost": 160,
+   "ability": "none"
   },
   {
    "id": "aw_bone_mage",
@@ -209,7 +219,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "support_t2",
-   "base_cost": 300
+   "base_cost": 300,
+   "ability": "none"
   },
   {
    "id": "aw_brawler",
@@ -228,7 +239,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t2",
-   "base_cost": 140
+   "base_cost": 140,
+   "ability": "dodge"
   },
   {
    "id": "aw_ice_archer",
@@ -247,7 +259,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "ranged_t2",
-   "base_cost": 160
+   "base_cost": 160,
+   "ability": "frost"
   },
   {
    "id": "aw_berserker",
@@ -266,7 +279,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t2",
-   "base_cost": 250
+   "base_cost": 250,
+   "ability": "whirlwind"
   },
   {
    "id": "aw_shield_bearer",
@@ -285,7 +299,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t2",
-   "base_cost": 120
+   "base_cost": 120,
+   "ability": "shield_bash"
   },
   {
    "id": "aw_sarissa",
@@ -304,7 +319,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t2",
-   "base_cost": 200
+   "base_cost": 200,
+   "ability": "brace"
   },
   {
    "id": "aw_snake_archer",
@@ -323,7 +339,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "ranged_t2",
-   "base_cost": 180
+   "base_cost": 180,
+   "ability": "poison"
   },
   {
    "id": "aw_valkyrie",
@@ -342,7 +359,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "hero_t3",
-   "base_cost": 500
+   "base_cost": 500,
+   "ability": "leap"
   },
   {
    "id": "aw_jarl",
@@ -361,7 +379,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "hero_t3",
-   "base_cost": 850
+   "base_cost": 850,
+   "ability": "war_cry"
   },
   {
    "id": "aw_minotaur",
@@ -380,7 +399,8 @@
    "supply": 4,
    "physics_profile": "large",
    "icon": "hero_t3",
-   "base_cost": 1000
+   "base_cost": 1000,
+   "ability": "charge"
   },
   {
    "id": "aw_mammoth",
@@ -399,7 +419,8 @@
    "supply": 4,
    "physics_profile": "quadruped_large",
    "icon": "cavalry_t3",
-   "base_cost": 2200
+   "base_cost": 2200,
+   "ability": "trample"
   },
   {
    "id": "aw_ballista",
@@ -418,7 +439,8 @@
    "supply": 2,
    "physics_profile": "siege",
    "icon": "siege_t3",
-   "base_cost": 900
+   "base_cost": 900,
+   "ability": "pierce"
   },
   {
    "id": "aw_longship",
@@ -437,7 +459,8 @@
    "supply": 4,
    "physics_profile": "vehicle_large",
    "icon": "siege_t3",
-   "base_cost": 1000
+   "base_cost": 1000,
+   "ability": "none"
   },
   {
    "id": "aw_zeus",
@@ -456,7 +479,8 @@
    "supply": 4,
    "physics_profile": "large",
    "icon": "hero_t3",
-   "base_cost": 2000
+   "base_cost": 2000,
+   "ability": "chain_lightning"
   },
   {
    "id": "kd_commander",
@@ -475,7 +499,8 @@
    "supply": 4,
    "physics_profile": "humanoid",
    "icon": "commander_t0",
-   "base_cost": 1500
+   "base_cost": 1500,
+   "ability": "rally"
   },
   {
    "id": "kd_builder_t1",
@@ -494,7 +519,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "builder_t1",
-   "base_cost": 60
+   "base_cost": 60,
+   "ability": "none"
   },
   {
    "id": "kd_builder_t2",
@@ -513,7 +539,8 @@
    "supply": 2,
    "physics_profile": "vehicle",
    "icon": "builder_t2",
-   "base_cost": 300
+   "base_cost": 300,
+   "ability": "none"
   },
   {
    "id": "kd_bard",
@@ -532,7 +559,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "support_t1",
-   "base_cost": 60
+   "base_cost": 60,
+   "ability": "inspire"
   },
   {
    "id": "kd_squire",
@@ -551,7 +579,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
-   "base_cost": 100
+   "base_cost": 100,
+   "ability": "shield_block"
   },
   {
    "id": "kd_archer",
@@ -570,7 +599,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "ranged_t1",
-   "base_cost": 140
+   "base_cost": 140,
+   "ability": "volley"
   },
   {
    "id": "kd_fencer",
@@ -589,7 +619,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
-   "base_cost": 150
+   "base_cost": 150,
+   "ability": "riposte"
   },
   {
    "id": "kd_painter",
@@ -608,7 +639,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
-   "base_cost": 50
+   "base_cost": 50,
+   "ability": "none"
   },
   {
    "id": "kd_healer",
@@ -627,7 +659,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "support_t2",
-   "base_cost": 180
+   "base_cost": 180,
+   "ability": "heal_pulse"
   },
   {
    "id": "kd_samurai",
@@ -646,7 +679,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "inf_t2",
-   "base_cost": 500
+   "base_cost": 500,
+   "ability": "cleave"
   },
   {
    "id": "kd_monk",
@@ -665,7 +699,8 @@
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "support_t2",
-   "base_cost": 250
+   "base_cost": 250,
+   "ability": "push_wave"
   },
   {
    "id": "kd_ninja",
@@ -684,7 +719,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "inf_t2",
-   "base_cost": 500
+   "base_cost": 500,
+   "ability": "shadowstep"
   },
   {
    "id": "kd_halberd",
@@ -703,7 +739,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "inf_t2",
-   "base_cost": 400
+   "base_cost": 400,
+   "ability": "brace"
   },
   {
    "id": "kd_musketeer",
@@ -722,7 +759,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "ranged_t2",
-   "base_cost": 300
+   "base_cost": 300,
+   "ability": "none"
   },
   {
    "id": "kd_balloon_archer",
@@ -741,7 +779,8 @@
    "supply": 1,
    "physics_profile": "flyer",
    "icon": "ranged_t2",
-   "base_cost": 250
+   "base_cost": 250,
+   "ability": "none"
   },
   {
    "id": "kd_knight",
@@ -760,7 +799,8 @@
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "hero_t3",
-   "base_cost": 650
+   "base_cost": 650,
+   "ability": "cleave"
   },
   {
    "id": "kd_jouster",
@@ -779,7 +819,8 @@
    "supply": 2,
    "physics_profile": "mounted",
    "icon": "cavalry_t3",
-   "base_cost": 750
+   "base_cost": 750,
+   "ability": "charge"
   },
   {
    "id": "kd_firework_archer",
@@ -798,7 +839,8 @@
    "supply": 4,
    "physics_profile": "humanoid",
    "icon": "ranged_t3",
-   "base_cost": 1500
+   "base_cost": 1500,
+   "ability": "volley"
   },
   {
    "id": "kd_monkey_king",
@@ -817,7 +859,8 @@
    "supply": 4,
    "physics_profile": "humanoid",
    "icon": "hero_t3",
-   "base_cost": 2000
+   "base_cost": 2000,
+   "ability": "leap"
   },
   {
    "id": "kd_catapult",
@@ -836,7 +879,8 @@
    "supply": 4,
    "physics_profile": "siege",
    "icon": "siege_t3",
-   "base_cost": 1000
+   "base_cost": 1000,
+   "ability": "none"
   },
   {
    "id": "kd_hwacha",
@@ -855,7 +899,8 @@
    "supply": 4,
    "physics_profile": "siege",
    "icon": "siege_t3",
-   "base_cost": 1500
+   "base_cost": 1500,
+   "ability": "none"
   },
   {
    "id": "kd_davinci_tank",
@@ -874,7 +919,8 @@
    "supply": 4,
    "physics_profile": "vehicle_large",
    "icon": "siege_t3",
-   "base_cost": 4000
+   "base_cost": 4000,
+   "ability": "none"
   },
   {
    "id": "kd_dragon",
@@ -893,7 +939,8 @@
    "supply": 4,
    "physics_profile": "flyer_large",
    "icon": "hero_t3",
-   "base_cost": 3000
+   "base_cost": 3000,
+   "ability": "burn"
   }
  ]
 }

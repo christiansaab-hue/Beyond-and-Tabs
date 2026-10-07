@@ -17,6 +17,8 @@ public final class Ragdoll {
     /** Knocked down: muscles mostly off until balance recovers, then the unit pushes itself back up. */
     public boolean down;
     public boolean sleeping;
+    /** 0 = relaxed, 1+ = set for a fight: muscles hold the pose harder so weapons stay on target. */
+    public float stance;
     int stillTicks;
 
     static final float GRAVITY = -24f;      // blocks/s^2 (Minecraft-scale units are ~1.8 blocks tall)
@@ -93,7 +95,7 @@ public final class Ragdoll {
     public boolean step(float dt, Terrain terrain, int iterations, float balanceRecovery) {
         if (sleeping) return false;
         int n = rig.n;
-        float muscle = limp ? 0f : down ? POSE_K * 0.02f : POSE_K * (0.1f + 0.9f * balance * balance);
+        float muscle = limp ? 0f : down ? POSE_K * 0.02f : POSE_K * (0.1f + 0.9f * balance * balance) * (1 + .6f * Math.min(1.5f, stance));
         float g = GRAVITY * dt * dt;
         float maxMove = 0;
         for (int i = 0; i < n; i++) {

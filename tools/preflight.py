@@ -23,6 +23,7 @@ for r in S["units"]["rows"]:
     ref("units", r["id"], "factory", ["buildings"], r["factory"])
     ref("units", r["id"], "weapon_class", ["weapon_classes"], r["weapon_class"])
     ref("units", r["id"], "physics_profile", ["bodies"], r["physics_profile"])
+    ref("units", r["id"], "ability", ["abilities"], r["ability"], allow=())
 for r in S["buildings"]["rows"]:
     ref("buildings", r["id"], "race", ["races"], r["race"])
     ref("buildings", r["id"], "requires_tech", ["tech"], r["requires_tech"])

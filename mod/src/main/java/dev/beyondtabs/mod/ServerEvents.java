@@ -43,6 +43,7 @@ public final class ServerEvents {
         int before = w.winner;
         w.tick();
         if (level.getGameTime() % 5 == 0) m.structures.update();
+        if ((before < 0 && w.winner >= 0) || level.getGameTime() % 1200 == 0) TacticsStore.save(w);
         if (before < 0 && w.winner >= 0)
             for (ServerPlayer p : level.players()) p.sendSystemMessage(Component.literal(
                     m.teamOf(p.getUUID()) == w.winner ? "Victory! The enemy commander has fallen." : "Defeat. Your commander has fallen."));
@@ -65,10 +66,23 @@ public final class ServerEvents {
             .then(Commands.literal("watch").executes(c -> start(c, "ancient_world", "kingdoms", "normal", true))
                 .then(Commands.argument("difficulty", StringArgumentType.word()).executes(c -> start(c, "ancient_world", "kingdoms", StringArgumentType.getString(c, "difficulty"), true))))
             .then(Commands.literal("battle").then(Commands.argument("perSide", IntegerArgumentType.integer(1, 400)).executes(this::battle)))
-            .then(Commands.literal("clear").executes(c -> { MATCHES.remove(c.getSource().getLevel()); say(c, "Match cleared."); return 1; }))
+            .then(Commands.literal("clear").executes(c -> { Match old = MATCHES.remove(c.getSource().getLevel()); if (old != null) TacticsStore.save(old.world); say(c, "Match cleared."); return 1; }))
+            .then(Commands.literal("tactics").executes(ServerEvents::tactics))
             .then(Commands.literal("shove").executes(this::shove))
             .then(Commands.literal("showcase").executes(this::showcase))
             .then(Commands.literal("stats").executes(this::stats)));
+    }
+
+    /** What each army has learned: the best style per (unit, enemy class). */
+    static int tactics(CommandContext<CommandSourceStack> c) {
+        Match m = MATCHES.get(c.getSource().getLevel());
+        if (m == null) { say(c, "No match running."); return 0; }
+        for (var t : m.world.teams) {
+            say(c, "== " + t.race + " (" + t.tactics.engagements + " fights learned from) ==");
+            int n = 0;
+            for (var e : t.tactics.summary().entrySet()) { if (n++ >= 12) { say(c, "  ..."); break; } say(c, "  " + e.getKey().replace("|", " vs ") + ": " + e.getValue()); }
+        }
+        return 1;
     }
 
     static Match match(ServerLevel l) { return MATCHES.computeIfAbsent(l, Match::new); }
@@ -86,6 +100,7 @@ public final class ServerEvents {
         Match m = new Match(level); MATCHES.put(level, m);
         World w = m.world;
         w.addTeam(race); w.addTeam(enemy);
+        TacticsStore.load(w);
         if (player != null && !watch) m.playerTeams.put(player.getUUID(), 0);
         Vec3 p = c.getSource().getPosition();
         float yaw = (float) Math.toRadians(-c.getSource().getRotation().y), fx = (float) Math.sin(yaw), fz = (float) Math.cos(yaw);

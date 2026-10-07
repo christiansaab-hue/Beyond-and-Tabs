@@ -1,0 +1,198 @@
+{
+ "sheet": "tactics",
+ "notes": "Combat styles and the starting guess (prior) for each matchup. Units then learn during the match which style trades best against each kind of enemy and drift towards it. Classes: infantry, shield, reach, ranged, cavalry, large, siege, flyer, support; 'any' matches everything.",
+ "columns": [
+  "id",
+  "my_class",
+  "enemy_class",
+  "style",
+  "note",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "ranged_vs_infantry",
+   "my_class": "ranged",
+   "enemy_class": "infantry",
+   "style": "kite",
+   "note": "Keep the distance, shoot while backing off.",
+   "unverified": []
+  },
+  {
+   "id": "ranged_vs_shield",
+   "my_class": "ranged",
+   "enemy_class": "shield",
+   "style": "kite",
+   "note": "Shields block frontal arrows; keep away and let flankers work.",
+   "unverified": []
+  },
+  {
+   "id": "ranged_vs_cavalry",
+   "my_class": "ranged",
+   "enemy_class": "cavalry",
+   "style": "hold",
+   "note": "You can't outrun horses; stand by the spears.",
+   "unverified": []
+  },
+  {
+   "id": "ranged_vs_ranged",
+   "my_class": "ranged",
+   "enemy_class": "ranged",
+   "style": "focus",
+   "note": "Win the archer duel by focusing one target at a time.",
+   "unverified": []
+  },
+  {
+   "id": "ranged_vs_large",
+   "my_class": "ranged",
+   "enemy_class": "large",
+   "style": "focus",
+   "note": "Pour everything into the big one.",
+   "unverified": []
+  },
+  {
+   "id": "ranged_vs_any",
+   "my_class": "ranged",
+   "enemy_class": "any",
+   "style": "kite",
+   "note": "Default for shooters: keep range.",
+   "unverified": []
+  },
+  {
+   "id": "reach_vs_cavalry",
+   "my_class": "reach",
+   "enemy_class": "cavalry",
+   "style": "hold",
+   "note": "Brace and let them run onto the points.",
+   "unverified": []
+  },
+  {
+   "id": "reach_vs_large",
+   "my_class": "reach",
+   "enemy_class": "large",
+   "style": "hold",
+   "note": "Keep the giant at spear length.",
+   "unverified": []
+  },
+  {
+   "id": "reach_vs_any",
+   "my_class": "reach",
+   "enemy_class": "any",
+   "style": "hold",
+   "note": "Keep enemies at the tip of the weapon.",
+   "unverified": []
+  },
+  {
+   "id": "infantry_vs_ranged",
+   "my_class": "infantry",
+   "enemy_class": "ranged",
+   "style": "flank",
+   "note": "Go round the front line to the archers.",
+   "unverified": []
+  },
+  {
+   "id": "infantry_vs_support",
+   "my_class": "infantry",
+   "enemy_class": "support",
+   "style": "flank",
+   "note": "Kill the healers first.",
+   "unverified": []
+  },
+  {
+   "id": "infantry_vs_large",
+   "my_class": "infantry",
+   "enemy_class": "large",
+   "style": "skirmish",
+   "note": "Hit and step back out of its reach.",
+   "unverified": []
+  },
+  {
+   "id": "infantry_vs_reach",
+   "my_class": "infantry",
+   "enemy_class": "reach",
+   "style": "aggressive",
+   "note": "Get inside the spear points fast.",
+   "unverified": []
+  },
+  {
+   "id": "infantry_vs_any",
+   "my_class": "infantry",
+   "enemy_class": "any",
+   "style": "aggressive",
+   "note": "Default for foot soldiers: close and fight.",
+   "unverified": []
+  },
+  {
+   "id": "shield_vs_ranged",
+   "my_class": "shield",
+   "enemy_class": "ranged",
+   "style": "aggressive",
+   "note": "Advance behind the shield.",
+   "unverified": []
+  },
+  {
+   "id": "shield_vs_any",
+   "my_class": "shield",
+   "enemy_class": "any",
+   "style": "hold",
+   "note": "Hold the line.",
+   "unverified": []
+  },
+  {
+   "id": "cavalry_vs_ranged",
+   "my_class": "cavalry",
+   "enemy_class": "ranged",
+   "style": "flank",
+   "note": "Ride round and charge the archers.",
+   "unverified": []
+  },
+  {
+   "id": "cavalry_vs_reach",
+   "my_class": "cavalry",
+   "enemy_class": "reach",
+   "style": "skirmish",
+   "note": "Don't charge spears head-on.",
+   "unverified": []
+  },
+  {
+   "id": "cavalry_vs_any",
+   "my_class": "cavalry",
+   "enemy_class": "any",
+   "style": "aggressive",
+   "note": "Default for riders: charge in.",
+   "unverified": []
+  },
+  {
+   "id": "large_vs_any",
+   "my_class": "large",
+   "enemy_class": "any",
+   "style": "aggressive",
+   "note": "Default for monsters: wade in.",
+   "unverified": []
+  },
+  {
+   "id": "siege_vs_any",
+   "my_class": "siege",
+   "enemy_class": "any",
+   "style": "hold",
+   "note": "Stay behind the army.",
+   "unverified": []
+  },
+  {
+   "id": "flyer_vs_any",
+   "my_class": "flyer",
+   "enemy_class": "any",
+   "style": "kite",
+   "note": "Default for flyers: circle at range.",
+   "unverified": []
+  },
+  {
+   "id": "support_vs_any",
+   "my_class": "support",
+   "enemy_class": "any",
+   "style": "hold",
+   "note": "Stay behind your troops.",
+   "unverified": []
+  }
+ ]
+}

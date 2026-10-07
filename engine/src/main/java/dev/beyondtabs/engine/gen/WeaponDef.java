@@ -19,7 +19,7 @@ public record WeaponDef(String id, String kind, double range, int damage, double
     public static final WeaponDef TRAMPLE = new WeaponDef("trample", "melee", 3.0, 180, 1.5, 2.5, 25.0, "none", 0.0, 1, 0.0);
     public static final WeaponDef LANCE_CHARGE = new WeaponDef("lance_charge", "melee", 3.0, 300, 3.0, 0.0, 20.0, "none", 0.0, 1, 0.0);
     public static final WeaponDef THROWN = new WeaponDef("thrown", "ranged", 14.0, 55, 2.5, 0.0, 3.0, "spear", 20.0, 1, 24.0);
-    public static final WeaponDef THROWN_HEAVY = new WeaponDef("thrown_heavy", "ranged", 12.0, 120, 3.5, 1.5, 10.0, "boulder", 20.0, 1, 20.0);
+    public static final WeaponDef THROWN_HEAVY = new WeaponDef("thrown_heavy", "ranged", 12.0, 80, 4.5, 1.5, 8.0, "boulder", 20.0, 1, 20.0);
     public static final WeaponDef BOW = new WeaponDef("bow", "ranged", 22.0, 45, 2.0, 0.0, 1.0, "arrow", 20.0, 1, 32.0);
     public static final WeaponDef BOW_SLOW = new WeaponDef("bow_slow", "ranged", 20.0, 40, 2.2, 0.0, 1.0, "ice_arrow", 20.0, 1, 32.0);
     public static final WeaponDef BOW_POISON = new WeaponDef("bow_poison", "ranged", 20.0, 35, 2.0, 0.0, 1.0, "snake_arrow", 20.0, 1, 32.0);
