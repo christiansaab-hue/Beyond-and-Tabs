@@ -25,6 +25,8 @@ public final class Snapshot {
     /** Last "under attack" alert for my team: seconds ago (-1 none), where, and whether a building was hit. */
     public float alertAge = -1, alertX, alertZ; public boolean alertBuilding;
     public boolean paused; public float speed = 1;
+    /** Per team: colour (RGB) and alliance (-1 = none). */
+    public int[] teamColors = new int[0]; public byte[] alliances = new byte[0];
 
     public static final class U {
         public int id; public byte team; public short def; public boolean alive, knocked;
@@ -41,6 +43,7 @@ public final class Snapshot {
 
     public void encode(FriendlyByteBuf b) {
         b.writeVarLong(tick); b.writeVarInt(myTeam + 1); b.writeVarInt(winner + 1); b.writeUtf(myRace); b.writeBoolean(blockStyle); b.writeFloat(alertAge); b.writeFloat(alertX); b.writeFloat(alertZ); b.writeBoolean(alertBuilding); b.writeBoolean(paused); b.writeFloat(speed);
+        b.writeVarInt(teamColors.length); for (int i = 0; i < teamColors.length; i++) { b.writeInt(teamColors[i]); b.writeByte(alliances[i]); }
         for (float f : new float[]{metal, metalMax, metalIncome, metalSpend, energy, energyMax, energyIncome, energySpend, efficiency}) b.writeFloat(f);
         b.writeVarInt(supplyUsed); b.writeVarInt(supplyCap);
         b.writeVarInt(researched.size()); for (String r : researched) b.writeUtf(r);
@@ -77,6 +80,7 @@ public final class Snapshot {
 
     public static Snapshot decode(FriendlyByteBuf b) {
         Snapshot s = new Snapshot(); s.tick = b.readVarLong(); s.myTeam = b.readVarInt() - 1; s.winner = b.readVarInt() - 1; s.myRace = b.readUtf(); s.blockStyle = b.readBoolean(); s.alertAge = b.readFloat(); s.alertX = b.readFloat(); s.alertZ = b.readFloat(); s.alertBuilding = b.readBoolean(); s.paused = b.readBoolean(); s.speed = b.readFloat();
+        int tn = b.readVarInt(); s.teamColors = new int[tn]; s.alliances = new byte[tn]; for (int i = 0; i < tn; i++) { s.teamColors[i] = b.readInt(); s.alliances[i] = b.readByte(); }
         s.metal = b.readFloat(); s.metalMax = b.readFloat(); s.metalIncome = b.readFloat(); s.metalSpend = b.readFloat();
         s.energy = b.readFloat(); s.energyMax = b.readFloat(); s.energyIncome = b.readFloat(); s.energySpend = b.readFloat(); s.efficiency = b.readFloat();
         s.supplyUsed = b.readVarInt(); s.supplyCap = b.readVarInt();

@@ -51,6 +51,23 @@ public final class ServerEvents {
         for (ServerPlayer p : level.players()) Network.sendSnapshot(p, m, spots);
     }
 
+    @SubscribeEvent
+    public void onLogin(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e) {
+        if (!(e.getEntity() instanceof ServerPlayer p)) return;
+        p.sendSystemMessage(Component.literal("Beyond & TABS: press V to open the battle lobby (or the RTS view during a match)."));
+        Network.sendLobby(p, LobbyServer.of(p.serverLevel()), false);
+    }
+
+    @SubscribeEvent
+    public void onLogout(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) {
+        if (!(e.getEntity() instanceof ServerPlayer p)) return;
+        Lobby lb = LobbyServer.LOBBIES.get(p.serverLevel());
+        if (lb == null || lb.started) return;
+        lb.unseat(p.getUUID());
+        if (p.getUUID().equals(lb.host)) lb.host = null;
+        for (ServerPlayer q : p.serverLevel().players()) if (q != p) Network.sendLobby(q, lb, false);
+    }
+
     @SubscribeEvent public void onBreak(BlockEvent.BreakEvent e) { invalidate(e.getLevel()); }
     @SubscribeEvent public void onPlace(BlockEvent.EntityPlaceEvent e) { invalidate(e.getLevel()); }
     private void invalidate(Object level) { if (level instanceof ServerLevel l && MATCHES.containsKey(l)) MATCHES.get(l).terrain.invalidate(); }
@@ -68,6 +85,7 @@ public final class ServerEvents {
             .then(Commands.literal("battle").then(Commands.argument("perSide", IntegerArgumentType.integer(1, 400)).executes(this::battle)))
             .then(Commands.literal("clear").executes(c -> { Match old = MATCHES.remove(c.getSource().getLevel()); if (old != null) TacticsStore.save(old.world); say(c, "Match cleared."); return 1; }))
             .then(Commands.literal("tactics").executes(ServerEvents::tactics))
+            .then(Commands.literal("lobby").executes(c -> { ServerPlayer p = c.getSource().getPlayer(); if (p != null) LobbyServer.open(p); return 1; }))
             .then(Commands.literal("style").then(Commands.argument("style", StringArgumentType.word())
                 .suggests((c, b) -> { b.suggest("blocks"); b.suggest("models"); return b.buildFuture(); })
                 .executes(c -> {
@@ -243,8 +261,8 @@ public final class ServerEvents {
                     switch (type) {
                         case ATTACK -> {
                             Unit t = unit(w, a.targetUnit); Building b = building(w, a.targetBuilding);
-                            if (t != null && t.alive && t.team != team) o = Order.attack(t);
-                            else if (b != null && b.alive && b.team != team) o = Order.attackBuilding(b);
+                            if (t != null && t.alive && !w.ally(t.team, team)) o = Order.attack(t);
+                            else if (b != null && b.alive && !w.ally(b.team, team)) o = Order.attackBuilding(b);
                             else continue;
                         }
                         case GUARD -> { Unit t = unit(w, a.targetUnit); if (t == null || !t.alive) continue; o = Order.guard(t); }

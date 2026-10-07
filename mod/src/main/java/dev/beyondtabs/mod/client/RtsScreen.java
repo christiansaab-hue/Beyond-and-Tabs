@@ -322,7 +322,7 @@ public final class RtsScreen extends Screen {
     static Snapshot.U unitAt(Snapshot s, Proj p, double mx, double my, boolean mine) {
         Snapshot.U best = null; double bd = 12 * 12;
         for (Snapshot.U u : s.units) {
-            if (!u.alive || (u.team == s.myTeam) != mine) continue;
+            if (!u.alive || (mine ? u.team != s.myTeam : ClientMatch.ally(u.team, s.myTeam))) continue;   // mine, or a real enemy (not an ally)
             float[] q = screenOf(p, u); if (q == null) continue;
             double d = (q[0] - mx) * (q[0] - mx) + (q[1] - my) * (q[1] - my);
             if (d < bd) { bd = d; best = u; }
@@ -332,7 +332,7 @@ public final class RtsScreen extends Screen {
 
     static Snapshot.B buildingAt(Snapshot s, float x, float z, boolean mine) {
         for (Snapshot.B b : s.buildings) {
-            if ((b.team == s.myTeam) != mine) continue;
+            if (mine ? b.team != s.myTeam : ClientMatch.ally(b.team, s.myTeam)) continue;
             BuildingDef d = BuildingDef.ALL.get(b.def); String[] f = d.footprint().split("x");
             if (Math.abs(x - b.x) <= Integer.parseInt(f[0]) / 2f + .5f && Math.abs(z - b.z) <= Integer.parseInt(f[1]) / 2f + .5f) return b;
         }
@@ -398,9 +398,12 @@ public final class RtsScreen extends Screen {
         if (help) drawHelp(g);
         if (attackMode || patrolNext) g.drawCenteredString(font, (patrolNext ? "Patrol" : "Attack-move") + ": right-click a destination", width / 2, height - 118, 0xFFFF7060);
         if (s.winner >= 0) {
-            String msg = s.winner == s.myTeam ? "VICTORY" : "DEFEAT";
-            g.fill(width / 2 - 90, height / 2 - 22, width / 2 + 90, height / 2 + 22, BG);
-            g.drawCenteredString(font, msg, width / 2, height / 2 - 4, s.winner == s.myTeam ? 0xFF7CFF7C : 0xFFFF6A6A);
+            boolean won = s.myTeam >= 0 && ClientMatch.ally(s.winner, s.myTeam);
+            String msg = s.myTeam < 0 ? "BATTLE OVER" : won ? "VICTORY" : "DEFEAT";
+            g.fill(width / 2 - 100, height / 2 - 30, width / 2 + 100, height / 2 + 30, BG); outline(g, width / 2 - 100, height / 2 - 30, 200, 60, EDGE);
+            g.drawCenteredString(font, msg, width / 2, height / 2 - 20, s.myTeam < 0 ? TXT : won ? 0xFF7CFF7C : 0xFFFF6A6A);
+            button(g, width / 2 - 60, height / 2, 120, 18, "Back to lobby", "End this battle and set up the next one",
+                    () -> Network.send(new dev.beyondtabs.mod.LobbyAction(dev.beyondtabs.mod.LobbyAction.Op.RETURN)), null, false, true);
         }
         // tooltips
         for (Btn b : buttons) if (b.tip != null && mx >= b.x && my >= b.y && mx < b.x + b.w && my < b.y + b.h) tooltip(g, b.tip, mx, my);

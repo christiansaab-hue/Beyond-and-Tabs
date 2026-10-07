@@ -399,6 +399,7 @@ public final class MatchRenderer {
     @SubscribeEvent
     public static void onLogout(net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut e) {
         ClientMatch.clear();
+        ClientLobby.clear();
         clearCache();
         if (RtsCamera.active) RtsCamera.exit();
     }

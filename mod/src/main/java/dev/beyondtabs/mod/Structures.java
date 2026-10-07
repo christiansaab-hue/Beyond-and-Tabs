@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.WallBannerBlock;
@@ -72,11 +73,28 @@ public final class Structures {
         if (w >= 5) p.clearBox(w / 2 - 1, 1, d - 1, w / 2 + 1, 2, d - 1);
     }
 
-    /** Team-coloured version of a banner (every banner in a plan is recoloured). */
-    static BlockState teamBanner(BlockState s, int team) {
+    /** Wall banners in DyeColor order (white, orange, magenta, light blue, yellow, lime, pink, gray, light gray, cyan, purple, blue, brown, green, red, black). */
+    static final Block[] WALL_BANNERS = {Blocks.WHITE_WALL_BANNER, Blocks.ORANGE_WALL_BANNER, Blocks.MAGENTA_WALL_BANNER, Blocks.LIGHT_BLUE_WALL_BANNER,
+            Blocks.YELLOW_WALL_BANNER, Blocks.LIME_WALL_BANNER, Blocks.PINK_WALL_BANNER, Blocks.GRAY_WALL_BANNER, Blocks.LIGHT_GRAY_WALL_BANNER,
+            Blocks.CYAN_WALL_BANNER, Blocks.PURPLE_WALL_BANNER, Blocks.BLUE_WALL_BANNER, Blocks.BROWN_WALL_BANNER, Blocks.GREEN_WALL_BANNER,
+            Blocks.RED_WALL_BANNER, Blocks.BLACK_WALL_BANNER};
+
+    /** The banner colour closest to an RGB team colour. */
+    static Block bannerFor(int rgb) {
+        int best = 0; long bd = Long.MAX_VALUE;
+        for (DyeColor c : DyeColor.values()) {
+            int t = c.getTextColor();
+            long dr = ((t >> 16) & 255) - ((rgb >> 16) & 255), dg = ((t >> 8) & 255) - ((rgb >> 8) & 255), db = (t & 255) - (rgb & 255);
+            long d = dr * dr * 3 + dg * dg * 4 + db * db * 2;
+            if (d < bd) { bd = d; best = c.ordinal(); }
+        }
+        return WALL_BANNERS[best];
+    }
+
+    /** Team-coloured version of a banner (every banner in a plan takes the team's lobby colour). */
+    BlockState teamBanner(BlockState s, int team) {
         if (!(s.getBlock() instanceof WallBannerBlock)) return s;
-        Block b = team == 0 ? Blocks.BLUE_WALL_BANNER : team == 1 ? Blocks.RED_WALL_BANNER : Blocks.WHITE_WALL_BANNER;
-        return b.defaultBlockState().setValue(WallBannerBlock.FACING, s.getValue(WallBannerBlock.FACING));
+        return bannerFor(match.colorOf(team)).defaultBlockState().setValue(WallBannerBlock.FACING, s.getValue(WallBannerBlock.FACING));
     }
 
     /** Called every few server ticks; only buildings whose 10% step, level or state changed are touched. */

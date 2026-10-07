@@ -26,10 +26,8 @@ final class Look {
     static final int ROPE = 0xC0A472, DIRT = 0x7A5C40, FIRE = 0xFF9A2E, GLOW = 0x9FE6FF, GREEN = 0x5FAF4A, ORE = 0x6FD0E6;
     static final int WINDOW = 0xFFC66A, BRONZE = 0xB07A36, COPPER = 0x5FA08A, MARBLE = 0xEDE8DE;
 
-    static final int[] TEAMS = {TEAM_BLUE, TEAM_RED, 0x4FB04A, 0xE0B83A, 0x9A5AD8, 0x3AB8C8};
-
-    /** Team colours are the same for everyone (team 0 blue, team 1 red, ...), matching the banners on block buildings. */
-    static int team(int team, int myTeam) { return team < 0 ? TEAM_GREY : TEAMS[team % TEAMS.length]; }
+    /** Team colours are the ones picked in the lobby, the same for everyone (and on the banners of block buildings). */
+    static int team(int team, int myTeam) { return team < 0 ? TEAM_GREY : ClientMatch.teamColor(team); }
     static int teamArgb(int team) { return 0xFF000000 | team(team, -1); }
 
     static final int SHADOW_TINT = 0x2E3A58, LIT_TINT = 0xFFF1D8;

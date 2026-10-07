@@ -26,6 +26,10 @@ public final class RtsClient {
 
     public static void toggle() {
         Minecraft mc = Minecraft.getInstance();
+        if (!RtsCamera.active && !ClientMatch.live() && (ClientLobby.lobby == null || !ClientLobby.lobby.started)) {
+            Network.send(new dev.beyondtabs.mod.LobbyAction(dev.beyondtabs.mod.LobbyAction.Op.REQUEST));   // no battle yet: open the lobby
+            return;
+        }
         RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.MODE;
         if (!RtsCamera.active) {
             RtsCamera.enter();

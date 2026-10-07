@@ -16,6 +16,10 @@ public final class Match {
     public final Structures structures;
     /** Single-player conveniences: pause and game speed (0.5x, 1x, 2x, 3x). */
     public boolean paused; public float speed = 1; float speedAcc;
+    /** Colour of each team (RGB), chosen in the lobby; teams without one use the default palette. */
+    public final Map<Integer, Integer> teamColors = new HashMap<>();
+
+    public int colorOf(int team) { return teamColors.getOrDefault(team, Lobby.COLORS[Math.floorMod(team, Lobby.COLORS.length)]); }
 
     public Match(ServerLevel level) {
         this.level = level; this.terrain = new LevelTerrain(level);

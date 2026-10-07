@@ -19,7 +19,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class Network {
-    static final String VERSION = "4";
+    static final String VERSION = "5";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(BeyondTabs.MODID, "main"), () -> VERSION, VERSION::equals, VERSION::equals);
     static final float DETAIL_RANGE = 72f;   // blocks: full ragdoll particles sent within this distance of the player's camera
@@ -34,7 +34,19 @@ public final class Network {
             if (p != null) ctx.get().enqueueWork(() -> ServerEvents.handle(p, msg));
             ctx.get().setPacketHandled(true);
         }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(2, LobbySync.class, LobbySync::encode, LobbySync::decode, (msg, ctx) -> {
+            ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> dev.beyondtabs.mod.client.ClientLobby.accept(msg)));
+            ctx.get().setPacketHandled(true);
+        }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(3, LobbyAction.class, LobbyAction::encode, LobbyAction::decode, (msg, ctx) -> {
+            ServerPlayer p = ctx.get().getSender();
+            if (p != null) ctx.get().enqueueWork(() -> LobbyServer.handle(p, msg));
+            ctx.get().setPacketHandled(true);
+        }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
+
+    public static void send(LobbyAction a) { CHANNEL.sendToServer(a); }
+    static void sendLobby(ServerPlayer p, Lobby l, boolean open) { CHANNEL.send(PacketDistributor.PLAYER.with(() -> p), new LobbySync(l, open)); }
 
     public static void send(RtsAction a) { CHANNEL.sendToServer(a); }
 
@@ -42,6 +54,8 @@ public final class Network {
         World w = m.world; Snapshot s = new Snapshot();
         float px = (float) p.getX(), pz = (float) p.getZ();
         s.tick = w.tick; s.winner = w.winner; s.blockStyle = m.structures.blocks(); s.paused = m.paused; s.speed = m.speed;
+        s.teamColors = new int[w.teams.size()]; s.alliances = new byte[w.teams.size()];
+        for (int i = 0; i < w.teams.size(); i++) { s.teamColors[i] = m.colorOf(i); s.alliances[i] = (byte) w.teams.get(i).alliance; }
         int team = m.teamOf(p.getUUID()); s.myTeam = team;
         if (team >= 0 && team < w.teams.size()) {
             Team t = w.teams.get(team);
