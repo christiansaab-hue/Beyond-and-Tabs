@@ -1,7 +1,9 @@
 package dev.beyondtabs.engine;
 
 import dev.beyondtabs.engine.gen.*;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /** Plain-Java benches: no Minecraft, no Gradle. Each prints measurements and fails loudly when a check breaks. */
 public final class Bench {
@@ -10,7 +12,7 @@ public final class Bench {
 
     public static void main(String[] a) {
         ragdollStands(); ragdollKnockAndRecover(); wading(); battle(60, true); battle(200, false); battle(300, true); economy(); siege(); aiMatch(Ai.Difficulty.NORMAL, Ai.Difficulty.NORMAL); aiMatch(Ai.Difficulty.HARD, Ai.Difficulty.EASY);
-        abilities(); learning(); formations();
+        abilities(); learning(); formations(); multiAi(false); multiAi(true);
         System.out.println(failures == 0 ? "\nALL BENCHES PASS" : "\n" + failures + " FAILURES");
         System.exit(failures == 0 ? 0 : 1);
     }
@@ -167,6 +169,32 @@ public final class Bench {
         Building a = w.startConstruction(0, BuildingDef.KD_WALL, 50.5f, 50.5f), b = w.startConstruction(0, BuildingDef.KD_WALL, 51.5f, 50.5f);
         check(a != null && b != null, "walls can be placed next to each other");
         check(w.startConstruction(0, BuildingDef.KD_BARRACKS, 55.5f, 50.5f) == null, "other buildings still keep a lane free");
+    }
+
+    /** Four AIs on one map: free-for-all, or two alliances of two. */
+    static void multiAi(boolean teams) {
+        System.out.println("four AIs, " + (teams ? "2 vs 2 alliances" : "free-for-all") + ", radius 70");
+        World w = new World(Terrain.FLAT, teams ? 21 : 22);
+        List<Skirmish.Player> ps = new ArrayList<>();
+        String[] races = {"ancient_world", "kingdoms", "ancient_world", "kingdoms"};
+        for (int i = 0; i < 4; i++) ps.add(new Skirmish.Player(races[i], teams ? i % 2 : -1, -1, i % 2 == 0 ? Ai.Difficulty.NORMAL : Ai.Difficulty.HARD));
+        List<Skirmish.Start> st = Skirmish.setup(w, 0, 0, 70, 8, ps, 3);
+        float minD = Float.MAX_VALUE;
+        for (int i = 0; i < st.size(); i++) for (int j = i + 1; j < st.size(); j++) minD = Math.min(minD, World.dist(st.get(i).x(), st.get(i).z(), st.get(j).x(), st.get(j).z()));
+        w.cameras.add(new float[]{0, 80, 0});
+        int t = 0; double total = 0; int peak = 0; String order = "";
+        boolean[] gone = new boolean[4];
+        while (w.winner < 0 && t < 20 * 60 * 30) {
+            w.tick(); t++; total += w.lastTickMs; peak = Math.max(peak, w.units.size());
+            for (int k = 0; k < 4; k++) if (!gone[k] && w.teams.get(k).defeated) { gone[k] = true; order += String.format(" team %d out at %.0fs;", k, t / 20f); }
+        }
+        System.out.printf("  bases at least %.0f blocks apart | %s | winner %s after %.0f s | peak %d units, avg %.2f ms/tick%n",
+                minD, order.isEmpty() ? "nobody out" : order, w.winner < 0 ? "none" : "team " + w.winner + (teams ? " (alliance " + w.teams.get(w.winner).alliance + ")" : ""), t / 20f, peak, total / t);
+        check(minD > 40, "start positions spread out");
+        check(w.winner >= 0, "the match ended with a winner");
+        if (teams) { int a = w.teams.get(w.winner).alliance; check(w.teams.stream().filter(x -> !x.defeated).allMatch(x -> x.alliance == a), "only one alliance is left standing"); }
+        else check(w.teams.stream().filter(x -> !x.defeated).count() == 1, "exactly one army is left in a free-for-all");
+        for (Team tm : w.teams) if (tm.defeated) check(w.aliveCount(tm.id) == 0 && w.buildings.stream().noneMatch(b -> b.alive && b.team == tm.id), "a defeated army falls with its commander (team " + tm.id + ")");
     }
 
     static void siege() {

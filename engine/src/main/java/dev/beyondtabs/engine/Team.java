@@ -17,6 +17,8 @@ public final class Team {
     public int supplyUsed; public int supplyCap;
     /** Lost its commander (BAR rule: the commander is your life). */
     public boolean defeated;
+    /** Teams with the same alliance (>= 0) fight together; -1 = everyone else is an enemy. */
+    public int alliance = -1;
     /** What this army has learned about fighting each kind of enemy. */
     public final Tactics tactics;
     /** Last "under attack" alert (BAR-style): when, where, and whether it was a building. Throttled to one per 5 s. */

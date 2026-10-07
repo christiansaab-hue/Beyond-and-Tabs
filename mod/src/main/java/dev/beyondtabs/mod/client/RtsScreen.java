@@ -354,7 +354,16 @@ public final class RtsScreen extends Screen {
         return true;
     }
 
+    static final Map<String, String> DISPLAY = new HashMap<>();
+    static {
+        for (UnitDef d : UnitDef.ALL) DISPLAY.put(d.id(), d.name());
+        for (dev.beyondtabs.engine.gen.RaceDef r : dev.beyondtabs.engine.gen.RaceDef.ALL) DISPLAY.put(r.id(), r.name());
+    }
+
+    /** Display name: the sheet's name for units and races, otherwise the id made readable. */
     static String name(String id) {
+        String shown = DISPLAY.get(id);
+        if (shown != null) return shown;
         String n = id.contains("_") ? id.substring(id.indexOf('_') + 1) : id;
         StringBuilder b = new StringBuilder();
         for (String w : n.split("_")) if (!w.isEmpty()) b.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1)).append(' ');

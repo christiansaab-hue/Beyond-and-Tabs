@@ -3,6 +3,7 @@
  "notes": "Our RTS layer for each real TABS unit. tabs_key identifies the TABS unit (its name key); the unit's body, health, mass, speed, size and weapon are read from the player's own TABS install at runtime and never stored here. weapon_class and the bodies sheet give neutral fallback values used only by the engine benches.",
  "columns": [
   "id",
+  "name",
   "race",
   "tabs_key",
   "tier",
@@ -40,7 +41,8 @@
    "physics_profile": "humanoid",
    "icon": "commander_t0",
    "base_cost": 400,
-   "ability": "rally"
+   "ability": "rally",
+   "name": "Warchief"
   },
   {
    "id": "aw_builder_t1",
@@ -60,7 +62,8 @@
    "physics_profile": "humanoid",
    "icon": "builder_t1",
    "base_cost": 60,
-   "ability": "none"
+   "ability": "none",
+   "name": "Clan Laborer"
   },
   {
    "id": "aw_builder_t2",
@@ -80,7 +83,8 @@
    "physics_profile": "vehicle",
    "icon": "builder_t2",
    "base_cost": 300,
-   "ability": "none"
+   "ability": "none",
+   "name": "Hauler"
   },
   {
    "id": "aw_clubber",
@@ -100,7 +104,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 70,
-   "ability": "none"
+   "ability": "none",
+   "name": "Bonecrusher"
   },
   {
    "id": "aw_protector",
@@ -120,7 +125,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 80,
-   "ability": "shield_block"
+   "ability": "shield_block",
+   "name": "Hide Shield"
   },
   {
    "id": "aw_spear_thrower",
@@ -140,7 +146,8 @@
    "physics_profile": "humanoid",
    "icon": "ranged_t1",
    "base_cost": 120,
-   "ability": "none"
+   "ability": "none",
+   "name": "Javelineer"
   },
   {
    "id": "aw_headbutter",
@@ -160,7 +167,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 90,
-   "ability": "headbutt"
+   "ability": "headbutt",
+   "name": "Skullbasher"
   },
   {
    "id": "aw_hoplite",
@@ -180,7 +188,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 180,
-   "ability": "shield_block"
+   "ability": "shield_block",
+   "name": "Bronze Hoplite"
   },
   {
    "id": "aw_stoner",
@@ -200,7 +209,8 @@
    "physics_profile": "humanoid",
    "icon": "ranged_t2",
    "base_cost": 160,
-   "ability": "none"
+   "ability": "none",
+   "name": "Boulder Hurler"
   },
   {
    "id": "aw_bone_mage",
@@ -220,7 +230,8 @@
    "physics_profile": "humanoid",
    "icon": "support_t2",
    "base_cost": 300,
-   "ability": "none"
+   "ability": "none",
+   "name": "Bone Shaman"
   },
   {
    "id": "aw_brawler",
@@ -240,7 +251,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t2",
    "base_cost": 140,
-   "ability": "dodge"
+   "ability": "dodge",
+   "name": "Pit Brawler"
   },
   {
    "id": "aw_ice_archer",
@@ -260,7 +272,8 @@
    "physics_profile": "humanoid",
    "icon": "ranged_t2",
    "base_cost": 160,
-   "ability": "frost"
+   "ability": "frost",
+   "name": "Frostbow"
   },
   {
    "id": "aw_berserker",
@@ -280,7 +293,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t2",
    "base_cost": 250,
-   "ability": "whirlwind"
+   "ability": "whirlwind",
+   "name": "Berserker"
   },
   {
    "id": "aw_shield_bearer",
@@ -300,7 +314,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t2",
    "base_cost": 120,
-   "ability": "shield_bash"
+   "ability": "shield_bash",
+   "name": "Legion Shield"
   },
   {
    "id": "aw_sarissa",
@@ -320,7 +335,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t2",
    "base_cost": 200,
-   "ability": "brace"
+   "ability": "brace",
+   "name": "Phalangite"
   },
   {
    "id": "aw_snake_archer",
@@ -340,7 +356,8 @@
    "physics_profile": "humanoid",
    "icon": "ranged_t2",
    "base_cost": 180,
-   "ability": "poison"
+   "ability": "poison",
+   "name": "Viper Archer"
   },
   {
    "id": "aw_valkyrie",
@@ -360,7 +377,8 @@
    "physics_profile": "humanoid",
    "icon": "hero_t3",
    "base_cost": 500,
-   "ability": "leap"
+   "ability": "leap",
+   "name": "Valkyrie"
   },
   {
    "id": "aw_jarl",
@@ -380,7 +398,8 @@
    "physics_profile": "humanoid",
    "icon": "hero_t3",
    "base_cost": 850,
-   "ability": "war_cry"
+   "ability": "war_cry",
+   "name": "Jarl"
   },
   {
    "id": "aw_minotaur",
@@ -400,7 +419,8 @@
    "physics_profile": "large",
    "icon": "hero_t3",
    "base_cost": 1000,
-   "ability": "charge"
+   "ability": "charge",
+   "name": "Minotaur"
   },
   {
    "id": "aw_mammoth",
@@ -420,7 +440,8 @@
    "physics_profile": "quadruped_large",
    "icon": "cavalry_t3",
    "base_cost": 2200,
-   "ability": "trample"
+   "ability": "trample",
+   "name": "War Mammoth"
   },
   {
    "id": "aw_ballista",
@@ -440,7 +461,8 @@
    "physics_profile": "siege",
    "icon": "siege_t3",
    "base_cost": 900,
-   "ability": "pierce"
+   "ability": "pierce",
+   "name": "Ballista"
   },
   {
    "id": "aw_longship",
@@ -460,7 +482,8 @@
    "physics_profile": "vehicle_large",
    "icon": "siege_t3",
    "base_cost": 1000,
-   "ability": "none"
+   "ability": "none",
+   "name": "Raider Longship"
   },
   {
    "id": "aw_zeus",
@@ -480,7 +503,8 @@
    "physics_profile": "large",
    "icon": "hero_t3",
    "base_cost": 2000,
-   "ability": "chain_lightning"
+   "ability": "chain_lightning",
+   "name": "Thunder Titan"
   },
   {
    "id": "kd_commander",
@@ -500,7 +524,8 @@
    "physics_profile": "humanoid",
    "icon": "commander_t0",
    "base_cost": 1500,
-   "ability": "rally"
+   "ability": "rally",
+   "name": "High King"
   },
   {
    "id": "kd_builder_t1",
@@ -520,7 +545,8 @@
    "physics_profile": "humanoid",
    "icon": "builder_t1",
    "base_cost": 60,
-   "ability": "none"
+   "ability": "none",
+   "name": "Mason"
   },
   {
    "id": "kd_builder_t2",
@@ -540,7 +566,8 @@
    "physics_profile": "vehicle",
    "icon": "builder_t2",
    "base_cost": 300,
-   "ability": "none"
+   "ability": "none",
+   "name": "Hay Wagon"
   },
   {
    "id": "kd_bard",
@@ -560,7 +587,8 @@
    "physics_profile": "humanoid",
    "icon": "support_t1",
    "base_cost": 60,
-   "ability": "inspire"
+   "ability": "inspire",
+   "name": "War Bard"
   },
   {
    "id": "kd_squire",
@@ -580,7 +608,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 100,
-   "ability": "shield_block"
+   "ability": "shield_block",
+   "name": "Squire"
   },
   {
    "id": "kd_archer",
@@ -600,7 +629,8 @@
    "physics_profile": "humanoid",
    "icon": "ranged_t1",
    "base_cost": 140,
-   "ability": "volley"
+   "ability": "volley",
+   "name": "Longbowman"
   },
   {
    "id": "kd_fencer",
@@ -620,7 +650,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 150,
-   "ability": "riposte"
+   "ability": "riposte",
+   "name": "Duelist"
   },
   {
    "id": "kd_painter",
@@ -640,7 +671,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 50,
-   "ability": "none"
+   "ability": "none",
+   "name": "Mad Painter"
   },
   {
    "id": "kd_healer",
@@ -660,7 +692,8 @@
    "physics_profile": "humanoid",
    "icon": "support_t2",
    "base_cost": 180,
-   "ability": "heal_pulse"
+   "ability": "heal_pulse",
+   "name": "Cleric"
   },
   {
    "id": "kd_samurai",
@@ -680,7 +713,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t2",
    "base_cost": 500,
-   "ability": "cleave"
+   "ability": "cleave",
+   "name": "Samurai"
   },
   {
    "id": "kd_monk",
@@ -700,7 +734,8 @@
    "physics_profile": "humanoid",
    "icon": "support_t2",
    "base_cost": 250,
-   "ability": "push_wave"
+   "ability": "push_wave",
+   "name": "Iron Monk"
   },
   {
    "id": "kd_ninja",
@@ -720,7 +755,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t2",
    "base_cost": 500,
-   "ability": "shadowstep"
+   "ability": "shadowstep",
+   "name": "Shadow Ninja"
   },
   {
    "id": "kd_halberd",
@@ -740,7 +776,8 @@
    "physics_profile": "humanoid",
    "icon": "inf_t2",
    "base_cost": 400,
-   "ability": "brace"
+   "ability": "brace",
+   "name": "Halberdier"
   },
   {
    "id": "kd_musketeer",
@@ -760,7 +797,8 @@
    "physics_profile": "humanoid",
    "icon": "ranged_t2",
    "base_cost": 300,
-   "ability": "none"
+   "ability": "none",
+   "name": "Musketeer"
   },
   {
    "id": "kd_balloon_archer",
@@ -780,7 +818,8 @@
    "physics_profile": "flyer",
    "icon": "ranged_t2",
    "base_cost": 250,
-   "ability": "none"
+   "ability": "none",
+   "name": "Balloon Archer"
   },
   {
    "id": "kd_knight",
@@ -800,7 +839,8 @@
    "physics_profile": "humanoid",
    "icon": "hero_t3",
    "base_cost": 650,
-   "ability": "cleave"
+   "ability": "cleave",
+   "name": "Crown Knight"
   },
   {
    "id": "kd_jouster",
@@ -820,7 +860,8 @@
    "physics_profile": "mounted",
    "icon": "cavalry_t3",
    "base_cost": 750,
-   "ability": "charge"
+   "ability": "charge",
+   "name": "Lancer"
   },
   {
    "id": "kd_firework_archer",
@@ -840,7 +881,8 @@
    "physics_profile": "humanoid",
    "icon": "ranged_t3",
    "base_cost": 1500,
-   "ability": "volley"
+   "ability": "volley",
+   "name": "Firelance Archer"
   },
   {
    "id": "kd_monkey_king",
@@ -860,7 +902,8 @@
    "physics_profile": "humanoid",
    "icon": "hero_t3",
    "base_cost": 2000,
-   "ability": "leap"
+   "ability": "leap",
+   "name": "Monkey King"
   },
   {
    "id": "kd_catapult",
@@ -880,7 +923,8 @@
    "physics_profile": "siege",
    "icon": "siege_t3",
    "base_cost": 1000,
-   "ability": "none"
+   "ability": "none",
+   "name": "Catapult"
   },
   {
    "id": "kd_hwacha",
@@ -900,7 +944,8 @@
    "physics_profile": "siege",
    "icon": "siege_t3",
    "base_cost": 1500,
-   "ability": "none"
+   "ability": "none",
+   "name": "Hwacha"
   },
   {
    "id": "kd_davinci_tank",
@@ -920,7 +965,8 @@
    "physics_profile": "vehicle_large",
    "icon": "siege_t3",
    "base_cost": 4000,
-   "ability": "none"
+   "ability": "none",
+   "name": "Clockwork Tank"
   },
   {
    "id": "kd_dragon",
@@ -940,7 +986,8 @@
    "physics_profile": "flyer_large",
    "icon": "hero_t3",
    "base_cost": 3000,
-   "ability": "burn"
+   "ability": "burn",
+   "name": "Imperial Dragon"
   }
  ]
 }

@@ -203,14 +203,19 @@ public final class Ai {
     void scout() {
         seenEnemyRoles.clear();
         for (Unit e : w.units) {
-            if (!e.alive || e.team == team) continue;
+            if (!e.alive || w.ally(e.team, team)) continue;
             boolean seen = false;
             for (Unit m : w.units) if (m.alive && m.team == team && World.dist(m.x, m.z, e.x, e.z) < SIGHT) { seen = true; break; }
             if (!seen) for (Building b : w.buildings) if (b.alive && b.team == team && b.distTo(e.x, e.z) < SIGHT) { seen = true; break; }
             if (seen) seenEnemyRoles.merge(e.def.role(), 1, Integer::sum);
         }
-        // where is the enemy? (the AI starts knowing the opposite start location, like a player does in BAR)
-        if (Float.isNaN(enemyX)) for (Unit e : w.units) if (e.team != team && "commander".equals(e.def.role())) { enemyX = e.x; enemyZ = e.z; }
+        // where is the enemy? The nearest living enemy commander (the AI knows start locations, like a player does in
+        // BAR); re-chosen every time so that in a free-for-all it moves on once a rival is beaten.
+        float best = Float.MAX_VALUE; enemyX = Float.NaN;
+        for (Unit e : w.units) if (e.alive && !w.ally(e.team, team) && "commander".equals(e.def.role())) {
+            float d = World.dist(baseX, baseZ, e.x, e.z);
+            if (d < best) { best = d; enemyX = e.x; enemyZ = e.z; }
+        }
     }
     float stageX() { return Float.isNaN(enemyX) ? baseX : baseX + (enemyX - baseX) * .2f; }
     float stageZ() { return Float.isNaN(enemyX) ? baseZ : baseZ + (enemyZ - baseZ) * .2f; }
@@ -221,7 +226,7 @@ public final class Ai {
         // defend: enemies near our buildings pull the whole army back
         Unit intruder = null;
         for (Unit e : w.units) {
-            if (!e.alive || e.team == team) continue;
+            if (!e.alive || w.ally(e.team, team)) continue;
             for (Building b : w.buildings) if (b.alive && b.team == team && b.distTo(e.x, e.z) < 18) { intruder = e; break; }
             if (intruder != null) break;
         }
@@ -229,14 +234,15 @@ public final class Ai {
         if (Float.isNaN(enemyX)) return;
         // estimate the enemy army near their base from what we have seen (fallback: count everything, a cautious guess)
         float theirs = 0;
-        for (Unit e : w.units) if (e.alive && e.team != team && !"commander".equals(e.def.role()) && !"builder".equals(e.def.role())) theirs += value(e);
+        for (Unit e : w.units) if (e.alive && !w.ally(e.team, team) && !"commander".equals(e.def.role()) && !"builder".equals(e.def.role())
+                && World.dist(e.x, e.z, enemyX, enemyZ) < 70) theirs += value(e);   // only the rival we are about to hit
         float needed = Math.max(250 + waves * 120, theirs * attackRatio);
         boolean attacking = clock - lastAttack < 60;
         if (mine >= needed && !attacking) {
             lastAttack = clock; waves++;
             float tx = enemyX, tz = enemyZ;
             Building target = null; float bd = Float.MAX_VALUE;   // nearest enemy building to our base
-            for (Building b : w.buildings) if (b.alive && b.team != team) { float d = World.dist(baseX, baseZ, b.x, b.z); if (d < bd) { bd = d; target = b; } }
+            for (Building b : w.buildings) if (b.alive && !w.ally(b.team, team) && World.dist(b.x, b.z, enemyX, enemyZ) < 70) { float d = World.dist(baseX, baseZ, b.x, b.z); if (d < bd) { bd = d; target = b; } }
             if (target != null) { tx = target.x; tz = target.z; }
             for (Unit u : army) { w.order(u, Order.attackMove(tx, tz), false); w.order(u, Order.attackMove(enemyX, enemyZ), true); }
         } else if (!attacking) {

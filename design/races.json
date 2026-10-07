@@ -9,48 +9,53 @@
   "icon_style",
   "first_playable",
   "status",
+  "tagline",
   "unverified"
  ],
  "rows": [
   {
    "id": "ancient_world",
-   "name": "Ancient World",
+   "name": "Bronzeborn Clans",
    "tabs_factions": "TRIBAL,ANCIENT,VIKING",
    "color": "#C8763A",
    "icon_style": "stone",
    "first_playable": true,
    "status": "planned",
-   "unverified": []
+   "unverified": [],
+   "tagline": "Tribes, titans and raiders of the old world."
   },
   {
    "id": "kingdoms",
-   "name": "Kingdoms",
+   "name": "Sovereign Crown",
    "tabs_factions": "MEDIEVAL,ASIA,RENAISSANCE",
    "color": "#3A6EC8",
    "icon_style": "banner",
    "first_playable": true,
    "status": "planned",
-   "unverified": []
+   "unverified": [],
+   "tagline": "Knights, dynasties and Renaissance war machines."
   },
   {
    "id": "gunpowder",
-   "name": "Gunpowder",
+   "name": "Blackpowder Syndicate",
    "tabs_factions": "PIRATE,WESTERN",
    "color": "#7A5A3A",
    "icon_style": "powder",
    "first_playable": false,
    "status": "later",
-   "unverified": []
+   "unverified": [],
+   "tagline": "Pirates, outlaws and powder kegs."
   },
   {
    "id": "fantasy",
-   "name": "Fantasy",
+   "name": "Mythborne Covenant",
    "tabs_factions": "FANTASYGOOD,FANTASYEVIL,HALLOWEEN",
    "color": "#8A3AC8",
    "icon_style": "rune",
    "first_playable": false,
    "status": "later",
-   "unverified": []
+   "unverified": [],
+   "tagline": "Paladins, necromancers and things that go bump in the night."
   },
   {
    "id": "neon",
@@ -62,7 +67,8 @@
    "status": "later",
    "unverified": [
     "tabs_factions"
-   ]
+   ],
+   "tagline": "Glowing, fast and strange."
   }
  ]
 }

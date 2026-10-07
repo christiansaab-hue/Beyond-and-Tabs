@@ -98,7 +98,7 @@ final class Abilities {
                 boolean song = a.id().equals("inspire");
                 if (ready(u) && countEnemies(w, u, u.x, u.z, (float) a.range(), false) >= (song ? 1 : 3)) {
                     w.hash.query(u.x, u.z, (float) a.radius(), o -> {
-                        if (o.team != u.team || !o.alive) return;
+                        if (!w.ally(o.team, u.team) || !o.alive) return;
                         o.buffFor = Math.max(o.buffFor, (float) a.duration()); o.buffMul = Math.max(o.buffMul, (float) a.power()); o.buffStab = Math.max(o.buffStab, .5f);
                     });
                     u.abilityCd = (float) a.cooldown();
@@ -106,7 +106,7 @@ final class Abilities {
             }
             case "heal_pulse" -> {
                 if (ready(u) && woundedNear(w, u, (float) a.radius())) {
-                    w.hash.query(u.x, u.z, (float) a.radius(), o -> { if (o.team == u.team && o.alive) o.hp = Math.min(o.maxHp, o.hp + (float) a.power()); });
+                    w.hash.query(u.x, u.z, (float) a.radius(), o -> { if (w.ally(o.team, u.team) && o.alive) o.hp = Math.min(o.maxHp, o.hp + (float) a.power()); });
                     u.abilityCd = (float) a.cooldown();
                 }
             }
@@ -114,7 +114,7 @@ final class Abilities {
                 if (ready(u) && countEnemies(w, u, u.x, u.z, (float) a.range(), true) >= 2) {
                     float fx = (float) Math.sin(u.yaw), fz = (float) Math.cos(u.yaw);
                     w.hash.query(u.x, u.z, (float) a.radius(), o -> {
-                        if (o.team == u.team || !o.alive) return;
+                        if (w.ally(o.team, u.team) || !o.alive) return;
                         float dx = o.x - u.x, dz = o.z - u.z, l = Math.max(.01f, (float) Math.sqrt(dx * dx + dz * dz));
                         if ((dx * fx + dz * fz) / l < .3f) return;
                         w.damage(o, 15 * u.buffMul, (float) a.power(), u.x, u.z, Rig.TORSO, u);
@@ -139,7 +139,7 @@ final class Abilities {
         u.yaw = (float) Math.atan2(dx, dz); u.walkAmount = 1; u.walkPhase += sp * DT * 3.2f / Math.max(.5f, u.ragdoll.scale);
         // bowl over anyone in the way
         w.hash.query(u.x, u.z, u.radius + (float) a.radius(), o -> {
-            if (o.team == u.team || !o.alive || o == t || u.bowled.contains(o.id)) return;
+            if (w.ally(o.team, u.team) || !o.alive || o == t || u.bowled.contains(o.id)) return;
             u.bowled.add(o.id);
             w.damage(o, (float) u.weapon.damage() * .3f, 9, u.x, u.z, Rig.HIP, u);
         });
@@ -163,7 +163,7 @@ final class Abilities {
                 if (!ready(u)) return;
                 u.abilityCd = (float) a.cooldown();
                 w.hash.query(u.x, u.z, (float) a.radius(), o -> {
-                    if (o.team != u.team || !o.alive) return;
+                    if (!w.ally(o.team, u.team) || !o.alive) return;
                     o.buffFor = Math.max(o.buffFor, (float) a.duration()); o.buffMul = Math.max(o.buffMul, (float) a.power()); o.buffStab = Math.max(o.buffStab, .35f);
                 });
             }
@@ -172,7 +172,7 @@ final class Abilities {
                 if (!ready(u) || sp < u.speed * .4f) return;
                 u.abilityCd = (float) a.cooldown();
                 w.hash.query(u.x, u.z, (float) a.radius() * u.ragdoll.scale, o -> {
-                    if (o.team == u.team || !o.alive || o.cls.equals("large") || o.cls.equals("cavalry")) return;
+                    if (w.ally(o.team, u.team) || !o.alive || o.cls.equals("large") || o.cls.equals("cavalry")) return;
                     w.damage(o, (float) a.power(), 12, u.x, u.z, Rig.HIP, u);
                 });
             }
@@ -197,7 +197,7 @@ final class Abilities {
         if (!u.ability.kind().equals("cleave")) return;
         float fx = (float) Math.sin(u.yaw), fz = (float) Math.cos(u.yaw), reach = u.range + u.radius + .8f, share = dmg * (float) u.ability.power();
         w.hash.query(u.x, u.z, reach + 1, o -> {
-            if (o == t || o.team == u.team || !o.alive) return;
+            if (o == t || w.ally(o.team, u.team) || !o.alive) return;
             float dx = o.x - u.x, dz = o.z - u.z, l = (float) Math.sqrt(dx * dx + dz * dz);
             if (l > reach + o.radius || (dx * fx + dz * fz) / Math.max(.01f, l) < .3f) return;
             w.damage(o, share, (float) u.weapon.knockback() * .6f, u.x, u.z, Rig.TORSO, u);
@@ -214,7 +214,7 @@ final class Abilities {
             case "chain" -> {
                 int[] left = {(int) a.duration()};
                 java.util.List<Unit> near = new java.util.ArrayList<>();
-                w.hash.query(hit.x, hit.z, (float) a.range(), o -> { if (o != hit && o.team != src.team && o.alive) near.add(o); });
+                w.hash.query(hit.x, hit.z, (float) a.range(), o -> { if (o != hit && !w.ally(o.team, src.team) && o.alive) near.add(o); });
                 near.sort((x, y) -> Float.compare(World.dist(x.x, x.z, hit.x, hit.z), World.dist(y.x, y.z, hit.x, hit.z)));
                 for (Unit o : near) { if (left[0]-- <= 0) break; w.damage(o, p.damage * (float) a.power(), p.knockback * .5f, hit.x, hit.z, Rig.TORSO, src); }
             }
@@ -268,7 +268,7 @@ final class Abilities {
         cnt = 0;
         float fx = (float) Math.sin(u.yaw), fz = (float) Math.cos(u.yaw);
         w.hash.query(x, z, r, o -> {
-            if (o.team == u.team || !o.alive) return;
+            if (w.ally(o.team, u.team) || !o.alive) return;
             if (inFront) { float dx = o.x - u.x, dz = o.z - u.z, l = Math.max(.01f, (float) Math.sqrt(dx * dx + dz * dz)); if ((dx * fx + dz * fz) / l < .3f) return; }
             cnt++;
         });
@@ -277,14 +277,14 @@ final class Abilities {
 
     static int countShieldAllies(World w, Unit t) {
         cnt = 0;
-        w.hash.query(t.x, t.z, 2.2f, o -> { if (o != t && o.team == t.team && o.alive && o.ability.kind().equals("shield_block")) cnt++; });
+        w.hash.query(t.x, t.z, 2.2f, o -> { if (o != t && w.ally(o.team, t.team) && o.alive && o.ability.kind().equals("shield_block")) cnt++; });
         return cnt;
     }
 
     static boolean found;
     static boolean woundedNear(World w, Unit u, float r) {
         found = false;
-        w.hash.query(u.x, u.z, r, o -> { if (o.team == u.team && o.alive && o.hp < o.maxHp * .85f) found = true; });
+        w.hash.query(u.x, u.z, r, o -> { if (w.ally(o.team, u.team) && o.alive && o.hp < o.maxHp * .85f) found = true; });
         return found;
     }
 }

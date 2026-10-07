@@ -59,6 +59,13 @@ public final class World {
         return Rig.blob(b.particles(), (float) b.radius() * 2.2f, (float) b.radius() * 1.6f, (float) b.mass() * 60f);
     }
 
+    /** Same team, or teams in the same alliance. */
+    public boolean ally(int a, int b) {
+        if (a == b) return true;
+        if (a < 0 || b < 0 || a >= teams.size() || b >= teams.size()) return false;
+        int x = teams.get(a).alliance; return x >= 0 && x == teams.get(b).alliance;
+    }
+
     public Team addTeam(String race) { Team t = new Team(teams.size(), race); teams.add(t); return t; }
 
     public Unit spawn(int team, UnitDef def, float x, float z, float yaw) {
@@ -424,7 +431,7 @@ public final class World {
     Unit nearestMeleeThreat(Unit u, float r) {
         bestFound = null; bestScore = r * r;
         hash.query(u.x, u.z, r, o -> {
-            if (o.team == u.team || !o.alive || !o.isMelee() || o.knocked) return;
+            if (ally(o.team, u.team) || !o.alive || !o.isMelee() || o.knocked) return;
             float d = (o.x - u.x) * (o.x - u.x) + (o.z - u.z) * (o.z - u.z);
             if (d < bestScore) { bestScore = d; bestFound = o; }
         });
@@ -438,7 +445,7 @@ public final class World {
         final boolean melee = u.isMelee();
         final String ak = u.ability.kind();
         hash.query(cx, cz, r, o -> {
-            if (o.team == u.team || !o.alive) return;
+            if (ally(o.team, u.team) || !o.alive) return;
             float d = dist(u.x, u.z, o.x, o.z), s = d, hpf = o.hp / o.maxHp;
             if (o == cur) s -= 1.5f;                                   // don't flip-flop
             if (o.knocked) s += 1f;
@@ -518,7 +525,7 @@ public final class World {
     Unit nearestEnemy(Unit u, float cx, float cz, float r) {
         bestFound = null; bestScore = r * r;
         hash.query(cx, cz, r, o -> {
-            if (o.team == u.team || !o.alive) return;
+            if (ally(o.team, u.team) || !o.alive) return;
             float d = (o.x - cx) * (o.x - cx) + (o.z - cz) * (o.z - cz);
             if (d < bestScore) { bestScore = d; bestFound = o; }
         });
@@ -527,7 +534,7 @@ public final class World {
     Unit woundedAlly(Unit u, float r) {
         bestFound = null; bestScore = .95f;
         hash.query(u.x, u.z, r, o -> {
-            if (o.team != u.team || !o.alive || o == u) return;
+            if (!ally(o.team, u.team) || !o.alive || o == u) return;
             float f = o.hp / o.maxHp;
             if (f < bestScore) { bestScore = f; bestFound = o; }
         });
@@ -551,7 +558,7 @@ public final class World {
             case "support" -> {
                 if (w.damage() < 0) {
                     float heal = (float) -w.damage();
-                    hash.query(t.x, t.z, (float) w.aoe(), o -> { if (o.team == u.team && o.alive) o.hp = Math.min(o.maxHp, o.hp + heal); });
+                    hash.query(t.x, t.z, (float) w.aoe(), o -> { if (ally(o.team, u.team) && o.alive) o.hp = Math.min(o.maxHp, o.hp + heal); });
                 }
             }
             default -> launch(u, t);
@@ -574,7 +581,7 @@ public final class World {
     Building nearestEnemyBuilding(int team, float cx, float cz, float r) {
         Building best = null; float bd = r;
         for (Building b : buildings) {
-            if (!b.alive || b.team == team) continue;
+            if (!b.alive || ally(b.team, team)) continue;
             float d = b.distTo(cx, cz);
             if (d < bd) { bd = d; best = b; }
         }
@@ -588,7 +595,7 @@ public final class World {
             if ((b.cooldown -= DT) > 0) continue;
             Unit t = null; float best = 18f * 18f;
             for (Unit u : units) {
-                if (!u.alive || u.team == b.team) continue;
+                if (!u.alive || ally(u.team, b.team)) continue;
                 float d = (u.x - b.x) * (u.x - b.x) + (u.z - b.z) * (u.z - b.z);
                 if (d < best) { best = d; t = u; }
             }
@@ -607,11 +614,15 @@ public final class World {
             if (t.defeated) continue;
             boolean hadCommander = false, alive = false;
             for (Unit u : units) if ("commander".equals(u.def.role()) && u.team == t.id) { hadCommander = true; if (u.alive) alive = true; }
-            if (hadCommander && !alive) t.defeated = true;
+            if (hadCommander && !alive) {   // commander ends: the rest of that army falls with it (BAR rule)
+                t.defeated = true;
+                for (Unit u : units) if (u.alive && u.team == t.id) die(u, 0, 0);
+                for (Building b : buildings) if (b.alive && b.team == t.id) { b.alive = false; b.hp = 0; }
+            }
         }
-        int left = -1, count = 0;
-        for (Team t : teams) if (!t.defeated) { left = t.id; count++; }
-        if (count == 1) winner = left;
+        int left = -1; boolean several = false;
+        for (Team t : teams) if (!t.defeated) { if (left >= 0 && !ally(left, t.id)) several = true; if (left < 0) left = t.id; }
+        if (left >= 0 && !several) winner = left;   // one team, or one alliance, still standing
     }
 
     static float projectileSpeed(dev.beyondtabs.engine.gen.WeaponDef w) {
@@ -655,7 +666,7 @@ public final class World {
             if (!hitGround) {
                 bestFound = null; bestScore = 1e9f;
                 hash.query(p.x, p.z, 1.6f, o -> {
-                    if (o.team == p.team || !o.alive || o == p.lastHit) return;
+                    if (ally(o.team, p.team) || !o.alive || o == p.lastHit) return;
                     float oy = terrain.groundY(o.x, o.z) + 1f * o.ragdoll.scale;
                     float dx = o.x - p.x, dy = oy - p.y, dz = o.z - p.z, rr = o.radius + .35f;
                     float d2 = dx * dx + dz * dz;
@@ -665,13 +676,13 @@ public final class World {
             }
             Building hitB = null;
             if (hit == null) for (Building b : buildings)
-                if (b.alive && b.team != p.team && b.contains(p.x, p.z, .2f) && p.y < terrain.groundY(b.x, b.z) + 3.5f) { hitB = b; break; }
+                if (b.alive && !ally(b.team, p.team) && b.contains(p.x, p.z, .2f) && p.y < terrain.groundY(b.x, b.z) + 3.5f) { hitB = b; break; }
             if (hit != null || hitB != null || hitGround || p.life <= 0) {
                 float ox = p.x - p.vx * .1f, oz = p.z - p.vz * .1f;
                 boolean keep = false;
                 if (p.aoe > 0) {
                     areaDamage(p.team, p.x, p.z, p.aoe, p.damage, p.knockback, ox, oz, p.owner);
-                    for (Building b : buildings) if (b.alive && b.team != p.team && b.distTo(p.x, p.z) < p.aoe) damageBuilding(b, p.damage);
+                    for (Building b : buildings) if (b.alive && !ally(b.team, p.team) && b.distTo(p.x, p.z) < p.aoe) damageBuilding(b, p.damage);
                     if (hit != null) Abilities.onProjectileHit(this, p, hit);
                 }
                 else if (hit != null) { damage(hit, p.damage, p.knockback, ox, oz, Rig.TORSO, p.owner); keep = Abilities.onProjectileHit(this, p, hit); }
@@ -687,7 +698,7 @@ public final class World {
     void areaDamage(int team, float x, float z, float r, float dmg, float kb, float fromX, float fromZ, Unit src) {
         areaHit = true;
         hash.query(x, z, r, o -> {
-            if (o.team == team || !o.alive) return;
+            if (ally(o.team, team) || !o.alive) return;
             float d = dist(x, z, o.x, o.z);
             if (d > r + o.radius) return;
             float f = 1f - .6f * Math.min(1, d / r);
@@ -714,7 +725,7 @@ public final class World {
 
     public void damage(Unit t, float dmg, float knockback, float fromX, float fromZ, int part, Unit src) {
         if (!t.alive) return;
-        if (!noReactions && src != null && src.team != t.team && (dmg > 0 || knockback > 0)) {
+        if (!noReactions && src != null && !ally(src.team, t.team) && (dmg > 0 || knockback > 0)) {
             float[] r = Abilities.onDamaged(this, t, src, dmg, knockback, fromX, fromZ, areaHit);
             if (r == null) { dodges++; return; }
             dmg = r[0]; knockback = r[1];
@@ -725,7 +736,7 @@ public final class World {
         if (dmg > 0) {
             float dealt = Math.min(before, dmg);
             if (t.eng != null) t.eng.taken += dealt;
-            if (src != null && src.eng != null && src.team != t.team) src.eng.dealt += dealt;
+            if (src != null && src.eng != null && !ally(src.team, t.team)) src.eng.dealt += dealt;
         }
         float dx = t.x - fromX, dz = t.z - fromZ, d = Math.max(.01f, (float) Math.sqrt(dx * dx + dz * dz));
         dx /= d; dz /= d;
@@ -740,7 +751,7 @@ public final class World {
             t.lastHit = time;
         }
         if (t.hp <= 0 && t.alive) {
-            if (src != null && src.eng != null && src.team != t.team) src.eng.kills++;
+            if (src != null && src.eng != null && !ally(src.team, t.team)) src.eng.kills++;
             die(t, dx * shove, dz * shove);
         }
     }
