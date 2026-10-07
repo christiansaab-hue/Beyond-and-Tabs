@@ -71,6 +71,11 @@ public final class RtsScreen extends Screen {
 
     /** Middle-drag pans the map. */
     @Override public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (button == 0 && minimapDrag && mini != null) {
+            RtsCamera.focusX = mini[3] + (float) Math.max(0, Math.min(1, (mx - mini[0]) / mini[2])) * mini[5];
+            RtsCamera.focusZ = mini[4] + (float) Math.max(0, Math.min(1, (my - mini[1]) / mini[2])) * mini[5];
+            return true;
+        }
         if (button == 2) { RtsCamera.pan((float) -dx * .05f, (float) dy * .05f, .5f); return true; }
         return super.mouseDragged(mx, my, button, dx, dy);
     }
@@ -83,6 +88,15 @@ public final class RtsScreen extends Screen {
             return true;
         }
         Snapshot s = ClientMatch.cur;
+        if (mini != null && mx >= mini[0] && my >= mini[1] && mx < mini[0] + mini[2] && my < mini[1] + mini[2]) {
+            float wx = mini[3] + (float) (mx - mini[0]) / mini[2] * mini[5], wz = mini[4] + (float) (my - mini[1]) / mini[2] * mini[5];
+            if (button == 0) { RtsCamera.focusX = wx; RtsCamera.focusZ = wz; minimapDrag = true; }
+            else if (button == 1 && !selected.isEmpty()) {
+                RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.ORDER; a.queue = hasShiftDown(); a.ids = ids();
+                a.orderType = (attackMode ? Order.Type.ATTACK_MOVE : Order.Type.MOVE).ordinal(); a.x = wx; a.z = wz; Network.send(a); attackMode = false;
+            }
+            return true;
+        }
         if (button == 0) {
             if (placing != null) { placeBuilding(); return true; }
             dragX = mx; dragY = my; dragging = true; return true;
@@ -112,6 +126,7 @@ public final class RtsScreen extends Screen {
     }
 
     @Override public boolean mouseReleased(double mx, double my, int button) {
+        if (button == 0) minimapDrag = false;
         if (button != 0 || !dragging) return false;
         dragging = false;
         Snapshot s = ClientMatch.cur; if (s == null) return true;
@@ -316,7 +331,8 @@ public final class RtsScreen extends Screen {
         // selection summary
         Map<Short, Integer> counts = new LinkedHashMap<>();
         for (Snapshot.U u : s.units) if (selected.contains(u.id)) counts.merge(u.def, 1, Integer::sum);
-        int x = 8, ty = y + 6;
+        int mm = h - 6; drawMinimap(g, s, 3, y + 3, mm);
+        int x = mm + 10, ty = y + 6;
         if (!counts.isEmpty()) {
             g.drawString(font, selected.size() + " selected", x, ty, TXT); ty += 11;
             for (var e : counts.entrySet()) {
@@ -330,12 +346,41 @@ public final class RtsScreen extends Screen {
             g.drawString(font, "Left-drag to select, right-click to order. A attack-move, S stop, B build, Ctrl+1-9 groups.", x, ty, DIM);
             g.drawString(font, "Arrows / screen edge / middle-drag pan, wheel zoom, Q/E rotate, P patrol, V or Esc to leave.", x, ty + 11, DIM);
         }
-        int bx = 230;
+        int bx = mm + 200;
         if (buildMenu && !selected.isEmpty()) drawBuildMenu(g, s, bx, y + 6);
         if (selectedBuilding >= 0 && selected.isEmpty()) {
             Snapshot.B b = s.buildings.stream().filter(q -> q.id == selectedBuilding).findFirst().orElse(null);
             if (b != null && b.team == s.myTeam) drawBuildingActions(g, s, b, bx, y + 6);
         }
+    }
+
+    /** Minimap: [screenX, screenY, size, worldMinX, worldMinZ, worldSpan] of the last drawn minimap (north = up). */
+    static float[] mini; static boolean minimapDrag;
+
+    void drawMinimap(GuiGraphics g, Snapshot s, int x, int y, int size) {
+        float minX = Float.MAX_VALUE, minZ = Float.MAX_VALUE, maxX = -Float.MAX_VALUE, maxZ = -Float.MAX_VALUE;
+        float[] spots = ClientMatch.metalSpots;
+        for (int i = 0; i + 1 < spots.length; i += 2) { minX = Math.min(minX, spots[i]); maxX = Math.max(maxX, spots[i]); minZ = Math.min(minZ, spots[i + 1]); maxZ = Math.max(maxZ, spots[i + 1]); }
+        for (Snapshot.U u : s.units) if (u.alive) { minX = Math.min(minX, u.x); maxX = Math.max(maxX, u.x); minZ = Math.min(minZ, u.z); maxZ = Math.max(maxZ, u.z); }
+        if (minX > maxX) return;
+        float span = Math.max(maxX - minX, maxZ - minZ) + 40, cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+        float x0 = cx - span / 2, z0 = cz - span / 2;
+        mini = new float[]{x, y, size, x0, z0, span};
+        g.fill(x, y, x + size, y + size, 0xFF22301E); outline(g, x, y, size, size, EDGE);
+        java.util.function.BiFunction<Float, Float, int[]> at = (wx, wz) -> new int[]{x + (int) ((wx - x0) / span * size), y + (int) ((wz - z0) / span * size)};
+        for (int i = 0; i + 1 < spots.length; i += 2) { int[] q = at.apply(spots[i], spots[i + 1]); g.fill(q[0] - 1, q[1] - 1, q[0] + 1, q[1] + 1, 0xFFB8C4D0); }
+        for (Snapshot.B b : s.buildings) {
+            int[] q = at.apply(b.x, b.z); int c = b.team == s.myTeam ? 0xFF4A90E2 : 0xFFE24A4A;
+            g.fill(q[0] - 2, q[1] - 2, q[0] + 2, q[1] + 2, c);
+        }
+        for (Snapshot.U u : s.units) {
+            if (!u.alive) continue;
+            int[] q = at.apply(u.x, u.z); int c = u.team == s.myTeam ? (selected.contains(u.id) ? 0xFFFFFFFF : 0xFF8CC8FF) : 0xFFFF8080;
+            g.fill(q[0], q[1], q[0] + 1, q[1] + 1, c);
+        }
+        int[] f = at.apply(RtsCamera.focusX, RtsCamera.focusZ); int r = Math.max(3, (int) (RtsCamera.dist * .6f / span * size));
+        outline(g, f[0] - r, f[1] - r, 2 * r, 2 * r, 0xFFFFFFFF);
+        if (DebugRenderer.pingAt > 0 && System.currentTimeMillis() - DebugRenderer.pingAt < 1500) { int[] q = at.apply(DebugRenderer.pingX, DebugRenderer.pingZ); outline(g, q[0] - 3, q[1] - 3, 6, 6, 0xFF7CFF7C); }
     }
 
     void drawBuildingInfo(GuiGraphics g, Snapshot s, Snapshot.B b, int x, int y) {
