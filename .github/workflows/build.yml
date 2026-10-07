@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,6 +29,14 @@ jobs:
         with:
           name: beyondandtabs-mod
           path: mod/build/libs/*.jar
+      - name: Remove the previous dev build and older run artifacts
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release delete dev --cleanup-tag -y --repo "$GITHUB_REPOSITORY" || true
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" --jq ".artifacts[] | select(.workflow_run.id != ${{ github.run_id }}) | .id"); do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id" || true
+          done
       - name: Publish the latest dev build (pre-release 'dev')
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
