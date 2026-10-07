@@ -342,8 +342,9 @@ public final class RtsScreen extends Screen {
     static boolean validPlacement(Snapshot s, BuildingDef d, float x, float z) {
         String[] f = d.footprint().split("x"); float hw = Integer.parseInt(f[0]) / 2f, hh = Integer.parseInt(f[1]) / 2f;
         for (Snapshot.B b : s.buildings) {
-            String[] g = BuildingDef.ALL.get(b.def).footprint().split("x");
-            if (Math.abs(b.x - x) < Integer.parseInt(g[0]) / 2f + hw + .5f && Math.abs(b.z - z) < Integer.parseInt(g[1]) / 2f + hh + .5f) return false;
+            BuildingDef od = BuildingDef.ALL.get(b.def); String[] g = od.footprint().split("x");
+            float gap = od.footprint().equals("1x1") && d.footprint().equals("1x1") ? 0 : .5f;   // walls join up (same rule as the server)
+            if (Math.abs(b.x - x) < Integer.parseInt(g[0]) / 2f + hw + gap && Math.abs(b.z - z) < Integer.parseInt(g[1]) / 2f + hh + gap) return false;
         }
         if (d.effect().equals("metal_per_s")) {
             for (int i = 0; i + 1 < ClientMatch.metalSpots.length; i += 2)
@@ -474,12 +475,12 @@ public final class RtsScreen extends Screen {
         java.util.function.BiFunction<Float, Float, int[]> at = (wx, wz) -> new int[]{x + (int) ((wx - x0) / span * size), y + (int) ((wz - z0) / span * size)};
         for (int i = 0; i + 1 < spots.length; i += 2) { int[] q = at.apply(spots[i], spots[i + 1]); g.fill(q[0] - 1, q[1] - 1, q[0] + 1, q[1] + 1, 0xFFB8C4D0); }
         for (Snapshot.B b : s.buildings) {
-            int[] q = at.apply(b.x, b.z); int c = b.team == s.myTeam ? 0xFF4A90E2 : 0xFFE24A4A;
+            int[] q = at.apply(b.x, b.z); int c = Look.teamArgb(b.team);
             g.fill(q[0] - 2, q[1] - 2, q[0] + 2, q[1] + 2, c);
         }
         for (Snapshot.U u : s.units) {
             if (!u.alive) continue;
-            int[] q = at.apply(u.x, u.z); int c = u.team == s.myTeam ? (selected.contains(u.id) ? 0xFFFFFFFF : 0xFF8CC8FF) : 0xFFFF8080;
+            int[] q = at.apply(u.x, u.z); int c = selected.contains(u.id) ? 0xFFFFFFFF : Look.lighter(Look.teamArgb(u.team), .3f) | 0xFF000000;
             g.fill(q[0], q[1], q[0] + 1, q[1] + 1, c);
         }
         int[] f = at.apply(RtsCamera.focusX, RtsCamera.focusZ); int r = Math.max(3, (int) (RtsCamera.dist * .6f / span * size));
@@ -687,7 +688,7 @@ public final class RtsScreen extends Screen {
         for (Snapshot.B b : s.buildings) {
             float[] q = p.toScreen(b.x, RtsCamera.ground(b.x, b.z), b.z);
             if (q == null) continue;
-            int c = b.team == s.myTeam ? 0xFF4A90E2 : 0xFFE24A4A, r = 5;
+            int c = Look.teamArgb(b.team), r = 5;
             g.fill((int) q[0] - r, (int) q[1] - r, (int) q[0] + r, (int) q[1] + r, b.progress < 1 ? (c & 0x60FFFFFF) : c);
             outline(g, (int) q[0] - r, (int) q[1] - r, 2 * r, 2 * r, b.id == selectedBuilding ? 0xFFFFFFFF : 0xFF000000);
         }
@@ -697,7 +698,7 @@ public final class RtsScreen extends Screen {
             float[] q = p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]), xz[1]);
             if (q == null) continue;
             String role = UnitDef.ALL.get(u.def).role();
-            int c = u.team == s.myTeam ? 0xFF6AB0FF : 0xFFFF6A6A, r = role.equals("commander") ? 4 : role.equals("hero") || role.equals("siege") ? 3 : 2;
+            int c = Look.lighter(Look.teamArgb(u.team), .2f) | 0xFF000000, r = role.equals("commander") ? 4 : role.equals("hero") || role.equals("siege") ? 3 : 2;
             int x = (int) q[0], y = (int) q[1];
             if (role.equals("ranged") || role.equals("siege")) { for (int k = 0; k <= r; k++) g.hLine(x - k, x + k, y - r + k, c); }   // triangle
             else g.fill(x - r, y - r, x + r, y + r, c);

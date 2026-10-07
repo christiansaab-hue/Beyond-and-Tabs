@@ -8,6 +8,7 @@ public final class BenchOne {
             case "abilities" -> Bench.abilities();
             case "learning" -> Bench.learning();
             case "siege" -> Bench.siege();
+            case "formations" -> Bench.formations();
             case "stands" -> { Bench.ragdollStands(); Bench.ragdollKnockAndRecover(); }
             default -> System.out.println("unknown " + n);
         }

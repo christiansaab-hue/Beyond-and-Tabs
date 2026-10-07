@@ -84,7 +84,7 @@ public final class World {
         }
         String[] f = def.footprint().split("x"); float hw = Integer.parseInt(f[0].trim()) / 2f, hh = Integer.parseInt(f[1].trim()) / 2f;
         for (Building o : buildings)   // no overlapping footprints (keep a 1-block lane so units can pass)
-            if (o.alive && Math.abs(o.x - x) < o.hw + hw + .5f && Math.abs(o.z - z) < o.hh + hh + .5f) return null;
+            if (o.alive && Math.abs(o.x - x) < o.hw + hw + gap(o.def, def) && Math.abs(o.z - z) < o.hh + hh + gap(o.def, def)) return null;
         return place(team, def, x, z, false);
     }
 
@@ -94,7 +94,7 @@ public final class World {
         if (!def.race().equals(t.race) || !t.has(def.requiresTech())) return false;
         if (def.effect().equals("metal_per_s") && nearestFreeSpot(x, z, 3f) == null) return false;
         String[] f = def.footprint().split("x"); float hw = Integer.parseInt(f[0].trim()) / 2f, hh = Integer.parseInt(f[1].trim()) / 2f;
-        for (Building o : buildings) if (o.alive && Math.abs(o.x - x) < o.hw + hw + .5f && Math.abs(o.z - z) < o.hh + hh + .5f) return false;
+        for (Building o : buildings) if (o.alive && Math.abs(o.x - x) < o.hw + hw + gap(o.def, def) && Math.abs(o.z - z) < o.hh + hh + gap(o.def, def)) return false;
         return true;
     }
 
@@ -265,7 +265,8 @@ public final class World {
         // up: being jostled by friends or stepping off a ledge never does.
         boolean recentlyHit = time - u.lastHit < .8f;
         if (!u.knocked && !u.leaping && (r.balance < .3f || (recentlyHit && u.lod < 2 && r.poseError() > .9f * r.scale))) {
-            u.knocked = true; r.down = true; u.downFor = 0; u.charging = u.spinning = false; knockdowns++;
+            u.knocked = true; r.down = true; u.downFor = 0; knockdowns++;
+            cancelAbility(u);
         }
         if (u.knocked) {
             u.downFor += DT;
@@ -277,6 +278,7 @@ public final class World {
             return;
         }
         if (u.stunFor > 0) {   // dazed: stands there
+            cancelAbility(u);
             u.stunFor -= DT; u.vx *= .8f; u.vz *= .8f; u.x += u.vx * DT; u.z += u.vz * DT; u.walkAmount = 0; u.attackAnim = -1;
             return;
         }
@@ -295,8 +297,10 @@ public final class World {
             } else if (o.target() == null || !o.target().alive) { u.orders.poll(); o = u.orders.peek(); } else u.target = o.target();
         }
         if (u.targetB != null && !u.targetB.alive) u.targetB = null;
-        boolean autoTarget = o == null || o.type() == Order.Type.ATTACK_MOVE || o.type() == Order.Type.PATROL
-                || o.type() == Order.Type.GUARD || o.type() == Order.Type.AREA_ATTACK;
+        boolean builder = "builder".equals(u.def.role()) && (o == null || o.type() != Order.Type.ATTACK);   // builders don't fight unless ordered
+        if (builder) { u.target = null; u.targetB = null; }
+        boolean autoTarget = !builder && (o == null || o.type() == Order.Type.ATTACK_MOVE || o.type() == Order.Type.PATROL
+                || o.type() == Order.Type.GUARD || o.type() == Order.Type.AREA_ATTACK);
         if (u.target != null && !u.target.alive) u.target = null;
         if (autoTarget && (u.retargetIn -= DT) <= 0) {
             u.retargetIn = .5f + rng.nextFloat() * .2f;
@@ -310,7 +314,6 @@ public final class World {
         track(u);
         if (Abilities.act(this, u, u.target != null && !u.isSupport() ? u.target : null)) { u.inCombat = true; return; }
         float goalX = u.x, goalZ = u.z; boolean move = false; float stopAt = .6f;
-        if ("builder".equals(u.def.role()) && (o == null || o.type() != Order.Type.ATTACK)) { u.target = null; u.targetB = null; }   // builders don't fight unless ordered
         if (u.target == null && u.targetB != null) {
             Building b = u.targetB; float d = b.distTo(u.x, u.z), reach = u.range + u.radius;
             if (d > reach * .9f) { goalX = b.x; goalZ = b.z; move = true; stopAt = 0; }
@@ -460,6 +463,11 @@ public final class World {
         Unit t = u.target;
         if (t != null && !u.isSupport()) {
             u.noTargetFor = 0;
+            // holding a line nobody attacks is a stalemate: after a few quiet seconds, go to them (and remember that it didn't work)
+            if (u.eng != null && u.style == Combat.Style.HOLD && time - u.eng.start > 5 && u.eng.dealt + u.eng.taken < 1) {
+                teams.get(u.team).tactics.penalize(u, u.eng.enemyCls, Combat.Style.HOLD, -.1f);
+                u.style = Combat.Style.AGGRESSIVE; u.anchorX = Float.NaN;
+            }
             if (u.eng == null || !u.eng.enemyCls.equals(t.cls) || time - u.eng.start > 12) {
                 closeEngagement(u, false);
                 u.style = teams.get(u.team).tactics.choose(u, t.cls);
@@ -688,14 +696,25 @@ public final class World {
         areaHit = false;
     }
 
-    boolean areaHit;
+    boolean areaHit, noReactions;
+
+    /** Ends any ability that is steering the unit (knocked down or stunned mid-move). */
+    void cancelAbility(Unit u) {
+        if (u.charging || u.spinning || u.leaping) u.abilityCd = Math.max(u.abilityCd, (float) u.ability.cooldown() * .5f);
+        u.charging = u.spinning = u.leaping = false; u.bracing = false; u.inCombat = false;
+    }
+
+    /** Building footprints keep a half-block lane between them so units can pass, except walls, which join up. */
+    static float gap(dev.beyondtabs.engine.gen.BuildingDef a, dev.beyondtabs.engine.gen.BuildingDef b) {
+        return a.footprint().equals("1x1") && b.footprint().equals("1x1") ? 0 : .5f;
+    }
 
     /** Applies damage plus a physical knockback: the ragdoll is shoved, balance drops, the controller is pushed. */
     public void damage(Unit t, float dmg, float knockback, float fromX, float fromZ, int part) { damage(t, dmg, knockback, fromX, fromZ, part, null); }
 
     public void damage(Unit t, float dmg, float knockback, float fromX, float fromZ, int part, Unit src) {
         if (!t.alive) return;
-        if (src != null && src.team != t.team && (dmg > 0 || knockback > 0)) {
+        if (!noReactions && src != null && src.team != t.team && (dmg > 0 || knockback > 0)) {
             float[] r = Abilities.onDamaged(this, t, src, dmg, knockback, fromX, fromZ, areaHit);
             if (r == null) { dodges++; return; }
             dmg = r[0]; knockback = r[1];

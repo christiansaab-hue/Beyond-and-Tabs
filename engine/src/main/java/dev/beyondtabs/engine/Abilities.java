@@ -19,7 +19,9 @@ final class Abilities {
         if (u.buffFor > 0 && (u.buffFor -= DT) <= 0) { u.buffMul = 1; u.buffStab = 0; }
         if (u.poisonFor > 0) {
             u.poisonFor -= DT;
+            w.noReactions = true;   // a poison tick can't be dodged or blocked
             w.damage(u, u.poisonDps * DT, 0, u.x, u.z, Rig.TORSO, u.poisonSrc);
+            w.noReactions = false;
         }
         if (u.abilityCd > 0) u.abilityCd -= DT;
     }

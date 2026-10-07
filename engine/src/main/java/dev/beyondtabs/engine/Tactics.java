@@ -65,12 +65,23 @@ public final class Tactics {
         engagements++;
     }
 
+    /** A small nudge against a style that led nowhere (e.g. holding while nobody came). */
+    void penalize(Unit u, String enemyCls, Combat.Style style, float r) {
+        String key = u.def.id() + "|" + enemyCls;
+        float[] v = values(key, u.cls, enemyCls);
+        int[] c = count.computeIfAbsent(key, k -> new int[N]);
+        int i = style.ordinal(); c[i]++;
+        v[i] += (r - v[i]) / Math.min(c[i] + 1, 25);
+    }
+
     /** Best style per matchup, for UIs and benches. */
     public Map<String, String> summary() {
         Map<String, String> m = new java.util.TreeMap<>();
         for (var e : value.entrySet()) {
             float[] v = e.getValue();
-            dev.beyondtabs.engine.gen.UnitDef d = dev.beyondtabs.engine.gen.UnitDef.byId(e.getKey().substring(0, e.getKey().indexOf('|')));
+            dev.beyondtabs.engine.gen.UnitDef d;
+            try { d = dev.beyondtabs.engine.gen.UnitDef.byId(e.getKey().substring(0, e.getKey().indexOf('|'))); }
+            catch (RuntimeException gone) { continue; }   // a unit type from an older version of the sheets
             Combat.Style[] ok = Combat.stylesFor(Combat.classOf(d, dev.beyondtabs.engine.gen.WeaponDef.byId(d.weaponClass()), dev.beyondtabs.engine.gen.AbilityDef.byId(d.ability())));
             int best = ok[0].ordinal();
             for (Combat.Style st : ok) if (v[st.ordinal()] > v[best]) best = st.ordinal();

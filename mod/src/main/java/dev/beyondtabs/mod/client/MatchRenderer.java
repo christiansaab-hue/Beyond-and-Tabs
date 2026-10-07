@@ -383,6 +383,8 @@ public final class MatchRenderer {
     /** Remembers buildings that vanished between snapshots so they can collapse. */
     static void noteRuins(Snapshot prev, Snapshot cur) {
         if (prev == null) return;
+        long now = System.currentTimeMillis();
+        ruins.removeIf(r -> now - r.at > 45_000);
         java.util.Set<Integer> now = new java.util.HashSet<>();
         for (Snapshot.B b : cur.buildings) now.add(b.id);
         for (Snapshot.B b : prev.buildings)

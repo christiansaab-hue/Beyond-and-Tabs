@@ -28,7 +28,7 @@ public final class RtsAction {
         a.kind = b.readEnum(Kind.class); a.orderType = b.readVarInt(); a.queue = b.readBoolean(); a.on = b.readBoolean();
         a.x = b.readFloat(); a.z = b.readFloat(); a.radius = b.readFloat(); a.x2 = b.readFloat(); a.z2 = b.readFloat();
         a.targetUnit = b.readVarInt() - 1; a.targetBuilding = b.readVarInt() - 1; a.defIndex = b.readVarInt() - 1; a.count = Math.min(20, Math.max(1, b.readVarInt()));
-        a.ids = b.readVarIntArray(400);
+        a.ids = b.readVarIntArray(4096);
         return a;
     }
 }

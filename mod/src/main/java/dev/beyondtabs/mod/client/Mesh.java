@@ -32,6 +32,7 @@ final class Mesh {
 
     private final float[] wx = new float[4], wy = new float[4], wz = new float[4];
     private final float[] nx = new float[4], ny = new float[4], nz = new float[4];
+    private final float[] rgb = new float[12];   // reused: emit() runs for every quad every frame
     private boolean ol;   // emitting the outline hull right now
 
     Mesh to(VertexConsumer vc, Matrix4f m) { this.vc = vc; this.m = m; return this; }
@@ -91,7 +92,6 @@ final class Mesh {
             return;
         }
         int c = tint >= 0 ? Look.mix(color, tint, tintAmt) : color;
-        float[] rgb = new float[12];
         for (int i = 0; i < 4; i++) {
             float vx = fx, vy = fy, vz = fz;
             if (smooth) { vx = nx[i]; vy = ny[i]; vz = nz[i]; if (vx * fx + vy * fy + vz * fz < 0) { vx = -vx; vy = -vy; vz = -vz; } }

@@ -10,7 +10,7 @@ public final class Bench {
 
     public static void main(String[] a) {
         ragdollStands(); ragdollKnockAndRecover(); wading(); battle(60, true); battle(200, false); battle(300, true); economy(); siege(); aiMatch(Ai.Difficulty.NORMAL, Ai.Difficulty.NORMAL); aiMatch(Ai.Difficulty.HARD, Ai.Difficulty.EASY);
-        abilities(); learning();
+        abilities(); learning(); formations();
         System.out.println(failures == 0 ? "\nALL BENCHES PASS" : "\n" + failures + " FAILURES");
         System.exit(failures == 0 ? 0 : 1);
     }
@@ -143,6 +143,30 @@ public final class Bench {
         System.out.printf("  average health margin of the learning side: first 4 rounds %+.2f, last 4 rounds %+.2f%n", early, late);
         check(!memory.isEmpty(), "tactics were learned and saved");
         check(late > early, "the learning side does better after learning");
+    }
+
+    /** Group moves: front-liners end up ahead of archers, a line order spreads along the line, walls join up. */
+    static void formations() {
+        System.out.println("formations: a mixed group moved as a block and along a line; walls placed side by side");
+        World w = new World(Terrain.FLAT, 5); w.addTeam("kingdoms"); w.addTeam("ancient_world");
+        java.util.List<Unit> g = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) g.add(w.spawn(0, i % 2 == 0 ? UnitDef.KD_ARCHER : UnitDef.KD_SQUIRE, (i % 4) * 1.5f, (i / 4) * 1.5f, 0));
+        float[][] t = Formation.block(g, 0, 30);   // moving towards +z
+        float front = 0, back = 0;
+        for (int i = 0; i < g.size(); i++) { if (g.get(i).cls.equals("shield")) front += t[i][1] / 6; else back += t[i][1] / 6; }
+        float minGap = 1e9f;
+        for (int i = 0; i < t.length; i++) for (int j = i + 1; j < t.length; j++) minGap = Math.min(minGap, (float) Math.hypot(t[i][0] - t[j][0], t[i][1] - t[j][1]));
+        System.out.printf("  block: shields avg z %.1f, archers avg z %.1f, closest slots %.2f blocks%n", front, back, minGap);
+        check(front > back, "shields stand in front of archers");
+        check(minGap >= 1.29f, "no two units share a spot");
+        float[][] l = Formation.line(g, -10, 20, 10, 20);
+        float onLine = 0; for (int i = 0; i < g.size(); i++) if (Math.abs(l[i][1] - 20) < .01f) onLine++;
+        float spanX = 0; for (float[] q : l) spanX = Math.max(spanX, Math.abs(q[0]));
+        System.out.printf("  line: %d units on the line itself, spread to x = +-%.1f%n", (int) onLine, spanX);
+        check(onLine >= 10 && spanX > 8, "a line order spreads the group along the line");
+        Building a = w.startConstruction(0, BuildingDef.KD_WALL, 50.5f, 50.5f), b = w.startConstruction(0, BuildingDef.KD_WALL, 51.5f, 50.5f);
+        check(a != null && b != null, "walls can be placed next to each other");
+        check(w.startConstruction(0, BuildingDef.KD_BARRACKS, 55.5f, 50.5f) == null, "other buildings still keep a lane free");
     }
 
     static void siege() {
