@@ -19,7 +19,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class Network {
-    static final String VERSION = "2";
+    static final String VERSION = "3";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(BeyondTabs.MODID, "main"), () -> VERSION, VERSION::equals, VERSION::equals);
     static final float DETAIL_RANGE = 72f;   // blocks: full ragdoll particles sent within this distance of the player's camera
@@ -41,7 +41,7 @@ public final class Network {
     static void sendSnapshot(ServerPlayer p, Match m, boolean withSpots) {
         World w = m.world; Snapshot s = new Snapshot();
         float px = (float) p.getX(), pz = (float) p.getZ();
-        s.tick = w.tick; s.winner = w.winner;
+        s.tick = w.tick; s.winner = w.winner; s.blockStyle = m.structures.blocks();
         int team = m.teamOf(p.getUUID()); s.myTeam = team;
         if (team >= 0 && team < w.teams.size()) {
             Team t = w.teams.get(team);

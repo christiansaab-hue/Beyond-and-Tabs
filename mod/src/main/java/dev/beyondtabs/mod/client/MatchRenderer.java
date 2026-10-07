@@ -71,7 +71,8 @@ public final class MatchRenderer {
         RenderType quads = BTRender.SOLID;
         List<Snapshot.B> building = new ArrayList<>();
         quads.setupRenderState();
-        for (Snapshot.B b : s.buildings) {
+        boolean models = !s.blockStyle;
+        if (models) for (Snapshot.B b : s.buildings) {
             BuildingDef d = BuildingDef.ALL.get(b.def); int[] sz = BuildingModels.size(d);
             float gy = RtsCamera.ground(b.x, b.z), x0 = b.x - sz[0] / 2f, z0 = b.z - sz[1] / 2f;
             float h = measure(d, b.level)[1];
@@ -91,7 +92,7 @@ public final class MatchRenderer {
         Mesh m = M.to(vc, pose); m.vt = TRANS_SRC.getBuffer(BTRender.TRANSLUCENT);
         float camX = (float) cam.x, camY = (float) cam.y, camZ = (float) cam.z;
 
-        for (Snapshot.B b : s.buildings) {   // animated parts + soft shadows of all buildings
+        if (models) for (Snapshot.B b : s.buildings) {   // animated parts + soft shadows of all buildings
             BuildingDef d = BuildingDef.ALL.get(b.def); int[] sz = BuildingModels.size(d);
             float gy = RtsCamera.ground(b.x, b.z), x0 = b.x - sz[0] / 2f, z0 = b.z - sz[1] / 2f, h = measure(d, b.level)[1];
             if (fr != null && !fr.isVisible(new AABB(x0 - 3, gy - 1, z0 - 3, x0 + sz[0] + 3, gy + h + 2, z0 + sz[1] + 3))) continue;
@@ -102,8 +103,8 @@ public final class MatchRenderer {
             }
         }
         List<Runnable> ghosts = new ArrayList<>();
-        for (Snapshot.B b : building) construction(m, b, s, t, ghosts);
-        ruins(m, s, t);
+        if (models) { for (Snapshot.B b : building) construction(m, b, s, t, ghosts); ruins(m, s, t); }
+        else blockAccents(m, s, t);
         if (!strategic) {
             spots(m, s);
             units(m, s, a, t, fr, camX, camY, camZ);
@@ -175,6 +176,18 @@ public final class MatchRenderer {
             GHOST.reset(); GHOST.frame(x0, gy, z0, 0, 1); GHOST.from = limit; GHOST.alpha = .22f; GHOST.tint = 0xBFE4FF; GHOST.tintAmt = .65f;
             BuildingModels.build(GHOST, SINK.reset(), d, b.level, team, t);
         });
+    }
+
+    /** Block-style buildings get a floating team gem over the door so ownership reads at a glance. */
+    static void blockAccents(Mesh m, Snapshot s, float t) {
+        for (Snapshot.B b : s.buildings) {
+            BuildingDef d = BuildingDef.ALL.get(b.def); int[] sz = BuildingModels.size(d);
+            if (sz[0] < 3) continue;
+            float gy = RtsCamera.ground(b.x, b.z), y = gy + measure(d, b.level)[1] * Math.min(1, b.progress) + 1.2f + (float) Math.sin(t * 2 + b.id) * .15f;
+            m.reset(); m.glow = true; m.ow = .03f;
+            m.ballW(b.x, y, b.z, .22f, .32f, .22f, 8, 6, Look.lighter(Look.team(b.team, s.myTeam), .2f), (float) Math.cos(t), (float) Math.sin(t));
+            m.glow = false;
+        }
     }
 
     static void placementPreview(Mesh m, Snapshot s, float t, List<Runnable> ghosts) {

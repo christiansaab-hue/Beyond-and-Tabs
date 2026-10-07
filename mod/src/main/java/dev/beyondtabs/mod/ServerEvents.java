@@ -68,6 +68,17 @@ public final class ServerEvents {
             .then(Commands.literal("battle").then(Commands.argument("perSide", IntegerArgumentType.integer(1, 400)).executes(this::battle)))
             .then(Commands.literal("clear").executes(c -> { Match old = MATCHES.remove(c.getSource().getLevel()); if (old != null) TacticsStore.save(old.world); say(c, "Match cleared."); return 1; }))
             .then(Commands.literal("tactics").executes(ServerEvents::tactics))
+            .then(Commands.literal("style").then(Commands.argument("style", StringArgumentType.word())
+                .suggests((c, b) -> { b.suggest("blocks"); b.suggest("models"); return b.buildFuture(); })
+                .executes(c -> {
+                    Match m = MATCHES.get(c.getSource().getLevel());
+                    if (m == null) { say(c, "No match running."); return 0; }
+                    String st = StringArgumentType.getString(c, "style");
+                    if (!st.equals("blocks") && !st.equals("models")) { say(c, "Style: blocks or models"); return 0; }
+                    m.structures.setBlocks(st.equals("blocks"));
+                    say(c, st.equals("blocks") ? "Buildings are now built from Minecraft blocks." : "Buildings are now drawn as smooth models.");
+                    return 1;
+                })))
             .then(Commands.literal("shove").executes(this::shove))
             .then(Commands.literal("showcase").executes(this::showcase))
             .then(Commands.literal("stats").executes(this::stats)));

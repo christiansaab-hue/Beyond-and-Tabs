@@ -20,6 +20,8 @@ public final class Snapshot {
     public final List<float[]> projectiles = new ArrayList<>();
     public float[] metalSpots = new float[0];    // x,z pairs (sent every second)
     public boolean hasSpots;
+    /** Buildings are real Minecraft blocks (true) or client-drawn models (false). */
+    public boolean blockStyle = true;
 
     public static final class U {
         public int id; public byte team; public short def; public boolean alive, knocked;
@@ -34,7 +36,7 @@ public final class Snapshot {
     }
 
     public void encode(FriendlyByteBuf b) {
-        b.writeVarLong(tick); b.writeVarInt(myTeam + 1); b.writeVarInt(winner + 1); b.writeUtf(myRace);
+        b.writeVarLong(tick); b.writeVarInt(myTeam + 1); b.writeVarInt(winner + 1); b.writeUtf(myRace); b.writeBoolean(blockStyle);
         for (float f : new float[]{metal, metalMax, metalIncome, metalSpend, energy, energyMax, energyIncome, energySpend, efficiency}) b.writeFloat(f);
         b.writeVarInt(supplyUsed); b.writeVarInt(supplyCap);
         b.writeVarInt(researched.size()); for (String r : researched) b.writeUtf(r);
@@ -70,7 +72,7 @@ public final class Snapshot {
     static short clamp(float v) { return (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, Math.round(v))); }
 
     public static Snapshot decode(FriendlyByteBuf b) {
-        Snapshot s = new Snapshot(); s.tick = b.readVarLong(); s.myTeam = b.readVarInt() - 1; s.winner = b.readVarInt() - 1; s.myRace = b.readUtf();
+        Snapshot s = new Snapshot(); s.tick = b.readVarLong(); s.myTeam = b.readVarInt() - 1; s.winner = b.readVarInt() - 1; s.myRace = b.readUtf(); s.blockStyle = b.readBoolean();
         s.metal = b.readFloat(); s.metalMax = b.readFloat(); s.metalIncome = b.readFloat(); s.metalSpend = b.readFloat();
         s.energy = b.readFloat(); s.energyMax = b.readFloat(); s.energyIncome = b.readFloat(); s.energySpend = b.readFloat(); s.efficiency = b.readFloat();
         s.supplyUsed = b.readVarInt(); s.supplyCap = b.readVarInt();
