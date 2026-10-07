@@ -383,12 +383,12 @@ public final class MatchRenderer {
     /** Remembers buildings that vanished between snapshots so they can collapse. */
     static void noteRuins(Snapshot prev, Snapshot cur) {
         if (prev == null) return;
-        long now = System.currentTimeMillis();
-        ruins.removeIf(r -> now - r.at > 45_000);
-        java.util.Set<Integer> now = new java.util.HashSet<>();
-        for (Snapshot.B b : cur.buildings) now.add(b.id);
+        long t = System.currentTimeMillis();
+        ruins.removeIf(r -> t - r.at > 45_000);
+        java.util.Set<Integer> standing = new java.util.HashSet<>();
+        for (Snapshot.B b : cur.buildings) standing.add(b.id);
         for (Snapshot.B b : prev.buildings)
-            if (!now.contains(b.id) && b.progress > .3f) ruins.add(new Ruin(b.def, b.level, b.team, b.x, b.z, System.currentTimeMillis(), b.id));
+            if (!standing.contains(b.id) && b.progress > .3f) ruins.add(new Ruin(b.def, b.level, b.team, b.x, b.z, t, b.id));
     }
 
     static void clearCache() {
