@@ -1,0 +1,49 @@
+{
+ "sheet": "multiplayer",
+ "notes": "Filled and verified only after a real two-instance host/join test.",
+ "columns": [
+  "id",
+  "value",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "model",
+   "value": "Host-authoritative: host's Minecraft integrated server runs the sim; clients send orders and render snapshots",
+   "unverified": []
+  },
+  {
+   "id": "max_players",
+   "value": "unverified",
+   "unverified": [
+    "value"
+   ]
+  },
+  {
+   "id": "lan_open",
+   "value": "Minecraft 'Open to LAN' / dedicated server",
+   "unverified": []
+  },
+  {
+   "id": "internet_relay",
+   "value": "unverified: pick a bundleable relay (e.g. e4mc-style tunnel) and check license",
+   "unverified": [
+    "value"
+   ]
+  },
+  {
+   "id": "host_address_log",
+   "value": "mod writes 'TABSCRAFT Hosting at <address>' to its log",
+   "unverified": [
+    "value"
+   ]
+  },
+  {
+   "id": "join_method",
+   "value": "Prism/Minecraft --quickPlayMultiplayer <address>",
+   "unverified": [
+    "value"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,97 @@
+{
+ "sheet": "hooks",
+ "notes": "Every place the mod touches Minecraft (Forge 1.20.1).",
+ "columns": [
+  "id",
+  "mc_api",
+  "purpose",
+  "side",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "rts_dimension",
+   "mc_api": "Forge DimensionType + ChunkGenerator",
+   "purpose": "Match world: flat-ish generated battle maps, no mobs, no weather damage",
+   "side": "server",
+   "unverified": []
+  },
+  {
+   "id": "unit_entity",
+   "mc_api": "Entity (non-living mirror)",
+   "purpose": "One lightweight entity per unit for networking/visibility; sim owns state",
+   "side": "both",
+   "unverified": []
+  },
+  {
+   "id": "unit_renderer",
+   "mc_api": "EntityRenderer + RenderType.entityCutoutNoCull",
+   "purpose": "Draw extracted TABS meshes skinned to ragdoll pose; icons when zoomed out",
+   "side": "client",
+   "unverified": []
+  },
+  {
+   "id": "rts_camera",
+   "mc_api": "ViewportEvent.ComputeCameraAngles + CameraType override",
+   "purpose": "Free top-down camera with strategic zoom",
+   "side": "client",
+   "unverified": []
+  },
+  {
+   "id": "rts_input",
+   "mc_api": "InputEvent + KeyMapping",
+   "purpose": "Mouse picking, box select, orders, rebindable keys",
+   "side": "client",
+   "unverified": []
+  },
+  {
+   "id": "hud",
+   "mc_api": "RegisterGuiOverlaysEvent",
+   "purpose": "Resource bar, minimap, build menu, selection panel",
+   "side": "client",
+   "unverified": []
+  },
+  {
+   "id": "block_collision",
+   "mc_api": "Level.getBlockState via cached heightfield",
+   "purpose": "Physics ground + walls, refreshed when blocks change",
+   "side": "server",
+   "unverified": []
+  },
+  {
+   "id": "structures",
+   "mc_api": "StructureTemplate placement",
+   "purpose": "Buildings as block structures per race/level",
+   "side": "server",
+   "unverified": []
+  },
+  {
+   "id": "tabs_assets",
+   "mc_api": "Local resource pack + mod config dir",
+   "purpose": "Extracted TABS meshes/textures/sounds from the player's install",
+   "side": "client",
+   "unverified": []
+  },
+  {
+   "id": "networking",
+   "mc_api": "SimpleChannel packets",
+   "purpose": "Orders client->server; batched unit snapshots server->client",
+   "side": "both",
+   "unverified": []
+  },
+  {
+   "id": "tick",
+   "mc_api": "TickEvent.ServerTickEvent / ClientTickEvent",
+   "purpose": "Step sim; interpolate render",
+   "side": "both",
+   "unverified": []
+  },
+  {
+   "id": "fps_limiter",
+   "mc_api": "Options.framerateLimit",
+   "purpose": "Apply performance fps caps during matches",
+   "side": "client",
+   "unverified": []
+  }
+ ]
+}

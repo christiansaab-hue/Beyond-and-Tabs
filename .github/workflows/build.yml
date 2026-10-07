@@ -1,0 +1,40 @@
+name: build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Design sheets preflight (unverified cells allowed for dev builds)
+        run: python3 tools/preflight.py --allow-unverified
+      - name: Generated code matches the sheets
+        run: python3 tools/gen_java.py && git diff --exit-code engine/src/main/java/dev/beyondtabs/engine/gen
+      - name: Engine benches (no Minecraft)
+        run: |
+          mkdir -p /tmp/bt && javac --release 17 -d /tmp/bt $(find engine/src -name "*.java")
+          java -cp /tmp/bt dev.beyondtabs.engine.Bench
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.8' }
+      - name: Build the Forge mod
+        run: gradle -p mod build --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beyondandtabs-mod
+          path: mod/build/libs/*.jar
+      - name: Publish the latest dev build (pre-release 'dev')
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev
+          name: Latest dev build
+          prerelease: true
+          make_latest: false
+          body: "Automatic build of the newest commit on main (${{ github.sha }}). Untested in-game unless noted in the commit."
+          files: mod/build/libs/*.jar

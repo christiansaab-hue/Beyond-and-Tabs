@@ -1,0 +1,102 @@
+{
+ "sheet": "performance",
+ "notes": "Budgets to keep large battles smooth and the PC cool.",
+ "columns": [
+  "id",
+  "value",
+  "note",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "sim_tick_hz",
+   "value": 20,
+   "note": "RTS sim + physics step at Minecraft's 20 TPS; physics substeps below",
+   "unverified": []
+  },
+  {
+   "id": "physics_substeps_near",
+   "value": 2,
+   "note": "PBD substeps per tick for near-LOD ragdolls",
+   "unverified": []
+  },
+  {
+   "id": "lod_near_distance",
+   "value": 40,
+   "note": "blocks from camera: full active ragdoll",
+   "unverified": []
+  },
+  {
+   "id": "lod_mid_distance",
+   "value": 96,
+   "note": "reduced ragdoll (5 particles), 1 substep, every other tick",
+   "unverified": []
+  },
+  {
+   "id": "lod_far_distance",
+   "value": 200,
+   "note": "no ragdoll: point mass on flow field, animation only",
+   "unverified": []
+  },
+  {
+   "id": "icon_zoom_distance",
+   "value": 120,
+   "note": "camera height past which units draw as icons; mesh rendering off",
+   "unverified": []
+  },
+  {
+   "id": "max_units_per_player",
+   "value": 300,
+   "note": "hard cap; supply cap normally binds first",
+   "unverified": []
+  },
+  {
+   "id": "physics_budget_ms",
+   "value": 4.0,
+   "note": "per tick; adaptive LOD pushes distances in if exceeded",
+   "unverified": []
+  },
+  {
+   "id": "render_budget_ms",
+   "value": 6.0,
+   "note": "per frame for unit meshes; instanced by unit type",
+   "unverified": []
+  },
+  {
+   "id": "fps_cap_default",
+   "value": 60,
+   "note": "frame limiter on by default to keep heat down",
+   "unverified": []
+  },
+  {
+   "id": "fps_cap_unfocused",
+   "value": 15,
+   "note": "when the window is in the background",
+   "unverified": []
+  },
+  {
+   "id": "sleep_velocity",
+   "value": 0.02,
+   "note": "ragdolls at rest stop simulating until touched",
+   "unverified": []
+  },
+  {
+   "id": "pathfinding",
+   "value": "flow_field",
+   "note": "one flow field per destination group, cached, not A* per unit",
+   "unverified": []
+  },
+  {
+   "id": "spatial_hash_cell",
+   "value": 4,
+   "note": "blocks; neighbour queries for combat and collisions",
+   "unverified": []
+  },
+  {
+   "id": "threads",
+   "value": 2,
+   "note": "sim on one worker thread, render on main; no busy-waiting",
+   "unverified": []
+  }
+ ]
+}

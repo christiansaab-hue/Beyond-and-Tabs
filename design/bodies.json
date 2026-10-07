@@ -1,0 +1,106 @@
+{
+ "sheet": "bodies",
+ "notes": "Active-ragdoll bodies for the pure-Java position-based physics. particles/constraints = ragdoll cost per unit at full LOD.",
+ "columns": [
+  "id",
+  "particles",
+  "constraints",
+  "hp_base",
+  "mass",
+  "move_speed",
+  "radius",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "humanoid",
+   "particles": 11,
+   "constraints": 14,
+   "hp_base": 200,
+   "mass": 1.0,
+   "move_speed": 3.2,
+   "radius": 0.35,
+   "unverified": []
+  },
+  {
+   "id": "large",
+   "particles": 11,
+   "constraints": 14,
+   "hp_base": 1400,
+   "mass": 4.0,
+   "move_speed": 2.8,
+   "radius": 0.6,
+   "unverified": []
+  },
+  {
+   "id": "quadruped_large",
+   "particles": 14,
+   "constraints": 20,
+   "hp_base": 6000,
+   "mass": 20.0,
+   "move_speed": 2.6,
+   "radius": 1.4,
+   "unverified": []
+  },
+  {
+   "id": "mounted",
+   "particles": 16,
+   "constraints": 22,
+   "hp_base": 900,
+   "mass": 6.0,
+   "move_speed": 6.5,
+   "radius": 0.8,
+   "unverified": []
+  },
+  {
+   "id": "vehicle",
+   "particles": 6,
+   "constraints": 9,
+   "hp_base": 400,
+   "mass": 3.0,
+   "move_speed": 2.8,
+   "radius": 0.6,
+   "unverified": []
+  },
+  {
+   "id": "vehicle_large",
+   "particles": 10,
+   "constraints": 16,
+   "hp_base": 4000,
+   "mass": 15.0,
+   "move_speed": 2.2,
+   "radius": 1.4,
+   "unverified": []
+  },
+  {
+   "id": "siege",
+   "particles": 6,
+   "constraints": 9,
+   "hp_base": 600,
+   "mass": 6.0,
+   "move_speed": 1.6,
+   "radius": 0.9,
+   "unverified": []
+  },
+  {
+   "id": "flyer",
+   "particles": 8,
+   "constraints": 10,
+   "hp_base": 250,
+   "mass": 1.0,
+   "move_speed": 3.5,
+   "radius": 0.5,
+   "unverified": []
+  },
+  {
+   "id": "flyer_large",
+   "particles": 14,
+   "constraints": 20,
+   "hp_base": 5000,
+   "mass": 12.0,
+   "move_speed": 4.5,
+   "radius": 1.6,
+   "unverified": []
+  }
+ ]
+}

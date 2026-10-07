@@ -1,0 +1,496 @@
+{
+ "sheet": "weapon_classes",
+ "notes": "Fallback weapon behaviour for benches and for units whose TABS weapon could not be read. In game, each unit's real weapon comes from the player's TABS install at runtime. damage/cooldown stay unverified on purpose: they are placeholders.",
+ "columns": [
+  "id",
+  "kind",
+  "range",
+  "damage",
+  "cooldown",
+  "aoe",
+  "knockback",
+  "projectile",
+  "gravity",
+  "count",
+  "speed",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "melee_light",
+   "kind": "melee",
+   "range": 1.6,
+   "damage": 40,
+   "cooldown": 0.9,
+   "aoe": 0,
+   "knockback": 2.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_shield",
+   "kind": "melee",
+   "range": 1.5,
+   "damage": 30,
+   "cooldown": 1.0,
+   "aoe": 0,
+   "knockback": 1.5,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_heavy",
+   "kind": "melee",
+   "range": 2.0,
+   "damage": 120,
+   "cooldown": 1.4,
+   "aoe": 0,
+   "knockback": 6.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_dual",
+   "kind": "melee",
+   "range": 1.6,
+   "damage": 45,
+   "cooldown": 0.5,
+   "aoe": 0,
+   "knockback": 2.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_reach",
+   "kind": "melee",
+   "range": 3.2,
+   "damage": 70,
+   "cooldown": 1.3,
+   "aoe": 0,
+   "knockback": 3.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_fast",
+   "kind": "melee",
+   "range": 1.6,
+   "damage": 60,
+   "cooldown": 0.45,
+   "aoe": 0,
+   "knockback": 1.5,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_push",
+   "kind": "melee",
+   "range": 1.8,
+   "damage": 25,
+   "cooldown": 1.2,
+   "aoe": 0,
+   "knockback": 14.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_charge",
+   "kind": "melee",
+   "range": 2.2,
+   "damage": 200,
+   "cooldown": 2.0,
+   "aoe": 1.5,
+   "knockback": 18.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_crew",
+   "kind": "melee",
+   "range": 3.0,
+   "damage": 90,
+   "cooldown": 1.0,
+   "aoe": 2.0,
+   "knockback": 6.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "melee_staff",
+   "kind": "melee",
+   "range": 2.6,
+   "damage": 150,
+   "cooldown": 0.8,
+   "aoe": 1.5,
+   "knockback": 10.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "trample",
+   "kind": "melee",
+   "range": 3.0,
+   "damage": 180,
+   "cooldown": 1.5,
+   "aoe": 2.5,
+   "knockback": 25.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "lance_charge",
+   "kind": "melee",
+   "range": 3.0,
+   "damage": 300,
+   "cooldown": 3.0,
+   "aoe": 0,
+   "knockback": 20.0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "thrown",
+   "kind": "ranged",
+   "range": 14,
+   "damage": 55,
+   "cooldown": 2.5,
+   "aoe": 0,
+   "knockback": 3.0,
+   "projectile": "spear",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 24.0
+  },
+  {
+   "id": "thrown_heavy",
+   "kind": "ranged",
+   "range": 12,
+   "damage": 120,
+   "cooldown": 3.5,
+   "aoe": 1.5,
+   "knockback": 10.0,
+   "projectile": "boulder",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 20.0
+  },
+  {
+   "id": "bow",
+   "kind": "ranged",
+   "range": 22,
+   "damage": 45,
+   "cooldown": 2.0,
+   "aoe": 0,
+   "knockback": 1.0,
+   "projectile": "arrow",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 32.0
+  },
+  {
+   "id": "bow_slow",
+   "kind": "ranged",
+   "range": 20,
+   "damage": 40,
+   "cooldown": 2.2,
+   "aoe": 0,
+   "knockback": 1.0,
+   "projectile": "ice_arrow",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 32.0
+  },
+  {
+   "id": "bow_poison",
+   "kind": "ranged",
+   "range": 20,
+   "damage": 35,
+   "cooldown": 2.0,
+   "aoe": 0,
+   "knockback": 1.0,
+   "projectile": "snake_arrow",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 32.0
+  },
+  {
+   "id": "bow_air",
+   "kind": "ranged",
+   "range": 18,
+   "damage": 40,
+   "cooldown": 2.0,
+   "aoe": 0,
+   "knockback": 1.0,
+   "projectile": "arrow",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 32.0
+  },
+  {
+   "id": "musket",
+   "kind": "ranged",
+   "range": 26,
+   "damage": 140,
+   "cooldown": 5.0,
+   "aoe": 0,
+   "knockback": 5.0,
+   "projectile": "bullet",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 90.0
+  },
+  {
+   "id": "rocket_volley",
+   "kind": "ranged",
+   "range": 30,
+   "damage": 60,
+   "cooldown": 6.0,
+   "aoe": 2.0,
+   "knockback": 6.0,
+   "projectile": "firework",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 6,
+   "speed": 26.0
+  },
+  {
+   "id": "siege_bolt",
+   "kind": "ranged",
+   "range": 34,
+   "damage": 400,
+   "cooldown": 6.0,
+   "aoe": 0,
+   "knockback": 20.0,
+   "projectile": "bolt",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 45.0
+  },
+  {
+   "id": "siege_boulder",
+   "kind": "ranged",
+   "range": 36,
+   "damage": 300,
+   "cooldown": 7.0,
+   "aoe": 3.0,
+   "knockback": 25.0,
+   "projectile": "boulder",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 20.0
+  },
+  {
+   "id": "cannon_ring",
+   "kind": "ranged",
+   "range": 16,
+   "damage": 250,
+   "cooldown": 4.0,
+   "aoe": 2.5,
+   "knockback": 22.0,
+   "projectile": "cannonball",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 20.0
+  },
+  {
+   "id": "magic_aoe",
+   "kind": "ranged",
+   "range": 16,
+   "damage": 80,
+   "cooldown": 3.0,
+   "aoe": 2.5,
+   "knockback": 8.0,
+   "projectile": "bone_orb",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 18.0
+  },
+  {
+   "id": "magic_lightning",
+   "kind": "ranged",
+   "range": 24,
+   "damage": 350,
+   "cooldown": 4.0,
+   "aoe": 3.0,
+   "knockback": 15.0,
+   "projectile": "lightning",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 200.0
+  },
+  {
+   "id": "fire_breath",
+   "kind": "ranged",
+   "range": 10,
+   "damage": 40,
+   "cooldown": 0.25,
+   "aoe": 2.0,
+   "knockback": 2.0,
+   "projectile": "flame",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 20.0,
+   "count": 1,
+   "speed": 14.0
+  },
+  {
+   "id": "heal",
+   "kind": "support",
+   "range": 10,
+   "damage": -40,
+   "cooldown": 1.5,
+   "aoe": 3.0,
+   "knockback": 0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  },
+  {
+   "id": "buff_aura",
+   "kind": "support",
+   "range": 8,
+   "damage": 0,
+   "cooldown": 1.0,
+   "aoe": 8.0,
+   "knockback": 0,
+   "projectile": "none",
+   "unverified": [
+    "damage",
+    "cooldown"
+   ],
+   "gravity": 0.0,
+   "count": 1,
+   "speed": 0.0
+  }
+ ]
+}

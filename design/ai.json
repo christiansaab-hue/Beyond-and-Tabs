@@ -1,0 +1,72 @@
+{
+ "sheet": "ai",
+ "notes": "Solo AI. Same rules as players, no resource cheats.",
+ "columns": [
+  "id",
+  "behaviour",
+  "runs_every_s",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "economy_planner",
+   "behaviour": "Keep metal/energy income ratio near 1:10; build extractors on free spots, energy when energy-starved, storage when overflowing",
+   "runs_every_s": 2,
+   "unverified": []
+  },
+  {
+   "id": "build_order",
+   "behaviour": "Opening: 2 extractors, 1 energy, barracks, builder, 2 extractors, energy; then scale factories with income",
+   "runs_every_s": 1,
+   "unverified": []
+  },
+  {
+   "id": "tech_planner",
+   "behaviour": "Go T2 when income >= 15 metal/s or enemy has T2; T3 at >= 40 metal/s",
+   "runs_every_s": 5,
+   "unverified": []
+  },
+  {
+   "id": "army_composer",
+   "behaviour": "Counter enemy composition seen by scouts (ranged vs melee-heavy, siege vs defenses)",
+   "runs_every_s": 5,
+   "unverified": []
+  },
+  {
+   "id": "scouting",
+   "behaviour": "Keep one fast unit scouting enemy expansions; update threat map",
+   "runs_every_s": 3,
+   "unverified": []
+  },
+  {
+   "id": "threat_map",
+   "behaviour": "Grid of enemy strength by cell, decays over time; used for attacks and defense",
+   "runs_every_s": 1,
+   "unverified": []
+  },
+  {
+   "id": "attack_planner",
+   "behaviour": "Attack when own army value > 1.3x estimated enemy at target; prefer weak extractors",
+   "runs_every_s": 3,
+   "unverified": []
+  },
+  {
+   "id": "micro",
+   "behaviour": "Pull back units under 30% hp, focus fire, keep ranged behind melee, kite with ranged",
+   "runs_every_s": 0.5,
+   "unverified": []
+  },
+  {
+   "id": "defense",
+   "behaviour": "Respond to raids with nearest group; build watchtowers at contested spots",
+   "runs_every_s": 1,
+   "unverified": []
+  },
+  {
+   "id": "difficulty",
+   "behaviour": "Easy/Normal/Hard/Brutal scale APM, reaction delay and planner accuracy; never cheats on resources",
+   "runs_every_s": 0,
+   "unverified": []
+  }
+ ]
+}

@@ -1,0 +1,144 @@
+{
+ "sheet": "controls",
+ "notes": "BAR-style controls. All key bindings registered as Minecraft key mappings so players can rebind them.",
+ "columns": [
+  "id",
+  "binding",
+  "effect",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "camera_pan",
+   "binding": "WASD / screen edge / middle-drag",
+   "effect": "Move RTS camera",
+   "unverified": []
+  },
+  {
+   "id": "strategic_zoom",
+   "binding": "Mouse wheel",
+   "effect": "Zoom from 4 to 400 blocks; icons replace units past icon_zoom_distance",
+   "unverified": []
+  },
+  {
+   "id": "box_select",
+   "binding": "Left drag",
+   "effect": "Select units",
+   "unverified": []
+  },
+  {
+   "id": "double_click_select",
+   "binding": "Double left click",
+   "effect": "Select all on-screen units of that type",
+   "unverified": []
+  },
+  {
+   "id": "move",
+   "binding": "Right click",
+   "effect": "Move order",
+   "unverified": []
+  },
+  {
+   "id": "attack_move",
+   "binding": "A + right click",
+   "effect": "Fight while moving",
+   "unverified": []
+  },
+  {
+   "id": "shift_queue",
+   "binding": "Shift + any order",
+   "effect": "Append to command queue",
+   "unverified": []
+  },
+  {
+   "id": "formation_drag",
+   "binding": "Right drag",
+   "effect": "Spread units along a dragged line",
+   "unverified": []
+  },
+  {
+   "id": "area_attack",
+   "binding": "Ctrl + A + drag circle",
+   "effect": "Attack everything in area",
+   "unverified": []
+  },
+  {
+   "id": "area_reclaim",
+   "binding": "E + drag circle",
+   "effect": "Builders reclaim wrecks in area",
+   "unverified": []
+  },
+  {
+   "id": "patrol",
+   "binding": "P + right click",
+   "effect": "Patrol between points",
+   "unverified": []
+  },
+  {
+   "id": "guard",
+   "binding": "G + right click",
+   "effect": "Guard a unit or building",
+   "unverified": []
+  },
+  {
+   "id": "stop",
+   "binding": "S",
+   "effect": "Clear orders",
+   "unverified": []
+  },
+  {
+   "id": "control_group_set",
+   "binding": "Ctrl + 1-9",
+   "effect": "Save selection to group",
+   "unverified": []
+  },
+  {
+   "id": "control_group_select",
+   "binding": "1-9 (twice to centre)",
+   "effect": "Recall group",
+   "unverified": []
+  },
+  {
+   "id": "factory_repeat",
+   "binding": "Factory panel: Repeat",
+   "effect": "Loop the build queue",
+   "unverified": []
+  },
+  {
+   "id": "rally_point",
+   "binding": "Right click with factory selected",
+   "effect": "Units walk here when built",
+   "unverified": []
+  },
+  {
+   "id": "build_menu",
+   "binding": "B / factory panel",
+   "effect": "Place buildings, shift for rows",
+   "unverified": []
+  },
+  {
+   "id": "upgrade_building",
+   "binding": "U with building selected",
+   "effect": "Upgrade to next level",
+   "unverified": []
+  },
+  {
+   "id": "pause_speed",
+   "binding": "Pause / +/- (solo only)",
+   "effect": "Pause or game speed",
+   "unverified": []
+  },
+  {
+   "id": "minimap",
+   "binding": "Bottom-left",
+   "effect": "Click to jump; shows icons and pings",
+   "unverified": []
+  },
+  {
+   "id": "resource_bar",
+   "binding": "Top",
+   "effect": "Metal/energy income, drain, storage",
+   "unverified": []
+  }
+ ]
+}

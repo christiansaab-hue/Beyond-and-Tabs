@@ -1,0 +1,118 @@
+{
+ "sheet": "economy",
+ "notes": "BAR-style flow economy: income per second, build power drains resources while building, overflow wasted when storage full.",
+ "columns": [
+  "id",
+  "value",
+  "unit",
+  "source",
+  "unverified"
+ ],
+ "rows": [
+  {
+   "id": "start_metal",
+   "value": 1000,
+   "unit": "metal",
+   "source": "BAR start resources",
+   "unverified": []
+  },
+  {
+   "id": "start_energy",
+   "value": 1000,
+   "unit": "energy",
+   "source": "BAR start resources",
+   "unverified": []
+  },
+  {
+   "id": "commander_metal_income",
+   "value": 2.0,
+   "unit": "metal/s",
+   "source": "BAR commander",
+   "unverified": []
+  },
+  {
+   "id": "commander_energy_income",
+   "value": 25,
+   "unit": "energy/s",
+   "source": "BAR commander",
+   "unverified": []
+  },
+  {
+   "id": "base_storage",
+   "value": 1000,
+   "unit": "each",
+   "source": "BAR commander storage",
+   "unverified": []
+  },
+  {
+   "id": "commander_build_power",
+   "value": 30,
+   "unit": "work/s",
+   "source": "BAR commander",
+   "unverified": []
+  },
+  {
+   "id": "builder_build_power",
+   "value": 10,
+   "unit": "work/s per builder tier",
+   "source": "design",
+   "unverified": []
+  },
+  {
+   "id": "build_drain_rule",
+   "value": "proportional",
+   "unit": "rule",
+   "source": "BAR: spending scales with build power; if short, all builds slow proportionally",
+   "unverified": []
+  },
+  {
+   "id": "reclaim_fraction",
+   "value": 0.5,
+   "unit": "of metal cost",
+   "source": "BAR wreck reclaim",
+   "unverified": []
+  },
+  {
+   "id": "unit_cost_metal_factor",
+   "value": 0.5,
+   "unit": "x tabs_cost",
+   "source": "design",
+   "unverified": []
+  },
+  {
+   "id": "unit_cost_energy_factor",
+   "value": 4,
+   "unit": "x tabs_cost",
+   "source": "design",
+   "unverified": []
+  },
+  {
+   "id": "unit_work_factor",
+   "value": 0.25,
+   "unit": "x tabs_cost",
+   "source": "design",
+   "unverified": []
+  },
+  {
+   "id": "upgrade_cost_per_level",
+   "value": 0.6,
+   "unit": "x base cost",
+   "source": "design",
+   "unverified": []
+  },
+  {
+   "id": "metal_spots_per_player",
+   "value": 8,
+   "unit": "spots",
+   "source": "map generator",
+   "unverified": []
+  },
+  {
+   "id": "supply_cap",
+   "value": 200,
+   "unit": "supply",
+   "source": "performance sheet",
+   "unverified": []
+  }
+ ]
+}

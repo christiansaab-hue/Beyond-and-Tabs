@@ -1,0 +1,49 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+
+version = mod_version
+group = 'dev.beyondtabs'
+base { archivesName = 'beyondandtabs' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+// The headless engine (no Minecraft imports) is compiled into the mod.
+sourceSets.main.java.srcDirs += ['../engine/src/main/java']
+
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    copyIdeResources = true
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'info'
+            mods { beyondtabs { source sourceSets.main } }
+        }
+        client { }
+        server { args '--nogui' }
+    }
+}
+
+repositories { }
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    def props = [mod_id: mod_id, mod_version: mod_version]
+    inputs.properties props
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) { expand props }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes(['Specification-Title': 'beyondtabs', 'Implementation-Title': project.name,
+                    'Implementation-Version': project.jar.archiveVersion])
+    }
+    finalizedBy 'reobfJar'
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

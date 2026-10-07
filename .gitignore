@@ -1,0 +1,9 @@
+local/
+*.png
+*.assets
+*.resS
+__pycache__/
+mod/build/
+mod/run/
+mod/.gradle/
+.gradle/
