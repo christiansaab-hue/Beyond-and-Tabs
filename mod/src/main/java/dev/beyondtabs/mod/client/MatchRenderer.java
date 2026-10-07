@@ -336,10 +336,6 @@ public final class MatchRenderer {
             float[] xz = ClientMatch.pos(u); float gy = RtsCamera.ground(xz[0], xz[1]);
             UnitDef d = UnitDef.ALL.get(Math.max(0, u.def)); float k = (float) d.scale();
             if (sel) circle(vc, pose, xz[0], gy + .07f, xz[1], .6f * k, .3f, 1f, .4f);
-            if (sel && u.hp < .999f) {
-                float hy = gy + 2.6f * k;
-                seg(vc, pose, xz[0] - .4f, hy, xz[1], xz[0] - .4f + .8f * u.hp, hy, xz[1], .2f, 1f, .2f);
-            }
         }
         for (Snapshot.B b : s.buildings) {
             BuildingDef d = BuildingDef.ALL.get(b.def); int[] sz = BuildingModels.size(d);

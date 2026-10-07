@@ -22,11 +22,15 @@ public final class Snapshot {
     public boolean hasSpots;
     /** Buildings are real Minecraft blocks (true) or client-drawn models (false). */
     public boolean blockStyle = true;
+    /** Last "under attack" alert for my team: seconds ago (-1 none), where, and whether a building was hit. */
+    public float alertAge = -1, alertX, alertZ; public boolean alertBuilding;
+    public boolean paused; public float speed = 1;
 
     public static final class U {
         public int id; public byte team; public short def; public boolean alive, knocked;
         public float x, z, yaw, walkPhase, walkAmount, attack, hp; public float[] parts;
         public byte orders;   // queued order count (for the selection panel)
+        public byte style = -1;   // my units: the fighting style it is using (Combat.Style ordinal)
     }
 
     public static final class B {
@@ -36,7 +40,7 @@ public final class Snapshot {
     }
 
     public void encode(FriendlyByteBuf b) {
-        b.writeVarLong(tick); b.writeVarInt(myTeam + 1); b.writeVarInt(winner + 1); b.writeUtf(myRace); b.writeBoolean(blockStyle);
+        b.writeVarLong(tick); b.writeVarInt(myTeam + 1); b.writeVarInt(winner + 1); b.writeUtf(myRace); b.writeBoolean(blockStyle); b.writeFloat(alertAge); b.writeFloat(alertX); b.writeFloat(alertZ); b.writeBoolean(alertBuilding); b.writeBoolean(paused); b.writeFloat(speed);
         for (float f : new float[]{metal, metalMax, metalIncome, metalSpend, energy, energyMax, energyIncome, energySpend, efficiency}) b.writeFloat(f);
         b.writeVarInt(supplyUsed); b.writeVarInt(supplyCap);
         b.writeVarInt(researched.size()); for (String r : researched) b.writeUtf(r);
@@ -45,7 +49,7 @@ public final class Snapshot {
             b.writeVarInt(u.id); b.writeByte(u.team); b.writeShort(u.def);
             b.writeByte((u.alive ? 1 : 0) | (u.knocked ? 2 : 0) | (u.parts != null ? 4 : 0));
             b.writeFloat(u.x); b.writeFloat(u.z); b.writeFloat(u.yaw); b.writeFloat(u.walkPhase);
-            b.writeByte((int) (u.walkAmount * 255)); b.writeFloat(u.attack); b.writeByte((int) (Math.max(0, Math.min(1, u.hp)) * 255)); b.writeByte(u.orders);
+            b.writeByte((int) (u.walkAmount * 255)); b.writeFloat(u.attack); b.writeByte((int) (Math.max(0, Math.min(1, u.hp)) * 255)); b.writeByte(u.orders); b.writeByte(u.style);
             if (u.parts != null) {
                 b.writeByte(u.parts.length / 3);
                 float y0 = u.parts[1];
@@ -72,7 +76,7 @@ public final class Snapshot {
     static short clamp(float v) { return (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, Math.round(v))); }
 
     public static Snapshot decode(FriendlyByteBuf b) {
-        Snapshot s = new Snapshot(); s.tick = b.readVarLong(); s.myTeam = b.readVarInt() - 1; s.winner = b.readVarInt() - 1; s.myRace = b.readUtf(); s.blockStyle = b.readBoolean();
+        Snapshot s = new Snapshot(); s.tick = b.readVarLong(); s.myTeam = b.readVarInt() - 1; s.winner = b.readVarInt() - 1; s.myRace = b.readUtf(); s.blockStyle = b.readBoolean(); s.alertAge = b.readFloat(); s.alertX = b.readFloat(); s.alertZ = b.readFloat(); s.alertBuilding = b.readBoolean(); s.paused = b.readBoolean(); s.speed = b.readFloat();
         s.metal = b.readFloat(); s.metalMax = b.readFloat(); s.metalIncome = b.readFloat(); s.metalSpend = b.readFloat();
         s.energy = b.readFloat(); s.energyMax = b.readFloat(); s.energyIncome = b.readFloat(); s.energySpend = b.readFloat(); s.efficiency = b.readFloat();
         s.supplyUsed = b.readVarInt(); s.supplyCap = b.readVarInt();
@@ -82,7 +86,7 @@ public final class Snapshot {
             U u = new U(); u.id = b.readVarInt(); u.team = b.readByte(); u.def = b.readShort();
             int f = b.readByte(); u.alive = (f & 1) != 0; u.knocked = (f & 2) != 0;
             u.x = b.readFloat(); u.z = b.readFloat(); u.yaw = b.readFloat(); u.walkPhase = b.readFloat();
-            u.walkAmount = (b.readByte() & 255) / 255f; u.attack = b.readFloat(); u.hp = (b.readByte() & 255) / 255f; u.orders = b.readByte();
+            u.walkAmount = (b.readByte() & 255) / 255f; u.attack = b.readFloat(); u.hp = (b.readByte() & 255) / 255f; u.orders = b.readByte(); u.style = b.readByte();
             if ((f & 4) != 0) {
                 int pc = b.readByte() & 255; float y0 = b.readFloat(); u.parts = new float[pc * 3];
                 for (int i = 0; i < pc * 3; i += 3) { u.parts[i] = u.x + b.readShort() / 256f; u.parts[i + 1] = y0 + b.readShort() / 256f; u.parts[i + 2] = u.z + b.readShort() / 256f; }

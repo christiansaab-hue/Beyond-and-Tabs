@@ -35,6 +35,12 @@ public final class RtsScreen extends Screen {
     static boolean ghostValid;
 
     double dragX = -1, dragY; boolean dragging; long lastClick; int lastGroupKey = -1; long lastGroupAt;
+    /** Right-drag formation line: world start point while the right button is held. */
+    static float[] lineStart, lineEnd; static boolean rightDown;
+    /** Wall drag: world start of a line of 1x1 buildings. */
+    static float[] wallStart;
+    static boolean help; static int idleCycle;
+    static final Map<Integer, float[]> bookmarks = new HashMap<>();
     final List<Btn> buttons = new ArrayList<>();
     record Btn(int x, int y, int w, int h, String label, String tip, Runnable left, Runnable right, boolean on) { }
 
@@ -77,6 +83,7 @@ public final class RtsScreen extends Screen {
             return true;
         }
         if (button == 2) { RtsCamera.pan((float) -dx * .05f, (float) dy * .05f, .5f); return true; }
+        if (button == 1 && rightDown && lineStart != null) { float[] g = Proj.now().toGround(mx, my); if (g != null) lineEnd = new float[]{g[0], g[2]}; return true; }
         return super.mouseDragged(mx, my, button, dx, dy);
     }
 
@@ -98,7 +105,10 @@ public final class RtsScreen extends Screen {
             return true;
         }
         if (button == 0) {
-            if (placing != null) { placeBuilding(); return true; }
+            if (placing != null) {
+                if (placing.footprint().equals("1x1") && ghost != null) { wallStart = ghost.clone(); return true; }   // drag a line of walls
+                placeBuilding(); return true;
+            }
             dragX = mx; dragY = my; dragging = true; return true;
         }
         if (button == 1) {
@@ -112,7 +122,7 @@ public final class RtsScreen extends Screen {
                 RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.ORDER; a.queue = queue; a.ids = ids();
                 if (enemy != null) { a.orderType = Order.Type.ATTACK.ordinal(); a.targetUnit = enemy.id; }
                 else if (eb != null) { a.orderType = Order.Type.ATTACK.ordinal(); a.targetBuilding = eb.id; }
-                else if (g != null) { a.orderType = (patrolNext ? Order.Type.PATROL : attackMode ? Order.Type.ATTACK_MOVE : Order.Type.MOVE).ordinal(); a.x = g[0]; a.z = g[2]; }
+                else if (g != null) { rightDown = true; lineStart = new float[]{g[0], g[2]}; lineEnd = null; return true; }   // sent on release (click or line)
                 else return true;
                 Network.send(a); attackMode = false; patrolNext = false;
                 if (g != null) MatchRenderer.pingAt(g[0], g[1], g[2], a.orderType == Order.Type.ATTACK_MOVE.ordinal() || a.orderType == Order.Type.ATTACK.ordinal());
@@ -126,6 +136,37 @@ public final class RtsScreen extends Screen {
     }
 
     @Override public boolean mouseReleased(double mx, double my, int button) {
+        if (button == 1 && rightDown) {
+            rightDown = false;
+            if (lineStart != null && !selected.isEmpty()) {
+                RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.ORDER; a.queue = hasShiftDown(); a.ids = ids();
+                a.orderType = (patrolNext ? Order.Type.PATROL : attackMode ? Order.Type.ATTACK_MOVE : Order.Type.MOVE).ordinal();
+                a.x = lineStart[0]; a.z = lineStart[1];
+                if (lineEnd != null && Math.hypot(lineEnd[0] - lineStart[0], lineEnd[1] - lineStart[1]) > 2) { a.x2 = lineEnd[0]; a.z2 = lineEnd[1]; }
+                Network.send(a);
+                float px = lineEnd != null ? (lineStart[0] + lineEnd[0]) / 2 : lineStart[0], pz = lineEnd != null ? (lineStart[1] + lineEnd[1]) / 2 : lineStart[1];
+                MatchRenderer.pingAt(px, RtsCamera.ground(px, pz), pz, a.orderType == Order.Type.ATTACK_MOVE.ordinal());
+                attackMode = false; patrolNext = false;
+            }
+            lineStart = lineEnd = null;
+            return true;
+        }
+        if (button == 0 && wallStart != null) {
+            float[] end = ghost != null ? ghost : wallStart;
+            float dx = end[0] - wallStart[0], dz = end[1] - wallStart[1];
+            int n = (int) Math.max(Math.abs(dx), Math.abs(dz));
+            Snapshot s = ClientMatch.cur;
+            for (int k = 0; k <= n; k++) {
+                float x = wallStart[0] + (n == 0 ? 0 : Math.round(dx * k / (float) n)), z = wallStart[1] + (n == 0 ? 0 : Math.round(dz * k / (float) n));
+                if (s != null && !validPlacement(s, placing, x, z)) continue;
+                RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.BUILD; a.defIndex = BuildingDef.ALL.indexOf(placing);
+                a.x = x; a.z = z; a.ids = ids(); a.queue = k > 0 || hasShiftDown();
+                Network.send(a);
+            }
+            wallStart = null;
+            if (!hasShiftDown()) placing = null;
+            return true;
+        }
         if (button == 0) minimapDrag = false;
         if (button != 0 || !dragging) return false;
         dragging = false;
@@ -164,7 +205,21 @@ public final class RtsScreen extends Screen {
             if (placing != null && key == GLFW.GLFW_KEY_ESCAPE) { placing = null; return true; }
             RtsClient.toggle(); return true;
         }
+        if (key == GLFW.GLFW_KEY_A && hasControlDown()) { selectArmy(s); return true; }
         if (key == GLFW.GLFW_KEY_A) { attackMode = true; return true; }
+        if (key == GLFW.GLFW_KEY_I && s != null) { selectIdleBuilder(s); return true; }
+        if (key == GLFW.GLFW_KEY_SPACE && s != null && s.alertAge >= 0) { RtsCamera.focusX = s.alertX; RtsCamera.focusZ = s.alertZ; return true; }
+        if (key == GLFW.GLFW_KEY_HOME && s != null) { centerOnCommander(s); return true; }
+        if (key == GLFW.GLFW_KEY_H || key == GLFW.GLFW_KEY_F1) { help = !help; return true; }
+        if (key == GLFW.GLFW_KEY_PAUSE || key == GLFW.GLFW_KEY_F9) { simple(RtsAction.Kind.PAUSE, 1); return true; }
+        if (key == GLFW.GLFW_KEY_EQUAL || key == GLFW.GLFW_KEY_KP_ADD) { simple(RtsAction.Kind.SPEED, 2); return true; }
+        if (key == GLFW.GLFW_KEY_MINUS || key == GLFW.GLFW_KEY_KP_SUBTRACT) { simple(RtsAction.Kind.SPEED, 1); return true; }
+        if (key >= GLFW.GLFW_KEY_F5 && key <= GLFW.GLFW_KEY_F8) {   // camera bookmarks: Ctrl to store
+            int b = key - GLFW.GLFW_KEY_F5;
+            if (hasControlDown()) bookmarks.put(b, new float[]{RtsCamera.focusX, RtsCamera.focusZ, RtsCamera.targetDist, RtsCamera.yaw});
+            else { float[] v = bookmarks.get(b); if (v != null) { RtsCamera.focusX = v[0]; RtsCamera.focusZ = v[1]; RtsCamera.targetDist = v[2]; RtsCamera.yaw = v[3]; } }
+            return true;
+        }
         if (key == GLFW.GLFW_KEY_S) { order(Order.Type.STOP); return true; }
         if (key == GLFW.GLFW_KEY_P) { attackMode = false; patrolNext = true; return true; }
         if (key == GLFW.GLFW_KEY_B) { buildMenu = s != null && canBuild(s); return true; }
@@ -201,6 +256,40 @@ public final class RtsScreen extends Screen {
     static void act(RtsAction.Kind k, int defIndex, int count) {
         RtsAction a = new RtsAction(); a.kind = k; a.targetBuilding = selectedBuilding; a.defIndex = defIndex; a.count = count;
         Network.send(a);
+    }
+
+    static void simple(RtsAction.Kind k, int count) { RtsAction a = new RtsAction(); a.kind = k; a.count = count; Network.send(a); }
+
+    /** Ctrl+A: every fighting unit (not builders or the commander). */
+    void selectArmy(Snapshot s) {
+        if (s == null) return;
+        selected.clear(); selectedBuilding = -1;
+        for (Snapshot.U u : s.units) {
+            if (!u.alive || u.team != s.myTeam) continue;
+            String r = UnitDef.ALL.get(u.def).role();
+            if (!r.equals("builder") && !r.equals("commander")) selected.add(u.id);
+        }
+        buildMenu = false;
+    }
+
+    /** I: cycle through builders with nothing to do and look at them. */
+    void selectIdleBuilder(Snapshot s) {
+        List<Snapshot.U> idle = new ArrayList<>();
+        for (Snapshot.U u : s.units) if (u.alive && u.team == s.myTeam && u.orders == 0 && UnitDef.ALL.get(u.def).role().equals("builder")) idle.add(u);
+        if (idle.isEmpty()) { Minecraft.getInstance().gui.setOverlayMessage(Component.literal("No idle builders"), false); return; }
+        Snapshot.U u = idle.get(Math.floorMod(idleCycle++, idle.size()));
+        selected.clear(); selectedBuilding = -1; selected.add(u.id);
+        RtsCamera.focusX = u.x; RtsCamera.focusZ = u.z; buildMenu = true;
+    }
+
+    void centerOnCommander(Snapshot s) {
+        for (Snapshot.U u : s.units) if (u.alive && u.team == s.myTeam && UnitDef.ALL.get(u.def).role().equals("commander")) { RtsCamera.focusX = u.x; RtsCamera.focusZ = u.z; return; }
+    }
+
+    static int idleBuilders(Snapshot s) {
+        int n = 0;
+        for (Snapshot.U u : s.units) if (u.alive && u.team == s.myTeam && u.orders == 0 && UnitDef.ALL.get(u.def).role().equals("builder")) n++;
+        return n;
     }
 
     void placeBuilding() {
@@ -291,8 +380,12 @@ public final class RtsScreen extends Screen {
             int x0 = (int) Math.min(dragX, mx), x1 = (int) Math.max(dragX, mx), y0 = (int) Math.min(dragY, my), y1 = (int) Math.max(dragY, my);
             g.fill(x0, y0, x1, y1, 0x2040FF60); outline(g, x0, y0, x1 - x0, y1 - y0, 0xFF60FF80);
         }
+        drawFormationPreview(g, s, p);
         drawTopBar(g, s);
         drawBottomPanel(g, s, mx, my);
+        drawAlert(g, s);
+        if (!dragging && placing == null && my < height - 96) drawHover(g, s, p, mx, my);
+        if (help) drawHelp(g);
         if (attackMode || patrolNext) g.drawCenteredString(font, (patrolNext ? "Patrol" : "Attack-move") + ": right-click a destination", width / 2, height - 118, 0xFFFF7060);
         if (s.winner >= 0) {
             String msg = s.winner == s.myTeam ? "VICTORY" : "DEFEAT";
@@ -300,10 +393,7 @@ public final class RtsScreen extends Screen {
             g.drawCenteredString(font, msg, width / 2, height / 2 - 4, s.winner == s.myTeam ? 0xFF7CFF7C : 0xFFFF6A6A);
         }
         // tooltips
-        for (Btn b : buttons) if (b.tip != null && mx >= b.x && my >= b.y && mx < b.x + b.w && my < b.y + b.h) {
-            int tw = font.width(b.tip) + 8;
-            g.fill(mx + 8, my - 14, mx + 8 + tw, my - 1, BG); g.drawString(font, b.tip, mx + 12, my - 11, TXT);
-        }
+        for (Btn b : buttons) if (b.tip != null && mx >= b.x && my >= b.y && mx < b.x + b.w && my < b.y + b.h) tooltip(g, b.tip, mx, my);
     }
 
     static boolean sizeOdd(BuildingDef d, int axis) { return Integer.parseInt(d.footprint().split("x")[axis]) % 2 == 1; }
@@ -315,6 +405,14 @@ public final class RtsScreen extends Screen {
         bar(g, x + 166, 4, 150, "Energy", s.energy, s.energyMax, s.energyIncome, s.energySpend, ENERGY);
         g.drawString(font, "Supply " + s.supplyUsed + "/" + s.supplyCap, x + 326, 4, s.supplyUsed >= s.supplyCap ? 0xFFFF6A6A : TXT);
         if (s.efficiency < .99f) g.drawString(font, String.format("Build %d%%", Math.round(s.efficiency * 100)), x + 326, 13, 0xFFFF9A4A);
+        int idle = idleBuilders(s);
+        if (idle > 0) {
+            String t = idle + " idle builder" + (idle > 1 ? "s" : "") + " (I)";
+            int bw = font.width(t) + 10;
+            button(g, x + w + 6, 2, bw, 16, t, "Select the next builder with nothing to do", () -> selectIdleBuilder(s), null, false, true);
+        }
+        if (s.paused) g.drawCenteredString(font, "PAUSED  (Pause / F9 to resume)", width / 2, 28, 0xFFFFD27A);
+        else if (s.speed != 1) g.drawCenteredString(font, "Speed " + (s.speed == .5f ? "0.5" : String.valueOf((int) s.speed)) + "x", width / 2, 28, 0xFFFFD27A);
     }
 
     void bar(GuiGraphics g, int x, int y, int w, String label, float v, float max, float inc, float spend, int color) {
@@ -336,15 +434,21 @@ public final class RtsScreen extends Screen {
         if (!counts.isEmpty()) {
             g.drawString(font, selected.size() + " selected", x, ty, TXT); ty += 11;
             for (var e : counts.entrySet()) {
-                if (ty > height - 10) break;
-                g.drawString(font, e.getValue() + "x " + name(UnitDef.ALL.get(e.getKey()).id()), x, ty, DIM); ty += 10;
+                if (ty > height - 12) break;
+                UnitDef d = UnitDef.ALL.get(e.getKey()); final short def = e.getKey();
+                String label = e.getValue() + "x " + name(d.id());
+                button(g, x, ty, Math.max(120, font.width(label) + 10), 11, label, unitTip(d) + "\nLeft: select only these.  Right: drop these.",
+                        () -> { Snapshot c = ClientMatch.cur; if (c != null) selected.removeIf(id -> c.units.stream().anyMatch(u -> u.id == id && u.def != def)); },
+                        () -> { Snapshot c = ClientMatch.cur; if (c != null) selected.removeIf(id -> c.units.stream().anyMatch(u -> u.id == id && u.def == def)); },
+                        false, true);
+                ty += 12;
             }
         } else if (selectedBuilding >= 0) {
             Snapshot.B b = s.buildings.stream().filter(q -> q.id == selectedBuilding).findFirst().orElse(null);
             if (b != null) drawBuildingInfo(g, s, b, x, ty);
         } else {
-            g.drawString(font, "Left-drag to select, right-click to order. A attack-move, S stop, B build, Ctrl+1-9 groups.", x, ty, DIM);
-            g.drawString(font, "Arrows / screen edge / middle-drag pan, wheel zoom, Q/E rotate, P patrol, V or Esc to leave.", x, ty + 11, DIM);
+            g.drawString(font, "Left-drag select, right-click order (right-drag = line formation). A attack-move, S stop, B build.", x, ty, DIM);
+            g.drawString(font, "Ctrl+A army, I idle builder, Space last alert, Home commander, Ctrl+1-9 groups, H all hotkeys.", x, ty + 11, DIM);
         }
         int bx = mm + 200;
         if (buildMenu && !selected.isEmpty()) drawBuildMenu(g, s, bx, y + 6);
@@ -402,7 +506,7 @@ public final class RtsScreen extends Screen {
             int w = Math.max(70, font.width(label) + 10);
             if (cx + w > width - 8) { cx = x; cy += 22; }
             final BuildingDef fd = d;
-            String tip = String.format("%d metal, %d energy%s", d.metal(), d.energy(), ok ? "" : " — needs " + name(d.requiresTech()));
+            String tip = String.format("%s\n%d metal, %d energy, %s footprint, %d levels%s", name(d.id()), d.metal(), d.energy(), d.footprint(), d.levels(), ok ? "" : "\nNeeds " + name(d.requiresTech()));
             button(g, cx, cy, w, 18, label, tip, ok ? () -> { placing = fd; } : null, null, placing == d, ok);
             cx += w + 4;
         }
@@ -420,7 +524,7 @@ public final class RtsScreen extends Screen {
                 String label = name(u.id()) + (queued > 0 ? " [" + queued + "]" : "");
                 int w = Math.max(64, font.width(label) + 10);
                 if (cx + w > width - 8) { cx = x; cy += 20; }
-                button(g, cx, cy, w, 17, label, String.format("%d metal, %d energy, supply %d", u.metal(), u.energy(), u.supply()),
+                button(g, cx, cy, w, 17, label, unitTip(u) + String.format("\n%d metal, %d energy, supply %d%s", u.metal(), u.energy(), u.supply(), unlocked ? "" : "\nNeeds tier " + u.tier() + " research"),
                         unlocked ? () -> act(RtsAction.Kind.ENQUEUE, idx, hasShiftDown() ? 5 : 1) : null,
                         () -> act(RtsAction.Kind.DEQUEUE, idx, 1), false, unlocked);
                 cx += w + 3;
@@ -448,6 +552,109 @@ public final class RtsScreen extends Screen {
                     () -> act(RtsAction.Kind.UPGRADE, -1, 1), null, false, true);
     }
 
+    static final String[] STYLE_NAMES = {"Aggressive", "Flanking", "Skirmishing", "Holding", "Kiting", "Focusing"};
+
+    /** Name, role, health, weapon and ability of a unit type. */
+    static String unitTip(UnitDef d) {
+        var st = dev.beyondtabs.engine.UnitStats.fallback(d);
+        var ab = dev.beyondtabs.engine.gen.AbilityDef.byId(d.ability());
+        var w = st.weapon();
+        StringBuilder b = new StringBuilder();
+        b.append(name(d.id())).append("  (").append(d.role()).append(", tier ").append(d.tier()).append(")\n");
+        b.append(String.format("HP %.0f  |  %s: %d dmg every %.1fs, range %.1f", st.hp(), name("x_" + w.id()), w.damage(), w.cooldown(), w.range()));
+        if (!ab.id().equals("none")) b.append("\n").append(ab.name()).append(": ").append(ab.description());
+        return b.toString();
+    }
+
+    void tooltip(GuiGraphics g, String tip, int mx, int my) {
+        List<String> lines = new ArrayList<>();
+        for (String l : tip.split("\n")) {   // wrap long lines
+            while (font.width(l) > 300) { int cut = l.lastIndexOf(' ', Math.min(l.length() - 1, 70)); if (cut <= 0) break; lines.add(l.substring(0, cut)); l = l.substring(cut + 1); }
+            lines.add(l);
+        }
+        int tw = 0; for (String l : lines) tw = Math.max(tw, font.width(l));
+        int h = lines.size() * 10 + 6, x = Math.min(mx + 10, width - tw - 14), y = Math.max(2, my - h - 4);
+        g.fill(x, y, x + tw + 10, y + h, 0xF0101418); outline(g, x, y, tw + 10, h, EDGE);
+        for (int i = 0; i < lines.size(); i++) g.drawString(font, lines.get(i), x + 5, y + 4 + i * 10, i == 0 ? TXT : DIM);
+    }
+
+    /** Hovering a unit or building in the world shows what it is (and for your units, how it is fighting). */
+    void drawHover(GuiGraphics g, Snapshot s, Proj p, int mx, int my) {
+        Snapshot.U u = unitAt(s, p, mx, my, true); if (u == null) u = unitAt(s, p, mx, my, false);
+        if (u != null) {
+            UnitDef d = UnitDef.ALL.get(u.def);
+            String tip = (u.team == s.myTeam ? "" : "Enemy ") + unitTip(d) + String.format("\nHealth %d%%", Math.round(u.hp * 100));
+            if (u.style >= 0 && u.style < STYLE_NAMES.length) tip += "  |  fighting: " + STYLE_NAMES[u.style];
+            if (u.knocked) tip += "  |  knocked down";
+            tooltip(g, tip, mx, my);
+            return;
+        }
+        float[] gr = p.toGround(mx, my);
+        if (gr == null) return;
+        Snapshot.B b = buildingAt(s, gr[0], gr[2], true); if (b == null) b = buildingAt(s, gr[0], gr[2], false);
+        if (b != null) {
+            BuildingDef d = BuildingDef.ALL.get(b.def);
+            tooltip(g, (b.team == s.myTeam ? "" : "Enemy ") + name(d.id()) + String.format("  (level %d/%d)\nHealth %d%%%s", b.level, d.levels(), Math.round(b.hp * 100),
+                    b.progress < 1 ? String.format("  |  %s %d%%", b.upgrading ? "upgrading" : "building", Math.round(b.progress * 100)) : ""), mx, my);
+        }
+    }
+
+    /** While right-dragging: where the selected units will stand. */
+    void drawFormationPreview(GuiGraphics g, Snapshot s, Proj p) {
+        if (!rightDown || lineStart == null || lineEnd == null || selected.isEmpty()) return;
+        float lx = lineEnd[0] - lineStart[0], lz = lineEnd[1] - lineStart[1], len = (float) Math.sqrt(lx * lx + lz * lz);
+        if (len < 2) return;
+        int n = selected.size();
+        float cx = 0, cz = 0; int k = 0;
+        for (Snapshot.U u : s.units) if (selected.contains(u.id)) { cx += u.x; cz += u.z; k++; }
+        if (k > 0) { cx /= k; cz /= k; }
+        float fx = lz / len, fz = -lx / len, mxw = (lineStart[0] + lineEnd[0]) / 2, mzw = (lineStart[1] + lineEnd[1]) / 2;
+        if ((mxw - cx) * fx + (mzw - cz) * fz < 0) { fx = -fx; fz = -fz; }
+        int cols = Math.max(1, Math.min(n, (int) (len / 1.4f) + 1));
+        float colSp = cols > 1 ? Math.max(1.4f, len / (cols - 1)) : 1.4f, rx = fz, rz = -fx;
+        int c = attackMode ? 0xFFFF7060 : 0xFF7CFF8C;
+        for (int i = 0; i < n; i++) {
+            int r = i / cols, j = i % cols, inRow = Math.min(cols, n - r * cols);
+            float side = (j - (inRow - 1) / 2f) * colSp, back = -r * 1.4f;
+            float wx = mxw + rx * side + fx * back, wz = mzw + rz * side + fz * back;
+            float[] q = p.toScreen(wx, RtsCamera.ground(wx, wz) + .1f, wz);
+            if (q != null) g.fill((int) q[0] - 2, (int) q[1] - 2, (int) q[0] + 2, (int) q[1] + 2, c);
+        }
+    }
+
+    /** "Under attack" banner and a pulsing marker on the minimap; Space jumps there. */
+    void drawAlert(GuiGraphics g, Snapshot s) {
+        if (s.alertAge < 0 || s.alertAge > 5) return;
+        String t = (s.alertBuilding ? "A building is under attack" : "Your units are under attack") + "  —  Space to look";
+        int w = font.width(t) + 16, x = width / 2 - w / 2;
+        int a = (int) (200 * Math.max(0, 1 - s.alertAge / 5f)) + 40;
+        g.fill(x, 40, x + w, 54, (a << 24) | 0x5A1414); outline(g, x, 40, w, 14, 0xFFFF6A6A);
+        g.drawString(font, t, x + 8, 43, 0xFFFFD0D0);
+        if (mini != null) {
+            int px = (int) (mini[0] + (s.alertX - mini[3]) / mini[5] * mini[2]), py = (int) (mini[1] + (s.alertZ - mini[4]) / mini[5] * mini[2]);
+            int r = 3 + (int) ((System.currentTimeMillis() / 120) % 5);
+            outline(g, px - r, py - r, 2 * r, 2 * r, 0xFFFF4040);
+        }
+    }
+
+    void drawHelp(GuiGraphics g) {
+        String[] lines = {
+                "HOTKEYS  (H to close)",
+                "Left-drag: box select   Double-click: all of that type on screen   Shift: add / queue",
+                "Right-click: move / attack   Right-drag: line formation   A: attack-move   P: patrol   S: stop",
+                "Ctrl+A: select army   I: next idle builder   Ctrl+1-9: set group   1-9: select group (twice: jump)",
+                "B: build menu   (walls: drag to place a line)   U: upgrade building   R: factory repeat",
+                "Space: jump to last alert   Home: commander   Ctrl+F5-F8: save camera   F5-F8: recall camera",
+                "Arrows / screen edges / middle-drag: pan   Wheel: zoom (far = strategic icons)   Q / E: rotate",
+                "Pause or F9: pause (single player)   + / -: game speed   Alt: health bars for everyone",
+                "V or Esc: leave the RTS view",
+        };
+        int w = 0; for (String l : lines) w = Math.max(w, font.width(l));
+        int x = width / 2 - w / 2 - 10, y = height / 2 - lines.length * 6 - 10;
+        g.fill(x, y, x + w + 20, y + lines.length * 12 + 14, 0xF0101418); outline(g, x, y, w + 20, lines.length * 12 + 14, EDGE);
+        for (int i = 0; i < lines.length; i++) g.drawString(font, lines[i], x + 10, y + 8 + i * 12, i == 0 ? ENERGY : TXT);
+    }
+
     void button(GuiGraphics g, int x, int y, int w, int h, String label, String tip, Runnable left, Runnable right, boolean on, boolean enabled) {
         g.fill(x, y, x + w, y + h, on ? 0xFF3E6A48 : enabled ? 0xFF2A3440 : 0xFF20262C);
         outline(g, x, y, w, h, on ? 0xFF7CDC7C : EDGE);
@@ -457,15 +664,21 @@ public final class RtsScreen extends Screen {
 
     static void outline(GuiGraphics g, int x, int y, int w, int h, int c) { g.hLine(x, x + w - 1, y, c); g.hLine(x, x + w - 1, y + h - 1, c); g.vLine(x, y, y + h - 1, c); g.vLine(x + w - 1, y, y + h - 1, c); }
 
-    /** Close up: small health bars and brackets over selected units. */
+    /** Close up: health bars over selected and damaged units (Alt: everyone). */
     void drawSelectionMarkers(GuiGraphics g, Snapshot s, Proj p) {
+        boolean all = hasAltDown();
         for (Snapshot.U u : s.units) {
-            if (!u.alive || !selected.contains(u.id)) continue;
+            if (!u.alive) continue;
+            boolean sel = selected.contains(u.id);
+            if (!sel && !all && u.hp > .995f) continue;
             float[] xz = ClientMatch.pos(u);
-            float[] q = p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]) + 2.3f, xz[1]);
+            float k = (float) UnitDef.ALL.get(Math.max(0, u.def)).scale();
+            float[] q = p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]) + 2.5f * k, xz[1]);
             if (q == null) continue;
-            int x = (int) q[0], y = (int) q[1];
-            g.fill(x - 8, y, x + 8, y + 2, 0xFF303030); g.fill(x - 8, y, x - 8 + (int) (16 * u.hp), y + 2, 0xFF60E070);
+            int x = (int) q[0], y = (int) q[1], hw = sel ? 9 : 7;
+            int col = u.team == s.myTeam ? (u.hp > .5f ? 0xFF5FD86A : u.hp > .25f ? 0xFFE8C94A : 0xFFE8604A) : 0xFFE8604A;
+            g.fill(x - hw - 1, y - 1, x + hw + 1, y + 3, 0xC0000000);
+            g.fill(x - hw, y, x - hw + Math.round(2 * hw * u.hp), y + 2, col);
         }
     }
 

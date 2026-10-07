@@ -41,7 +41,7 @@ public final class ServerEvents {
         for (ServerPlayer p : level.players()) { Vec3 v = p.getEyePosition(); w.cameras.add(new float[]{(float) v.x, (float) v.y, (float) v.z}); }
         if (level.getGameTime() % 40 == 0) m.terrain.invalidate();
         int before = w.winner;
-        w.tick();
+        if (!m.paused) { m.speedAcc += m.speed; while (m.speedAcc >= 1) { m.speedAcc -= 1; w.tick(); } }
         if (level.getGameTime() % 5 == 0) m.structures.update();
         if ((before < 0 && w.winner >= 0) || level.getGameTime() % 1200 == 0) TacticsStore.save(w);
         if (before < 0 && w.winner >= 0)
@@ -233,7 +233,11 @@ public final class ServerEvents {
             case ORDER -> {
                 Order.Type type = Order.Type.values()[Math.max(0, Math.min(Order.Type.values().length - 1, a.orderType))];
                 List<Unit> mine = owned(w, team, a.ids);
-                int cols = (int) Math.ceil(Math.sqrt(mine.size())), i = 0;
+                int i = 0;
+                float[][] slots = null;
+                if (type == Order.Type.MOVE || type == Order.Type.ATTACK_MOVE || type == Order.Type.PATROL)
+                    slots = !Float.isNaN(a.x2) && Math.hypot(a.x2 - a.x, a.z2 - a.z) > 2 ? dev.beyondtabs.engine.Formation.line(mine, a.x, a.z, a.x2, a.z2)
+                            : mine.size() > 1 ? dev.beyondtabs.engine.Formation.block(mine, a.x, a.z) : null;
                 for (Unit u : mine) {
                     Order o;
                     switch (type) {
@@ -246,13 +250,28 @@ public final class ServerEvents {
                         case GUARD -> { Unit t = unit(w, a.targetUnit); if (t == null || !t.alive) continue; o = Order.guard(t); }
                         case STOP -> o = new Order(Order.Type.STOP, u.x, u.z, 0, null, null);
                         case AREA_ATTACK -> o = Order.areaAttack(a.x, a.z, Math.max(3, a.radius));
-                        default -> {   // spread groups into a square formation around the clicked point
-                            float ox = (i % cols - (cols - 1) / 2f) * 1.6f, oz = (i / cols - (cols - 1) / 2f) * 1.6f;
-                            o = new Order(type, a.x + ox, a.z + oz, 0, null, null);
+                        default -> {   // formation: front-liners ahead, archers behind, no crossing paths
+                            float tx = slots != null ? slots[i][0] : a.x, tz = slots != null ? slots[i][1] : a.z;
+                            o = new Order(type, tx, tz, 0, null, null);
                         }
                     }
                     w.order(u, o, a.queue); i++;
                 }
+            }
+            case PAUSE -> {
+                boolean solo = m.playerTeams.size() <= 1;
+                if (!solo && !player.hasPermissions(2)) { player.displayClientMessage(Component.literal("Only an operator can pause a multiplayer match."), true); return; }
+                m.paused = !m.paused;
+                for (ServerPlayer p : player.serverLevel().players()) p.displayClientMessage(Component.literal(m.paused ? "Paused" : "Resumed"), true);
+            }
+            case SPEED -> {
+                boolean solo = m.playerTeams.size() <= 1;
+                if (!solo && !player.hasPermissions(2)) return;
+                float[] steps = {.5f, 1, 2, 3};
+                int idx = 1; for (int k = 0; k < steps.length; k++) if (Math.abs(steps[k] - m.speed) < .01f) idx = k;
+                idx = Math.max(0, Math.min(steps.length - 1, idx + (a.count > 1 ? 1 : -1)));
+                m.speed = steps[idx];
+                player.displayClientMessage(Component.literal("Game speed " + (m.speed == .5f ? "0.5" : String.valueOf((int) m.speed)) + "x"), true);
             }
             case BUILD -> {
                 if (a.defIndex < 0 || a.defIndex >= BuildingDef.ALL.size()) return;

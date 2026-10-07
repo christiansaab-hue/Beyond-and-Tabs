@@ -19,6 +19,12 @@ public final class Team {
     public boolean defeated;
     /** What this army has learned about fighting each kind of enemy. */
     public final Tactics tactics;
+    /** Last "under attack" alert (BAR-style): when, where, and whether it was a building. Throttled to one per 5 s. */
+    public float alertAt = -99, alertX, alertZ; public boolean alertBuilding;
+    void alert(float time, float x, float z, boolean building) {
+        if (time - alertAt < 5 && Math.abs(x - alertX) + Math.abs(z - alertZ) < 30) return;
+        alertAt = time; alertX = x; alertZ = z; alertBuilding = building;
+    }
 
     public Team(int id, String race) {
         this.id = id; this.race = race; this.tactics = new Tactics(id * 7919L + 17);

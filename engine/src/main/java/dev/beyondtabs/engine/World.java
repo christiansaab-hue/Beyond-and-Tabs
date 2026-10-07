@@ -559,6 +559,7 @@ public final class World {
     public void damageBuilding(Building b, float dmg) {
         if (!b.alive) return;
         b.hp -= dmg;
+        if (dmg > 0 && b.team < teams.size()) teams.get(b.team).alert(time, b.x, b.z, true);
         if (b.hp <= 0) { b.alive = false; b.hp = 0; recomputeStorage(teams.get(b.team)); }
     }
 
@@ -701,6 +702,7 @@ public final class World {
         }
         float before = t.hp;
         t.hp -= dmg;
+        if (dmg > 0 && src != null && t.team < teams.size()) teams.get(t.team).alert(time, t.x, t.z, false);
         if (dmg > 0) {
             float dealt = Math.min(before, dmg);
             if (t.eng != null) t.eng.taken += dealt;

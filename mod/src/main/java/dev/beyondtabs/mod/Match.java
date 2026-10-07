@@ -14,6 +14,8 @@ public final class Match {
     /** Game mode each player had before entering the RTS view, restored when they leave it. */
     public final Map<UUID, GameType> previousMode = new HashMap<>();
     public final Structures structures;
+    /** Single-player conveniences: pause and game speed (0.5x, 1x, 2x, 3x). */
+    public boolean paused; public float speed = 1; float speedAcc;
 
     public Match(ServerLevel level) {
         this.level = level; this.terrain = new LevelTerrain(level);

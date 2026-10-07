@@ -19,7 +19,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class Network {
-    static final String VERSION = "3";
+    static final String VERSION = "4";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(BeyondTabs.MODID, "main"), () -> VERSION, VERSION::equals, VERSION::equals);
     static final float DETAIL_RANGE = 72f;   // blocks: full ragdoll particles sent within this distance of the player's camera
@@ -41,7 +41,7 @@ public final class Network {
     static void sendSnapshot(ServerPlayer p, Match m, boolean withSpots) {
         World w = m.world; Snapshot s = new Snapshot();
         float px = (float) p.getX(), pz = (float) p.getZ();
-        s.tick = w.tick; s.winner = w.winner; s.blockStyle = m.structures.blocks();
+        s.tick = w.tick; s.winner = w.winner; s.blockStyle = m.structures.blocks(); s.paused = m.paused; s.speed = m.speed;
         int team = m.teamOf(p.getUUID()); s.myTeam = team;
         if (team >= 0 && team < w.teams.size()) {
             Team t = w.teams.get(team);
@@ -50,6 +50,7 @@ public final class Network {
             s.energy = (float) t.energy; s.energyMax = (float) t.energyStorage; s.energyIncome = (float) t.energyIncome; s.energySpend = (float) t.energySpend;
             s.efficiency = (float) t.efficiency; s.supplyUsed = t.supplyUsed; s.supplyCap = t.supplyCap;
             s.researched.addAll(t.researched);
+            if (t.alertAt > 0) { s.alertAge = w.time - t.alertAt; s.alertX = t.alertX; s.alertZ = t.alertZ; s.alertBuilding = t.alertBuilding; }
         }
         for (Unit u : w.units) {
             Snapshot.U su = new Snapshot.U();
@@ -57,6 +58,7 @@ public final class Network {
             su.alive = u.alive; su.knocked = u.knocked; su.x = u.x; su.z = u.z; su.yaw = u.yaw;
             su.walkPhase = u.walkPhase; su.walkAmount = u.walkAmount; su.attack = u.attackAnim; su.hp = u.hp / u.maxHp;
             su.orders = (byte) Math.min(127, u.orders.size());
+            if (u.team == team && u.inCombat) su.style = (byte) u.style.ordinal();
             float dx = u.x - px, dz = u.z - pz;
             if (u.lod < 2 && dx * dx + dz * dz < DETAIL_RANGE * DETAIL_RANGE) {
                 var r = u.ragdoll; int n = r.rig.n; su.parts = new float[n * 3];
