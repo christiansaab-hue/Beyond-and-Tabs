@@ -19,6 +19,7 @@ public final class ClientMatch {
         prevById.clear();
         if (cur != null) for (Snapshot.U u : cur.units) prevById.put(u.id, u);
         if (s.hasSpots) metalSpots = s.metalSpots;
+        MatchRenderer.noteRuins(cur, s);
         prev = cur; cur = s; curAtNanos = System.nanoTime();
         if (poseBodies.size() > s.units.size() * 2 + 64) poseBodies.keySet().retainAll(s.units.stream().map(u -> u.id).toList());
         RtsScreen.pruneSelection(s);
@@ -36,7 +37,7 @@ public final class ClientMatch {
         return poseBodies.computeIfAbsent(u.id, id -> {
             UnitDef d = UnitDef.ALL.get(Math.max(0, u.def));
             BodyDef b = BodyDef.byId(d.body());
-            Rig rig = "humanoid".equals(d.body()) ? Rig.humanoidDefault() : Rig.blob(b.particles(), (float) b.radius() * 2.2f, (float) b.radius() * 1.6f, (float) b.mass() * 60f);
+            Rig rig = ("humanoid".equals(d.body()) || "large".equals(d.body())) ? Rig.humanoidDefault() : Rig.blob(b.particles(), (float) b.radius() * 2.2f, (float) b.radius() * 1.6f, (float) b.mass() * 60f);
             return new Ragdoll(rig, (float) d.scale());
         });
     }

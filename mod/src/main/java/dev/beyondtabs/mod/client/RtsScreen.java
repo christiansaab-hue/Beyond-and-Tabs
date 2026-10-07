@@ -115,10 +115,10 @@ public final class RtsScreen extends Screen {
                 else if (g != null) { a.orderType = (patrolNext ? Order.Type.PATROL : attackMode ? Order.Type.ATTACK_MOVE : Order.Type.MOVE).ordinal(); a.x = g[0]; a.z = g[2]; }
                 else return true;
                 Network.send(a); attackMode = false; patrolNext = false;
-                if (g != null) DebugRenderer.pingAt(g[0], g[1], g[2], a.orderType == Order.Type.ATTACK_MOVE.ordinal() || a.orderType == Order.Type.ATTACK.ordinal());
+                if (g != null) MatchRenderer.pingAt(g[0], g[1], g[2], a.orderType == Order.Type.ATTACK_MOVE.ordinal() || a.orderType == Order.Type.ATTACK.ordinal());
             } else if (selectedBuilding >= 0 && g != null) {
                 RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.RALLY; a.targetBuilding = selectedBuilding; a.x = g[0]; a.z = g[2];
-                Network.send(a); DebugRenderer.pingAt(g[0], g[1], g[2], false);
+                Network.send(a); MatchRenderer.pingAt(g[0], g[1], g[2], false);
             }
             return true;
         }
@@ -380,7 +380,7 @@ public final class RtsScreen extends Screen {
         }
         int[] f = at.apply(RtsCamera.focusX, RtsCamera.focusZ); int r = Math.max(3, (int) (RtsCamera.dist * .6f / span * size));
         outline(g, f[0] - r, f[1] - r, 2 * r, 2 * r, 0xFFFFFFFF);
-        if (DebugRenderer.pingAt > 0 && System.currentTimeMillis() - DebugRenderer.pingAt < 1500) { int[] q = at.apply(DebugRenderer.pingX, DebugRenderer.pingZ); outline(g, q[0] - 3, q[1] - 3, 6, 6, 0xFF7CFF7C); }
+        if (MatchRenderer.pingAt > 0 && System.currentTimeMillis() - MatchRenderer.pingAt < 1500) { int[] q = at.apply(MatchRenderer.pingX, MatchRenderer.pingZ); outline(g, q[0] - 3, q[1] - 3, 6, 6, 0xFF7CFF7C); }
     }
 
     void drawBuildingInfo(GuiGraphics g, Snapshot s, Snapshot.B b, int x, int y) {

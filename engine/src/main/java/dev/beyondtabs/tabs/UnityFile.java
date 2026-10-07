@@ -62,6 +62,9 @@ public final class UnityFile implements AutoCloseable {
         for (int e = 0; e < ext; e++) { c.cstr(); c.skip(16); c.i32(); externals.add(c.cstr()); }
     }
 
+    /** Index into {@link #scriptTypes} of a MonoBehaviour object's script (-1 if none). */
+    public int scriptIndexOf(Obj o) { return typeScriptIndex.get(o.typeIndex()); }
+
     /** External file name for a PPtr fileID (0 = this file). */
     public String external(int fileId) { return fileId == 0 ? path.getFileName().toString() : externals.get(fileId - 1); }
 

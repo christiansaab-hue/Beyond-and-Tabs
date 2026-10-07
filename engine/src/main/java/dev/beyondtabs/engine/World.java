@@ -30,7 +30,7 @@ public final class World {
     /** Supplies the rig for a unit (Minecraft side: the one read from the player's TABS install). */
     /** Supplies a unit's numbers (Minecraft side: read from the player's TABS install). */
     public Function<UnitDef, UnitStats> stats = UnitStats::fallback;
-    public Function<UnitDef, Rig> rigs = d -> "humanoid".equals(d.body()) ? Rig.humanoidDefault() : blobFor(d);
+    public Function<UnitDef, Rig> rigs = d -> ("humanoid".equals(d.body()) || "large".equals(d.body())) ? Rig.humanoidDefault() : blobFor(d);
     int nextId = 1; public long tick; public float time;
     /** Team id of the winner once every other team is defeated, else -1. */
     public int winner = -1;
