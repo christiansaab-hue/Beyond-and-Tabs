@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+// Beyond and Tabs default rebinds (all still rebindable in Controls): WASD now pans the camera, so the
+// RoN defaults that sat on W/A/S/D moved: ability slot 2 W->Z, attack A->X, stop S->Space, open shop S->Space,
+// return resources (hotkey 5) D->;, observer/diplomacy toggle (hotkey 8) Z->., hotkey 9 X->,
 public class Keybindings {
 
     public static final String CATEGORY_CAMERA = "key.categories.reignofnether.camera";
@@ -26,6 +29,11 @@ public class Keybindings {
     public static final Keybinding panMinusX = new Keybinding("key.reignofnether.pan_minus_x", GLFW.GLFW_KEY_RIGHT,       CATEGORY_CAMERA, RtsConflictContext.PAN,    "X-");
     public static final Keybinding panPlusZ  = new Keybinding("key.reignofnether.pan_plus_z",  GLFW.GLFW_KEY_UP,          CATEGORY_CAMERA, RtsConflictContext.PAN,    "Z+");
     public static final Keybinding panMinusZ = new Keybinding("key.reignofnether.pan_minus_z", GLFW.GLFW_KEY_DOWN,        CATEGORY_CAMERA, RtsConflictContext.PAN,    "Z-");
+    // BAR-style WASD panning (Beyond and Tabs). Shift+WASD rotates/tilts instead. Arrow keys above still pan too.
+    public static final Keybinding panUp     = new Keybinding("key.reignofnether.pan_up",      GLFW.GLFW_KEY_W,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "W");
+    public static final Keybinding panLeft   = new Keybinding("key.reignofnether.pan_left",    GLFW.GLFW_KEY_A,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "A");
+    public static final Keybinding panDown   = new Keybinding("key.reignofnether.pan_down",    GLFW.GLFW_KEY_S,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "S");
+    public static final Keybinding panRight  = new Keybinding("key.reignofnether.pan_right",   GLFW.GLFW_KEY_D,           CATEGORY_CAMERA, RtsConflictContext.PAN,    "D");
     public static final Keybinding rotCW     = new Keybinding("key.reignofnether.rot_cw",      GLFW.GLFW_KEY_RIGHT,       CATEGORY_CAMERA, RtsConflictContext.ROTATE, "");
     public static final Keybinding rotCCW    = new Keybinding("key.reignofnether.rot_ccw",     GLFW.GLFW_KEY_LEFT,        CATEGORY_CAMERA, RtsConflictContext.ROTATE, "");
     public static final Keybinding reset     = new Keybinding("key.reignofnether.reset",       GLFW.GLFW_KEY_RIGHT_CONTROL, CATEGORY_CAMERA, "RC");
@@ -33,7 +41,7 @@ public class Keybindings {
     // RTS category
     public static final Keybinding cancelBuild = new Keybinding("key.reignofnether.cancel_build", GLFW.GLFW_KEY_DELETE,        CATEGORY_RTS, "DEL");
     public static final Keybinding abilitySlot1        = new Keybinding("key.reignofnether.ability_1",    GLFW.GLFW_KEY_Q,             CATEGORY_RTS, "Q");
-    public static final Keybinding abilitySlot2        = new Keybinding("key.reignofnether.ability_2",    GLFW.GLFW_KEY_W,             CATEGORY_RTS, "W");
+    public static final Keybinding abilitySlot2        = new Keybinding("key.reignofnether.ability_2",    GLFW.GLFW_KEY_Z,             CATEGORY_RTS, "Z");
     public static final Keybinding abilitySlot3        = new Keybinding("key.reignofnether.ability_3",    GLFW.GLFW_KEY_E,             CATEGORY_RTS, "E");
     public static final Keybinding abilitySlot4        = new Keybinding("key.reignofnether.ability_4",    GLFW.GLFW_KEY_R,             CATEGORY_RTS, "R");
     public static final Keybinding abilitySlot5        = new Keybinding("key.reignofnether.ability_5",    GLFW.GLFW_KEY_T,             CATEGORY_RTS, "T");
@@ -47,14 +55,14 @@ public class Keybindings {
     public static final Keybinding minimapToggle  = new Keybinding("key.reignofnether.minimap_toggle",        GLFW.GLFW_KEY_M,             CATEGORY_RTS, "M");
     public static final Keybinding hotkey3        = new Keybinding("key.reignofnether.hotkey_3",        GLFW.GLFW_KEY_F,             CATEGORY_RTS, "F");
     public static final Keybinding hotkey4        = new Keybinding("key.reignofnether.hotkey_4",        GLFW.GLFW_KEY_C,             CATEGORY_RTS, "C");
-    public static final Keybinding hotkey5        = new Keybinding("key.reignofnether.hotkey_5",        GLFW.GLFW_KEY_D,             CATEGORY_RTS, "D");
+    public static final Keybinding hotkey5        = new Keybinding("key.reignofnether.hotkey_5",        GLFW.GLFW_KEY_SEMICOLON,     CATEGORY_RTS, ";");
     public static final Keybinding hotkey6        = new Keybinding("key.reignofnether.hotkey_6",        GLFW.GLFW_KEY_J,             CATEGORY_RTS, "J");
     public static final Keybinding hotkey7        = new Keybinding("key.reignofnether.hotkey_7",        GLFW.GLFW_KEY_K,             CATEGORY_RTS, "K");
-    public static final Keybinding hotkey8        = new Keybinding("key.reignofnether.hotkey_8",        GLFW.GLFW_KEY_Z,             CATEGORY_RTS, "Z");
-    public static final Keybinding hotkey9        = new Keybinding("key.reignofnether.hotkey_9",        GLFW.GLFW_KEY_X,             CATEGORY_RTS, "X");
+    public static final Keybinding hotkey8        = new Keybinding("key.reignofnether.hotkey_8",        GLFW.GLFW_KEY_PERIOD,        CATEGORY_RTS, ".");
+    public static final Keybinding hotkey9        = new Keybinding("key.reignofnether.hotkey_9",        GLFW.GLFW_KEY_COMMA,         CATEGORY_RTS, ",");
     public static final Keybinding hotkey10       = new Keybinding("key.reignofnether.hotkey_10",       GLFW.GLFW_KEY_H,             CATEGORY_RTS, "H");
-    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_A,             CATEGORY_RTS, "A");
-    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_S,             CATEGORY_RTS, "S");
+    public static final Keybinding attack      = new Keybinding("key.reignofnether.attack",       GLFW.GLFW_KEY_X,             CATEGORY_RTS, "X");
+    public static final Keybinding stop        = new Keybinding("key.reignofnether.stop",         GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "SPC");
     public static final Keybinding hold        = new Keybinding("key.reignofnether.hold",         GLFW.GLFW_KEY_H,             CATEGORY_RTS, "H");
     public static final Keybinding build       = new Keybinding("key.reignofnether.build",        GLFW.GLFW_KEY_B,             CATEGORY_RTS, "B");
     public static final Keybinding gather      = new Keybinding("key.reignofnether.gather",       GLFW.GLFW_KEY_G,             CATEGORY_RTS, "G");
@@ -62,7 +70,7 @@ public class Keybindings {
     public static final Keybinding chat        = new Keybinding("key.reignofnether.chat",         GLFW.GLFW_KEY_ENTER,         CATEGORY_RTS, "");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
     public static final Keybinding tab         = new Keybinding("key.reignofnether.tab",          GLFW.GLFW_KEY_TAB,           CATEGORY_RTS, "");
-    public static final Keybinding openShop    = new Keybinding("key.reignofnether.open_shop",         GLFW.GLFW_KEY_S,             CATEGORY_RTS, "S");
+    public static final Keybinding openShop    = new Keybinding("key.reignofnether.open_shop",         GLFW.GLFW_KEY_SPACE,         CATEGORY_RTS, "SPC");
 
     public static final Keybinding item1 = new Keybinding("key.reignofnether.item1", GLFW.GLFW_KEY_T, CATEGORY_RTS, "T");
     public static final Keybinding item2 = new Keybinding("key.reignofnether.item2", GLFW.GLFW_KEY_Y, CATEGORY_RTS, "Y");
@@ -104,6 +112,7 @@ public class Keybindings {
             pause, shiftMod, ctrlMod, altMod,
             zoomIn, zoomOut,
             panPlusX, panMinusX, panPlusZ, panMinusZ,
+            panUp, panLeft, panDown, panRight,
             rotCW, rotCCW, reset,
             cancelBuild,
             abilitySlot1, abilitySlot2, abilitySlot3, abilitySlot4, abilitySlot5,

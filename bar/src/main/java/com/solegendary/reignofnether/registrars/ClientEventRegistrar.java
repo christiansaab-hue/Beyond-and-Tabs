@@ -78,6 +78,7 @@ public class ClientEventRegistrar {
 
     public void registerClientEvents() {
         vanillaEventBus.register(OrthoviewClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.class);
         vanillaEventBus.register(TopdownGuiClientEvents.class);
         vanillaEventBus.register(ConfigClientEvents.class);
         vanillaEventBus.register(BuildingClientEvents.class); // being first fixes a bug with drawBuildingToPlace()
