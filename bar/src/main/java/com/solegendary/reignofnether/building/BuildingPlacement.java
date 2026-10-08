@@ -1139,8 +1139,8 @@ public class BuildingPlacement {
             // a fresh building starts at 0; a partially built one loaded from a save is assumed to be paid so far
             flowInitialised = true;
             buildProgress = Math.max(buildProgress, (float) blocksPlaced / blocksTotal);
-            metalSpent = Math.max(metalSpent, building.cost.ore * buildProgress);
-            energySpent = Math.max(energySpent, building.cost.wood * buildProgress);
+            metalSpent = Math.max(metalSpent, building.cost.metal() * buildProgress);
+            energySpent = Math.max(energySpent, building.cost.energy() * buildProgress);
         }
         float ticksPerBlock = Building.BUILD_TICKS_PER_BLOCK * building.buildTimeModifier;
         if (isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) > 0)
@@ -1173,7 +1173,7 @@ public class BuildingPlacement {
                 }
             }
             float df = Math.min(buildPower / buildTicks, maxProgress - buildProgress);
-            float granted = EconomyServerEvents.requestFlow(payerName, building.cost.ore, building.cost.wood, df);
+            float granted = EconomyServerEvents.requestFlow(payerName, building.cost.metal(), building.cost.energy(), df);
             buildProgress += df * granted;
             metalSpent += building.cost.ore * df * granted;
             energySpent += building.cost.wood * df * granted;

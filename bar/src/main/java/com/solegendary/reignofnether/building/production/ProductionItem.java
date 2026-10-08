@@ -199,10 +199,10 @@ public abstract class ProductionItem {
                 float totalTicks = Math.max(1, cost.ticks);
                 float dTicks = Math.min(active.ticksLeft, speed);
                 float df = dTicks / totalTicks;
-                float granted = hasCheat ? 1f : EconomyServerEvents.requestFlow(placement.ownerName, cost.ore, cost.wood, df);
+                float granted = hasCheat ? 1f : EconomyServerEvents.requestFlow(placement.ownerName, cost.metal(), cost.energy(), df);
                 if (!hasCheat) {
-                    active.metalSpent += cost.ore * df * granted;
-                    active.energySpent += cost.wood * df * granted;
+                    active.metalSpent += cost.metal() * df * granted;
+                    active.energySpent += cost.energy() * df * granted;
                 }
                 active.ticksLeft -= dTicks * granted;
             }
@@ -214,10 +214,10 @@ public abstract class ProductionItem {
             ResourceCost cost = getCost(false, placement.ownerName);
             if (cost.ticks <= 0 && active.paidFraction < 1f && !hasCheat) {
                 float df = 1f - active.paidFraction;
-                float granted = EconomyServerEvents.requestFlow(placement.ownerName, cost.ore, cost.wood, df);
+                float granted = EconomyServerEvents.requestFlow(placement.ownerName, cost.metal(), cost.energy(), df);
                 active.paidFraction += df * granted;
-                active.metalSpent += cost.ore * df * granted;
-                active.energySpent += cost.wood * df * granted;
+                active.metalSpent += cost.metal() * df * granted;
+                active.energySpent += cost.energy() * df * granted;
                 if (active.paidFraction < 0.999f)
                     return false;
             }

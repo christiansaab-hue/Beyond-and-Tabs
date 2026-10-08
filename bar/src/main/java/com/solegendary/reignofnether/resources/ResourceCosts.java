@@ -188,13 +188,14 @@ public class ResourceCosts {
 
     public static FormattedCharSequence getFormattedCost(ResourceCost resCost) {
         // BAR economy: costs are Metal (ore field, iron ingot icon \uE020) and Energy (wood field, redstone icon \uE021)
+        // legacy food costs are paid as metal + energy (ResourceCost.metal()/energy()), so show those totals
         String str = "";
-        if (resCost.food > 0)
-            str += "\uE000  " + resCost.food + "     ";
-        if (resCost.ore > 0)
-            str += "\uE020  " + resCost.ore + "     ";
-        if (resCost.wood > 0)
-            str += "\uE021  " + resCost.wood + "     ";
+        int metal = Math.round(resCost.metal());
+        int energy = Math.round(resCost.energy());
+        if (metal > 0)
+            str += "\uE020  " + metal + "     ";
+        if (energy > 0)
+            str += "\uE021  " + energy + "     ";
         if (resCost.emerald > 0)
             str += "\uE010  " + resCost.emerald + "     ";
 
@@ -289,6 +290,8 @@ public class ResourceCosts {
         BEACON.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.BEACON);
 
         STOCKPILE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.STOCKPILE);
+        METAL_EXTRACTOR.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.METAL_EXTRACTOR);
+        WIND_GENERATOR.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WIND_GENERATOR);
         OAK_BRIDGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.OAK_BRIDGE);
         SPRUCE_BRIDGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.SPRUCE_BRIDGE);
         BLACKSTONE_BRIDGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.BLACKSTONE_BRIDGE);
