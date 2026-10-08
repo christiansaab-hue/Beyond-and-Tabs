@@ -29,7 +29,7 @@ displayName="Beyond and Tabs (BAR on Reign of Nether)" #mandatory
 # A file name (in the root of the mod JAR) containing a logo for display
 logoFile="examplemod.png" #optional
 # A text field displayed in the mod UI
-credits="Thanks to Technovision for his YouTube guides" #optional
+credits="Built on Reign of Nether by SoLegendary and contributors; thanks to the Beyond All Reason project for the design it chases" #optional
 # A text field displayed in the mod UI
 authors="SoLegendary, Goodbird (ported to 1.20.1)" #optional
 # The description text for the mod (multi line!) (#mandatory)

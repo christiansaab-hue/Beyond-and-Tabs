@@ -198,8 +198,7 @@ public class TitleScreenMixin extends Screen {
         };
         this.mapsButton.setTooltip(Tooltip.create(Component.literal("Get RTS maps!")));
 
-        this.addRenderableWidget(this.lilypadButton);
-        this.addRenderableWidget(this.discordButton);
+        // Beyond and Tabs: upstream's Discord/Lilypad promo buttons removed (their links, not this fork's)
         this.addRenderableWidget(this.mapsButton);
     }
 
