@@ -308,6 +308,11 @@ public final class MatchRenderer {
 
     static long lifeNanos;
 
+    static int lightAt(float x, float y, float z) {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.level == null ? 0xF000F0 : net.minecraft.client.renderer.LevelRenderer.getLightColor(mc.level, net.minecraft.core.BlockPos.containing(x, y + 1.2, z));
+    }
+
     /**
      * Bases at work: townsfolk (or drones) going about their business round every finished building, and the
      * buildings showing what they're doing - forge smoke and sparks while training, dust and a miner at extractors,
@@ -358,7 +363,8 @@ public final class MatchRenderer {
                 float g = RtsCamera.ground(pos[0], pos[1]);
                 m.reset(); m.ground(g, .4f, .2f); m.ow = .02f;
                 if (star) drone(m, pos[0], g + 1.8f + (float) Math.sin(t * 3 + seed) * .15f, pos[1], t + seed, working, b.x, gy + 1, b.z, team);
-                else worker(m, pos[0], g, pos[1], fx / fl, fz / fl, t * 6 + seed, working ? (t * 1.3f + seed) % 1f : 0, !working, kingdoms, team);
+                else if (!VanillaUnits.folk(race, pos[0], g, pos[1], fx / fl, fz / fl, t * 6 + seed, !working, working ? (t * 1.3f + seed) % 1f : 0, team, lightAt(pos[0], g, pos[1]), POSE, NORMAL, Minecraft.getInstance().renderBuffers().bufferSource()))
+                    worker(m, pos[0], g, pos[1], fx / fl, fz / fl, t * 6 + seed, working ? (t * 1.3f + seed) % 1f : 0, !working, kingdoms, team);
             }
         }
     }
@@ -398,7 +404,8 @@ public final class MatchRenderer {
                 float fx = ph < .7f ? dx : -dx, fz = ph < .7f ? dz : -dz;
                 m.reset(); m.ground(g, .4f, .2f); m.ow = .02f;
                 if (drones) drone(m, x, g + 2.2f + (float) Math.sin(t * 3 + i) * .15f + (float) Math.sin(k * Math.PI) * 1.2f, z, t + i, work > 0, ex, RtsCamera.ground(ex, ez) + 1.2f, ez, team);
-                else worker(m, x, g, z, fx, fz, t * 6 + i * 2, work, k > 0 && k < 1, d.race().equals("kingdoms"), team);
+                else if (!VanillaUnits.folk(d.race(), x, g, z, fx, fz, t * 6 + i * 2, k > 0 && k < 1, work > 0 ? (work * 3) % 1f : 0, team, lightAt(x, g, z), POSE, NORMAL, Minecraft.getInstance().renderBuffers().bufferSource()))
+                    worker(m, x, g, z, fx, fz, t * 6 + i * 2, work, k > 0 && k < 1, d.race().equals("kingdoms"), team);
             }
         }
     }

@@ -105,6 +105,7 @@ final class VanillaUnits {
             if (kit.shield()) hand(ps, buf, SHIELD, true, light);
         }
 
+        if (c.p == null) return null;   // townsfolk: nothing follows their hands
         // where the hands ended up, in world space (hand-made weapons follow them)
         PoseStack w = new PoseStack();
         place(w, x, gy, z, yaw, k);
@@ -113,6 +114,33 @@ final class VanillaUnits {
         put(q, w, model.leftArm, Rig.SHOULDER_L, 1, -1); put(q, w, model.leftArm, Rig.ELBOW_L, 1, 4); put(q, w, model.leftArm, Rig.HAND_L, 1, 10);
         put(q, w, model.head, Rig.HEAD, 0, -4); put(q, w, model.body, Rig.NECK, 0, 0); put(q, w, model.body, Rig.TORSO, 0, 6); put(q, w, model.body, Rig.HIP, 0, 12);
         return q;
+    }
+
+    static final UnitModels.Ctx FOLK = new UnitModels.Ctx();
+    static final Snapshot.U FOLK_U = new Snapshot.U();
+    static final java.util.Map<String, UnitDef> BUILDERS = new java.util.HashMap<>();
+
+    /** The race's first builder (its skin and tools dress the townsfolk). */
+    static UnitDef builderOf(String race) {
+        return BUILDERS.computeIfAbsent(race, r -> {
+            for (UnitDef d : UnitDef.ALL) if (d.race().equals(r) && d.role().equals("builder") && d.body().equals("humanoid")) return d;
+            return null;
+        });
+    }
+
+    /**
+     * A cosmetic worker in the race's builder look: walking (legs and arms swinging) or working (tool swings),
+     * carrying the builder's own tool. Returns false if the model isn't available (caller draws something else).
+     */
+    static boolean folk(String race, float x, float gy, float z, float fx, float fz, float phase, boolean walking, float work, int team, int light,
+                        Matrix4f view, Matrix3f normal, MultiBufferSource buf) {
+        UnitDef d = builderOf(race);
+        if (d == null) return false;
+        Snapshot.U u = FOLK_U;
+        u.def = (short) UnitDef.ALL.indexOf(d); u.id = (int) (phase * 7); u.alive = true;
+        u.walkPhase = phase; u.walkAmount = walking ? 1 : 0; u.attack = work > 0 ? work : -1;
+        UnitModels.Ctx c = FOLK; c.scale = (float) d.scale() * .95f; c.near = true; c.mid = true; c.p = null;
+        return draw(u, d, c, x, gy, z, (float) Math.atan2(fx, fz), team, light, view, normal, buf) != null || model != null;
     }
 
     /** Same frame vanilla uses for a mob: turned to face, flipped, scaled, feet on the ground. */
