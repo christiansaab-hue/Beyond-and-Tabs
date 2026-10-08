@@ -17,6 +17,10 @@ jobs:
         run: python3 tools/preflight.py --allow-unverified
       - name: Generated code matches the sheets
         run: python3 tools/gen_java.py && git diff --exit-code engine/src/main/java/dev/beyondtabs/engine/gen
+      - name: Safety protocol - structural syntax gate and balance audit
+        run: |
+          python3 tools/check_java.py $(git ls-files 'bar/src/main/java/*.java' 'mod/src/main/java/*.java' 'engine/src/*.java')
+          python3 tools/balance_audit.py
       - name: Engine benches (no Minecraft)
         run: |
           mkdir -p /tmp/bt && javac --release 17 -d /tmp/bt $(find engine/src -name "*.java")
