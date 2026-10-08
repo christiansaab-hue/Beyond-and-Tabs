@@ -7,3 +7,6 @@ mod/build/
 mod/run/
 mod/.gradle/
 .gradle/
+
+# our own original art ships with the mod (game assets stay excluded by the rule above)
+!mod/src/main/resources/assets/beyondtabs/**/*.png
