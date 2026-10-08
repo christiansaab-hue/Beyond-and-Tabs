@@ -175,7 +175,7 @@ public class BotPlayer {
         // 5) train fighters: the repeat queue keeps army buildings running once seeded
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && bp.getBuilding() == kit.armyBuilding() && bp instanceof ProductionPlacement pp) {
-                pp.repeatQueue = true;
+                pp.setRepeatQueue(true);
                 if (pp.productionQueue.size() < 2)
                     pp.startProductionItem(kit.army().get(rng.nextInt(kit.army().size())));
             }

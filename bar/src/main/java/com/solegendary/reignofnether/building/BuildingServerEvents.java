@@ -278,6 +278,7 @@ public class BuildingServerEvents {
                     BuildingServerEvents.getBuildings().add(building);
                     if (building instanceof ProductionPlacement pb) {
                         pb.setRallyPoint(b.rallyPoint);
+                        pb.repeatQueue = Boolean.TRUE.equals(b.dataStorage.getData(ProductionPlacement.REPEAT_QUEUE));
                     }
 
                     if (b.upgradeLevel > 0) {
@@ -712,6 +713,10 @@ public class BuildingServerEvents {
                     building instanceof PortalPlacement p ? p.getPortalType() : PortalPlacement.PortalType.BASIC,
                     building instanceof PortalPlacement p && p.hasDestination() ? p.destination : new BlockPos(0, 0, 0)
             );
+
+            if (building instanceof ProductionPlacement pp && pp.repeatQueue) {
+                BuildingProductionClientboundPacket.toggleRepeat(building.ownerName, building.originPos, true);
+            }
 
             if (building.getBuilding() instanceof Library) {
                 EnchantAbility ability = building.getDataStorage().getData(Library.AUTO_CAST_ENCHANT);

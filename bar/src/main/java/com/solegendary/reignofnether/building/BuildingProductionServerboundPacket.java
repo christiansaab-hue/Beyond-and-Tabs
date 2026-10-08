@@ -112,7 +112,7 @@ public class BuildingProductionServerboundPacket {
             }
             if (building instanceof ProductionPlacement pBuilding) {
                 if (this.action == BuildingAction.TOGGLE_REPEAT) {
-                    pBuilding.repeatQueue = !pBuilding.repeatQueue;
+                    pBuilding.setRepeatQueue(!pBuilding.repeatQueue);
                     BuildingProductionClientboundPacket.toggleRepeat(pBuilding.ownerName, buildingPos, pBuilding.repeatQueue);
                 } else if (this.action == BuildingAction.REQUEST_PRODUCTION_SYNC) {
                     for (ActiveProduction activeProd : pBuilding.productionQueue) {

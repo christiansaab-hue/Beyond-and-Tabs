@@ -56,6 +56,25 @@ public class ProductionPlacement extends BuildingPlacement {
     public final List<ActiveProduction> productionQueue = new ArrayList<>();
     /** BAR's repeat queue: when on, a completed trained unit re-queues itself at the back. */
     public boolean repeatQueue = false;
+    /** Persists the repeat toggle in the per-building save data so it survives reloads. */
+    public static final com.solegendary.reignofnether.building.data.DataType<Boolean> REPEAT_QUEUE =
+            com.solegendary.reignofnether.building.data.DataType.createRegistered(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                            com.solegendary.reignofnether.ReignOfNether.MOD_ID, "repeat_queue"),
+                    (tag, server) -> tag.getBoolean("repeat"),
+                    repeat -> {
+                        CompoundTag tag = new CompoundTag();
+                        tag.putBoolean("repeat", repeat);
+                        return tag;
+                    },
+                    () -> false);
+
+    /** Sets the repeat toggle and records it in the building's save data (server side). */
+    public void setRepeatQueue(boolean repeat) {
+        this.repeatQueue = repeat;
+        if (getLevel() != null && !getLevel().isClientSide())
+            getDataStorage().setData(REPEAT_QUEUE, repeat);
+    }
     public boolean attackRally = false;
     public ResourceName rallyResourceName = ResourceName.NONE; // used to set worker resource targets
 
