@@ -2232,5 +2232,9 @@
   "research.reignofnether.tier_2.tooltip2": "A big eco gamble: your income carries the drain while it runs.",
   "research.reignofnether.upgrade_extractor": "Tier 2 Extractor",
   "research.reignofnether.upgrade_extractor.tooltip1": "More than triples this extractor: +7 metal/s, and a copper drill tower everyone can see.",
-  "research.reignofnether.upgrade_extractor.tooltip2": "The drill stops while refitting - lose it mid-upgrade and the investment dies with it."
+  "research.reignofnether.upgrade_extractor.tooltip2": "The drill stops while refitting - lose it mid-upgrade and the investment dies with it.",
+  "quickbattle.reignofnether.button": "Quick Battle",
+  "quickbattle.reignofnether.title": "Quick Battle - pick your side (a bot plays the other)",
+  "quickbattle.reignofnether.villagers": "Play Villagers (vs Monster bot)",
+  "quickbattle.reignofnether.monsters": "Play Monsters (vs Villager bot)"
 }

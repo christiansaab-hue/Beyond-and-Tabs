@@ -14,7 +14,7 @@ with tempfile.TemporaryDirectory() as d:
                        capture_output=True, text=True)
 noise = re.compile(r"(cannot find symbol|package [\w.]+ (does not exist|is not visible)|"
                    r"method does not override or implement|符号)|location:|symbol:|  (required|found):|\^|^import|"
-                   r"error: cannot access|lambda expression not expected here|incompatible types|static import only from classes|name clash: |class file for .* not found")
+                   r"error: cannot access|lambda expression not expected here|incompatible types|static import only from classes|name clash: |non-static variable super|class file for .* not found")
 bad = []
 lines = r.stderr.splitlines()
 for i, l in enumerate(lines):

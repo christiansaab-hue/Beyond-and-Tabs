@@ -124,6 +124,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.bot.BotServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PatchQuickBuildClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);
