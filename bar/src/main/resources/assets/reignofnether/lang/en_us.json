@@ -2224,6 +2224,7 @@
   "server.reignofnether.commander_fallen": "%s's Commander has fallen!",
   "server.reignofnether.defeat_commander": "%s lost their Commander",
   "gamerule.commanderDefeat": "Losing your Commander defeats you",
-  "hud.reignofnether.patch_hint": "Metal patch - right-click with a worker to build a Metal Extractor",
-  "hud.reignofnether.building_extractor": "Building Metal Extractor on the patch"
+  "hud.reignofnether.patch_hint": "Metal patch - right-click: build extractor. Shift+right-click: area mex (all free patches nearby)",
+  "hud.reignofnether.building_extractor": "Building Metal Extractor on the patch",
+  "hud.reignofnether.building_extractors": "Area mex: queuing %s Metal Extractors"
 }

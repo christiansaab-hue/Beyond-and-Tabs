@@ -80,7 +80,6 @@ public class PatchQuickBuildClientEvents {
         Building extractor = extractorFor(PlayerClientEvents.getFaction());
         if (!(extractor instanceof MetalExtractor))
             return;
-        BlockPos originPos = patch.offset(-2, 1, -2);   // 5x5 centred on the patch, one above the ground
         ArrayList<Integer> builderIds = new ArrayList<>();
         for (LivingEntity entity : UnitClientEvents.getSelectedUnits())
             if (entity instanceof WorkerUnit)
@@ -88,10 +87,59 @@ public class PatchQuickBuildClientEvents {
         int[] ids = new int[builderIds.size()];
         for (int i = 0; i < ids.length; i++)
             ids[i] = builderIds.get(i);
-        BuildingServerboundPacket.placeAndQueueBuilding(extractor, originPos, Rotation.NONE,
-                MC.player.getName().getString(), ids, false);
-        HudClientEvents.showTemporaryMessage(Component.translatable("hud.reignofnether.building_extractor").getString());
+
+        // BAR's area mex: Shift+right-click queues an extractor on this patch and every free patch nearby,
+        // nearest first, all on the same workers (they walk the circuit)
+        java.util.List<BlockPos> targets = com.solegendary.reignofnether.keybinds.Keybindings.shiftMod.isDown()
+                ? freePatchesNear(patch, 40) : java.util.List.of(patch);
+        int queued = 0;
+        for (BlockPos target : targets) {
+            BlockPos originPos = target.offset(-2, 1, -2);   // 5x5 centred on the patch, one above the ground
+            BuildingServerboundPacket.placeAndQueueBuilding(extractor, originPos, Rotation.NONE,
+                    MC.player.getName().getString(), ids, queued > 0);
+            queued++;
+        }
+        HudClientEvents.showTemporaryMessage(queued > 1
+                ? Component.translatable("hud.reignofnether.building_extractors", queued).getString()
+                : Component.translatable("hud.reignofnether.building_extractor").getString());
         evt.setCanceled(true);   // don't also issue a move order
+    }
+
+    /**
+     * Patch centres within range of `from` with no building on them yet, nearest first. Patches are found by
+     * scanning the loaded surface for patch blocks and clustering the plus-shapes into centres.
+     */
+    static java.util.List<BlockPos> freePatchesNear(BlockPos from, int range) {
+        java.util.List<BlockPos> blocks = new ArrayList<>();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int x = from.getX() - range; x <= from.getX() + range; x++)
+            for (int z = from.getZ() - range; z <= from.getZ() + range; z++) {
+                int top = MC.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) - 1;
+                for (int y = top + 1; y >= top - 1; y--)
+                    if (MC.level.getBlockState(p.set(x, y, z)).is(MetalPatches.PATCH_BLOCK)) {
+                        blocks.add(new BlockPos(x, y, z));
+                        break;
+                    }
+            }
+        java.util.List<BlockPos> centres = new ArrayList<>();
+        for (BlockPos b : blocks) {   // cluster the plus shapes: keep one centre per group
+            boolean near = false;
+            for (int i = 0; i < centres.size(); i++)
+                if (centres.get(i).distSqr(b) < 6 * 6) {
+                    near = true;
+                    break;
+                }
+            if (!near)
+                centres.add(b);
+        }
+        centres.removeIf(c -> {
+            for (BuildingPlacement bp : BuildingClientEvents.getBuildings())
+                if (!bp.isDestroyedServerside && bp.originPos.distSqr(c) < 9 * 9)
+                    return true;
+            return false;
+        });
+        centres.sort((a, b) -> Double.compare(a.distSqr(from), b.distSqr(from)));
+        return centres;
     }
 
     /** A gentle hint while hovering a patch with a worker selected. */
