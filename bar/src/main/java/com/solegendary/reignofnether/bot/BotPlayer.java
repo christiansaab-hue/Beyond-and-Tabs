@@ -136,6 +136,27 @@ public class BotPlayer {
                 placeNear(level, kit.armyBuilding(), home.offset(rng.nextInt(25) - 12, 0, rng.nextInt(25) - 12), workers, 2);
         }
 
+        // 4b) tech: research tier 2 from ~5 minutes, then refit home extractors one at a time
+        boolean tier2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+        if (!tier2 && minutes >= 5 && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
+            cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+        if (tier2) {
+            boolean upgrading = false;
+            for (BuildingPlacement bp : buildings)
+                if (bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
+                        && bp instanceof ProductionPlacement pp && !pp.productionQueue.isEmpty())
+                    upgrading = true;
+            if (!upgrading)
+                for (BuildingPlacement bp : buildings)
+                    if (bp.isBuilt && bp.getUpgradeLevel() == 0 && bp.originPos.distSqr(home) < 45 * 45
+                            && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
+                            && bp instanceof ProductionPlacement pp) {
+                        pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR);
+                        break;
+                    }
+        }
+
         // 5) train fighters whenever an army building is free
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && bp.getBuilding() == kit.armyBuilding() && bp instanceof ProductionPlacement pp && pp.productionQueue.size() < 2)
