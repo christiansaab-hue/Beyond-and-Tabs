@@ -63,6 +63,8 @@ jobs:
 
   # Beyond and Tabs on the Reign of Nether base (bar/): built with its own Gradle wrapper (ForgeGradle 5, Gradle 7.6)
   bar:
+    needs: build   # publish after the main job so the two releases are never updated at the same moment
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -84,10 +86,17 @@ jobs:
             grep -E "FAILURE|What went wrong|> " build.log | head -20 | sed 's/^/::warning::/'
             exit 1
           }
-      - name: Publish the latest BAR build (pre-release 'bar-dev')
+      - name: Remove the previous BAR build
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env: { GH_TOKEN: "${{ github.token }}" }
-        run: |
-          gh release delete bar-dev --cleanup-tag -y --repo "$GITHUB_REPOSITORY" || true
-          gh release create bar-dev bar/build/libs/*.jar --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
-            --title "Latest BAR build (Reign of Nether base)" --notes "Automatic build of bar/ at ${{ github.sha }}. Untested in-game unless noted."
+        run: gh release delete bar-dev --cleanup-tag -y --repo "$GITHUB_REPOSITORY" || true
+      - name: Publish the latest BAR build (pre-release 'bar-dev')
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: bar-dev
+          name: Latest BAR build (Reign of Nether base)
+          prerelease: true
+          make_latest: false
+          body: "Automatic build of bar/ at ${{ github.sha }}. Untested in-game unless noted in the commit."
+          files: bar/build/libs/*.jar
