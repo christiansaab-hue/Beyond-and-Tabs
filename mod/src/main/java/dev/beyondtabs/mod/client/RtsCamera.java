@@ -27,6 +27,18 @@ public final class RtsCamera {
         return mc.level == null ? 64 : mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) Math.floor(x), (int) Math.floor(z));
     }
 
+    static final net.minecraft.core.BlockPos.MutableBlockPos FP = new net.minecraft.core.BlockPos.MutableBlockPos();
+
+    /** Where units stand: the ground, or in water the riverbed but never deeper than LevelTerrain.WADE (they swim). */
+    static float floor(float x, float z) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return 64;
+        int bx = (int) Math.floor(x), bz = (int) Math.floor(z);
+        int surface = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz), y = surface, min = surface - 8;
+        while (y > min && !mc.level.getFluidState(FP.set(bx, y - 1, bz)).isEmpty()) y--;
+        return Math.max(y, surface - dev.beyondtabs.mod.LevelTerrain.WADE);
+    }
+
     static void enter() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;

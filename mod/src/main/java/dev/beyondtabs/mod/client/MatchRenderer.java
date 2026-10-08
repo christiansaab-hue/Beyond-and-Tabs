@@ -371,10 +371,12 @@ public final class MatchRenderer {
         UnitModels.Ctx c = CTX; c.t = t;
         for (Snapshot.U u : s.units) {
             float[] xz = ClientMatch.pos(u);
-            float gy = RtsCamera.ground(xz[0], xz[1]);
+            float gy = RtsCamera.floor(xz[0], xz[1]);
             UnitDef d = UnitDef.ALL.get(Math.max(0, u.def));
             float k = (float) d.scale();
             if (fr != null && !fr.isVisible(new AABB(xz[0] - 2 * k - 1, gy - 2, xz[1] - 2 * k - 1, xz[0] + 2 * k + 1, gy + 3 * k + 2, xz[1] + 2 * k + 1))) continue;
+            float surf = RtsCamera.ground(xz[0], xz[1]);
+            if (surf - gy > .2f && u.alive && u.walkAmount > .15f && Fx.R.nextInt(14) == 0) Fx.wake(xz[0], surf, xz[1], k);   // wading
             float[] pts = parts(u, a);
             float ddx = xz[0] - camX, ddy = gy - camY, ddz = xz[1] - camZ, dist = (float) Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
             c.near = dist < 32; boolean mid = dist < 75;
@@ -426,7 +428,7 @@ public final class MatchRenderer {
         if (pts != null) return pts;
         float[] xz = ClientMatch.pos(u);
         Ragdoll body = ClientMatch.poseBody(u);
-        body.pose(xz[0], RtsCamera.ground(xz[0], xz[1]), xz[1], u.yaw, u.walkPhase, u.walkAmount, u.attack);
+        body.pose(xz[0], RtsCamera.floor(xz[0], xz[1]), xz[1], u.yaw, u.walkPhase, u.walkAmount, u.attack);
         float[] out = new float[body.rig.n * 3];
         for (int i = 0; i < body.rig.n; i++) { out[i * 3] = body.tx[i]; out[i * 3 + 1] = body.ty[i]; out[i * 3 + 2] = body.tz[i]; }
         return out;
@@ -445,7 +447,7 @@ public final class MatchRenderer {
         for (Snapshot.U u : s.units) {
             if (!u.alive) continue;
             boolean sel = RtsScreen.selected.contains(u.id);
-            float[] xz = ClientMatch.pos(u); float gy = RtsCamera.ground(xz[0], xz[1]);
+            float[] xz = ClientMatch.pos(u); float gy = RtsCamera.floor(xz[0], xz[1]);
             UnitDef d = UnitDef.ALL.get(Math.max(0, u.def)); float k = (float) d.scale();
             if (sel) circle(vc, pose, xz[0], gy + .07f, xz[1], .6f * k, .3f, 1f, .4f);
         }

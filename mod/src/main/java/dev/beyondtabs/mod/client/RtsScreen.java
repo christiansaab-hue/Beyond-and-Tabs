@@ -329,7 +329,7 @@ public final class RtsScreen extends Screen {
     // ---------------------------------------------------------------- picking helpers
     static float[] screenOf(Proj p, Snapshot.U u) {
         float[] xz = ClientMatch.pos(u);
-        return p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]) + 1, xz[1]);
+        return p.toScreen(xz[0], RtsCamera.floor(xz[0], xz[1]) + 1, xz[1]);
     }
     static boolean onScreen(Proj p, Snapshot.U u) { float[] q = screenOf(p, u); return q != null && q[0] >= 0 && q[1] >= 0 && q[0] <= p.gw && q[1] <= p.gh; }
 
@@ -701,7 +701,7 @@ public final class RtsScreen extends Screen {
             if (!sel && !all && u.hp > .995f) continue;
             float[] xz = ClientMatch.pos(u);
             float k = (float) UnitDef.ALL.get(Math.max(0, u.def)).scale();
-            float[] q = p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]) + 2.5f * k, xz[1]);
+            float[] q = p.toScreen(xz[0], RtsCamera.floor(xz[0], xz[1]) + 2.5f * k, xz[1]);
             if (q == null) continue;
             int x = (int) q[0], y = (int) q[1], hw = sel ? 9 : 7;
             int col = u.team == s.myTeam ? (u.hp > .5f ? 0xFF5FD86A : u.hp > .25f ? 0xFFE8C94A : 0xFFE8604A) : 0xFFE8604A;
@@ -722,7 +722,7 @@ public final class RtsScreen extends Screen {
         for (Snapshot.U u : s.units) {
             if (!u.alive) continue;
             float[] xz = ClientMatch.pos(u);
-            float[] q = p.toScreen(xz[0], RtsCamera.ground(xz[0], xz[1]), xz[1]);
+            float[] q = p.toScreen(xz[0], RtsCamera.floor(xz[0], xz[1]), xz[1]);
             if (q == null) continue;
             String role = UnitDef.ALL.get(u.def).role();
             int c = Look.lighter(Look.teamArgb(u.team), .2f) | 0xFF000000, r = role.equals("commander") ? 4 : role.equals("hero") || role.equals("siege") ? 3 : 2;

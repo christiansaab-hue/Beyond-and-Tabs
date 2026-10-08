@@ -223,6 +223,12 @@ final class Fx {
         shake(.25f + half * .04f, x, z);
     }
 
+    /** Ripples and foam round a unit wading or swimming. */
+    static void wake(float x, float y, float z, float scale) {
+        ring(x, y - .25f, z, .9f * scale, .7f, 0x9AB8C8);
+        P p = smoke(x + rnd(-.3f, .3f), y + .05f, z + rnd(-.3f, .3f), .18f * scale, .8f, 0xF0F6FA, .5f); p.grow = 1.8f;
+    }
+
     // ------------------------------------------------------------------ building blocks
 
     static P flash(float x, float y, float z, float size, float life, int c) { return add(FLASH, x, y, z, life, size, c); }

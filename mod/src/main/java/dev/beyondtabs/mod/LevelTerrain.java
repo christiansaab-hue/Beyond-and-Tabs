@@ -19,6 +19,12 @@ public final class LevelTerrain implements Terrain {
     /** Columns under building structures report their original ground (see Structures). */
     java.util.Map<Long, Float> overrides = java.util.Map.of();
 
+    /**
+     * How far below the water surface units can sink. Deeper water acts as if it had a floor here, so soldiers wade
+     * and swim with their heads out instead of walking along a riverbed out of sight. The client uses the same rule.
+     */
+    public static final float WADE = 1.25f;
+
     public LevelTerrain(ServerLevel level) { this.level = level; }
 
     public void invalidate() { java.util.Arrays.fill(used, false); }
@@ -36,7 +42,7 @@ public final class LevelTerrain implements Terrain {
             int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
             int surface = y, minY = level.getMinBuildHeight();
             while (y > minY && !level.getFluidState(pos.set(bx, y - 1, bz)).isEmpty()) y--;   // walk down through water
-            top = y; depth = surface - y;
+            top = Math.max(y, surface - WADE); depth = surface - top;   // deep water: units swim, head above the surface
         }
         keys[h] = k; ground[h] = top; water[h] = depth; used[h] = true;
         return h;
