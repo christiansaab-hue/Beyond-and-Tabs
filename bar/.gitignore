@@ -12,7 +12,6 @@ run/
 # gradle
 build
 .gradle
-build.gradle
 
 ### Eclipse ###
 .apt_generated
