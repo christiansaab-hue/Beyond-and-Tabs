@@ -469,9 +469,11 @@ final class Architecture {
                 int h = 4 + lv;
                 stoneWalls(p, 0, 0, 0, w - 1, h, d - 1, bricks, trim);
                 p.set(cx, 2, d - 1, s(Blocks.IRON_BARS)).set(cx, h - 1, 0, s(Blocks.IRON_BARS)).set(0, h - 1, cz, s(Blocks.IRON_BARS)).set(w - 1, 3, cz, s(Blocks.IRON_BARS));
-                p.fill(0, h + 1, 0, w - 1, h + 1, d - 1, slab(Blocks.STONE_BRICK_SLAB, false));
-                p.crenel(0, 0, w - 1, d - 1, h + 2, bricks);
-                if (lv >= 2) { p.corners(0, 0, w - 1, d - 1, h + 2, h + 3, s(Blocks.DARK_OAK_FENCE)); p.pyramid(0, w - 1, 0, d - 1, h + 4, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES)); p.set(cx, h + 3, cz, hanging(Blocks.LANTERN)); }
+                p.fill(0, h + 1, 0, w - 1, h + 1, d - 1, trim);                               // parapet band
+                // merlons on the side centres, corner posts carry the cap
+                for (int[] m : new int[][]{{cx, 0}, {cx, d - 1}, {0, cz}, {w - 1, cz}}) p.set(m[0], h + 2, m[1], s(Blocks.STONE_BRICK_WALL));
+                if (lv < 2) p.corners(0, 0, w - 1, d - 1, h + 2, h + 2, bricks);
+                if (lv >= 2) { p.corners(0, 0, w - 1, d - 1, h + 2, h + 3, log(Blocks.DARK_OAK_LOG, Direction.Axis.Y)); p.pyramid(0, w - 1, 0, d - 1, h + 4, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES)); p.set(cx, h + 3, cz, hanging(Blocks.LANTERN)); }
                 else p.set(cx, h + 2, cz, s(Blocks.LANTERN));
             }
             case "wall" -> {
