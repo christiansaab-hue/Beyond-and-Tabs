@@ -29,6 +29,8 @@ import org.lwjgl.glfw.GLFW;
 public final class RtsScreen extends Screen {
     static final Set<Integer> selected = new LinkedHashSet<>();
     static int selectedBuilding = -1;
+    /** A unit that isn't ours (enemy, ally, or anything while spectating) clicked to read its stats. */
+    static int inspectUnit = -1;
     static final Map<Integer, Set<Integer>> groups = new HashMap<>();
     static BuildingDef placing; static boolean attackMode, buildMenu;
     static float[] ghost;            // x,z under the cursor while placing
@@ -80,10 +82,11 @@ public final class RtsScreen extends Screen {
         Minecraft mc = Minecraft.getInstance(); long w = mc.getWindow().getWindow();
         long now = System.nanoTime(); float dt = panNanos == 0 ? 0 : Math.min(.05f, (now - panNanos) / 1e9f); panNanos = now;
         float right = 0, fwd = 0;
-        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_UP)) fwd += 1;
-        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_DOWN)) fwd -= 1;
-        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_RIGHT)) right += 1;
-        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_LEFT)) right -= 1;
+        boolean wasd = !hasControlDown() && !hasAltDown();   // Ctrl+A etc. stay hotkeys
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_UP) || (wasd && InputConstants.isKeyDown(w, GLFW.GLFW_KEY_W))) fwd += 1;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_DOWN) || (wasd && InputConstants.isKeyDown(w, GLFW.GLFW_KEY_S))) fwd -= 1;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_RIGHT) || (wasd && InputConstants.isKeyDown(w, GLFW.GLFW_KEY_D))) right += 1;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_LEFT) || (wasd && InputConstants.isKeyDown(w, GLFW.GLFW_KEY_A))) right -= 1;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_Q)) RtsCamera.yaw -= 90 * dt;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_E)) RtsCamera.yaw += 90 * dt;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_PAGE_UP)) RtsCamera.tiltBy(60 * dt);
@@ -220,20 +223,25 @@ public final class RtsScreen extends Screen {
         if (Math.abs(mx - dragX) < 4 && Math.abs(my - dragY) < 4) {   // click
             Snapshot.U u = unitAt(s, p, mx, my, true);
             long now = System.currentTimeMillis(); boolean dbl = now - lastClick < 300; lastClick = now;
-            if (u != null) {
+            inspectUnit = -1;
+            Snapshot.U other = u == null ? unitAt(s, p, mx, my, false) : null;
+            if (u == null && other == null) other = anyUnitAt(s, p, mx, my);
+            if (other != null) { if (!add) selected.clear(); selectedBuilding = -1; inspectUnit = other.id; }
+            else if (u != null) {
                 if (!add) { selected.clear(); selectedBuilding = -1; }
                 if (dbl) for (Snapshot.U o : s.units) { if (o.alive && o.team == s.myTeam && o.def == u.def && onScreen(p, o)) selected.add(o.id); }
                 else if (add && selected.contains(u.id)) selected.remove(u.id); else selected.add(u.id);
             } else {
                 float[] g = p.toGround(mx, my);
                 Snapshot.B b = g == null ? null : buildingAt(s, g[0], g[2], true);
+                if (b == null && g != null) b = anyBuildingAt(s, g[0], g[2]);   // enemy / spectating: inspect it
                 if (!add) selected.clear();
                 selectedBuilding = b == null ? -1 : b.id;
             }
         } else {   // box
             double x0 = Math.min(dragX, mx), x1 = Math.max(dragX, mx), y0 = Math.min(dragY, my), y1 = Math.max(dragY, my);
             if (!add) { selected.clear(); }
-            selectedBuilding = -1;
+            selectedBuilding = -1; inspectUnit = -1;
             for (Snapshot.U u : s.units) {
                 if (!u.alive || u.team != s.myTeam) continue;
                 float[] q = screenOf(p, u);
@@ -251,7 +259,7 @@ public final class RtsScreen extends Screen {
             RtsClient.toggle(); return true;
         }
         if (key == GLFW.GLFW_KEY_A && hasControlDown()) { selectArmy(s); return true; }
-        if (key == GLFW.GLFW_KEY_A) { attackMode = true; return true; }
+        if (key == GLFW.GLFW_KEY_F) { attackMode = true; return true; }   // F = fight / attack-move (BAR); A is camera now
         if (key == GLFW.GLFW_KEY_I && s != null) { selectIdleBuilder(s); return true; }
         if (key == GLFW.GLFW_KEY_SPACE && s != null && s.alertAge >= 0) { RtsCamera.focusX = s.alertX; RtsCamera.focusZ = s.alertZ; return true; }
         if (key == GLFW.GLFW_KEY_HOME && s != null) { centerOnCommander(s); return true; }
@@ -265,7 +273,7 @@ public final class RtsScreen extends Screen {
             else { float[] v = bookmarks.get(b); if (v != null) { RtsCamera.focusX = v[0]; RtsCamera.focusZ = v[1]; RtsCamera.targetDist = v[2]; RtsCamera.yaw = v[3]; } }
             return true;
         }
-        if (key == GLFW.GLFW_KEY_S) { order(Order.Type.STOP); return true; }
+        if (key == GLFW.GLFW_KEY_X) { order(Order.Type.STOP); return true; }   // S is camera now
         if (key == GLFW.GLFW_KEY_P) { attackMode = false; patrolNext = true; return true; }
         if (key == GLFW.GLFW_KEY_B) { buildMenu = s != null && canBuild(s); return true; }
         if (key == GLFW.GLFW_KEY_U && selectedBuilding >= 0) { act(RtsAction.Kind.UPGRADE, -1, 1); return true; }
@@ -373,6 +381,25 @@ public final class RtsScreen extends Screen {
             if (d < bd) { bd = d; best = u; }
         }
         return best;
+    }
+
+    static Snapshot.U anyUnitAt(Snapshot s, Proj p, double mx, double my) {
+        Snapshot.U best = null; double bd = 12 * 12;
+        for (Snapshot.U u : s.units) {
+            if (!u.alive) continue;
+            float[] q = screenOf(p, u); if (q == null) continue;
+            double d = (q[0] - mx) * (q[0] - mx) + (q[1] - my) * (q[1] - my);
+            if (d < bd) { bd = d; best = u; }
+        }
+        return best;
+    }
+
+    static Snapshot.B anyBuildingAt(Snapshot s, float x, float z) {
+        for (Snapshot.B b : s.buildings) {
+            BuildingDef d = BuildingDef.ALL.get(b.def); String[] f = d.footprint().split("x");
+            if (Math.abs(x - b.x) <= Integer.parseInt(f[0]) / 2f + .5f && Math.abs(z - b.z) <= Integer.parseInt(f[1]) / 2f + .5f) return b;
+        }
+        return null;
     }
 
     static Snapshot.B buildingAt(Snapshot s, float x, float z, boolean mine) {
@@ -507,11 +534,18 @@ public final class RtsScreen extends Screen {
                         false, true);
                 ty += 12;
             }
+            if (counts.size() == 1) {   // one kind selected: its full stat card
+                Snapshot.U one = null; for (Snapshot.U u : s.units) if (selected.contains(u.id)) { one = u; break; }
+                if (one != null) drawUnitCard(g, s, one, x, ty + 2, (buildMenu ? mm + 200 : width) - x - 8, selected.size() == 1);
+            }
+        } else if (inspectUnit >= 0) {
+            Snapshot.U o = null; for (Snapshot.U u : s.units) if (u.id == inspectUnit) { o = u; break; }
+            if (o != null) drawUnitCard(g, s, o, x, ty, width - x - 8, true); else inspectUnit = -1;
         } else if (selectedBuilding >= 0) {
             Snapshot.B b = s.buildings.stream().filter(q -> q.id == selectedBuilding).findFirst().orElse(null);
             if (b != null) drawBuildingInfo(g, s, b, x, ty);
         } else {
-            g.drawString(font, "Left-drag select, right-click order (right-drag = line formation). A attack-move, S stop, B build.", x, ty, DIM);
+            g.drawString(font, "Left-drag select, right-click order (right-drag = line formation). WASD/edges move the camera, F attack-move, X stop, B build.", x, ty, DIM);
             g.drawString(font, "Ctrl+A army, I idle builder, Space last alert, Home commander, Ctrl+1-9 groups, H all hotkeys.", x, ty + 11, DIM);
         }
         int bx = mm + 200;
@@ -551,6 +585,39 @@ public final class RtsScreen extends Screen {
         if (MatchRenderer.pingAt > 0 && System.currentTimeMillis() - MatchRenderer.pingAt < 1500) { int[] q = at.apply(MatchRenderer.pingX, MatchRenderer.pingZ); outline(g, q[0] - 3, q[1] - 3, 6, 6, 0xFF7CFF7C); }
     }
 
+    /** Everything about a unit: role, health, weapon, speed, mass, ability and what it's doing. */
+    void drawUnitCard(GuiGraphics g, Snapshot s, Snapshot.U u, int x, int y, int w, boolean live) {
+        UnitDef d = UnitDef.ALL.get(Math.max(0, u.def));
+        var st = dev.beyondtabs.engine.UnitStats.fallback(d);
+        var wp = st.weapon();
+        var ab = dev.beyondtabs.engine.gen.AbilityDef.byId(d.ability());
+        boolean mine = u.team == s.myTeam, friend = !mine && ClientMatch.ally(u.team, s.myTeam);
+        List<String> lines = new ArrayList<>();
+        int col = mine ? TXT : friend ? 0xFF9AE6A0 : s.myTeam < 0 ? (Look.teamArgb(u.team) | 0xFF000000) : 0xFFFF8A8A;
+        String who = mine ? "" : friend ? "Ally " : s.myTeam < 0 ? "" : "Enemy ";
+        g.drawString(font, who + name(d.id()) + "  -  " + d.role() + ", tier " + d.tier() + "  (" + d.metal() + " metal, " + d.energy() + " energy)", x, y, col);
+        lines.add(String.format("Health %d / %d%s", live ? Math.round(st.hp() * u.hp) : Math.round(st.hp()), Math.round(st.hp()), live && u.knocked ? "  (knocked down)" : ""));
+        String wl = String.format("%s: %d damage every %.1fs, range %.1f", name("x_" + wp.id()), wp.damage(), wp.cooldown(), wp.range());
+        if (wp.aoe() > 0) wl += String.format(", splash %.1f", wp.aoe());
+        if (wp.count() > 1) wl += ", " + wp.count() + " shots";
+        lines.add(wl + String.format("  (%.0f dps)", wp.damage() * Math.max(1, wp.count()) / Math.max(.1, wp.cooldown())));
+        lines.add(String.format("Speed x%.2f  |  Mass %.0f  |  Supply %d", st.speedMult(), st.mass(), d.supply()));
+        if (!ab.id().equals("none")) lines.add(ab.name() + ": " + ab.description());
+        if (live && u.style >= 0 && u.style < STYLE_NAMES.length) lines.add("Fighting style: " + STYLE_NAMES[u.style]);
+        int ty = y + 11;
+        for (String l : lines) for (String part : wrap(l, Math.max(120, w))) { if (ty > height - 10) return; g.drawString(font, part, x, ty, DIM); ty += 10; }
+    }
+
+    List<String> wrap(String l, int w) {
+        List<String> out = new ArrayList<>();
+        while (font.width(l) > w) {
+            int cut = l.length() - 1; while (cut > 0 && (l.charAt(cut) != ' ' || font.width(l.substring(0, cut)) > w)) cut--;
+            if (cut <= 0) break;
+            out.add(l.substring(0, cut)); l = l.substring(cut + 1);
+        }
+        out.add(l); return out;
+    }
+
     void drawBuildingInfo(GuiGraphics g, Snapshot s, Snapshot.B b, int x, int y) {
         BuildingDef d = BuildingDef.ALL.get(b.def);
         g.drawString(font, name(d.id()) + "  (level " + b.level + "/" + d.levels() + ")", x, y, b.team == s.myTeam ? TXT : 0xFFFF8A8A);
@@ -558,6 +625,13 @@ public final class RtsScreen extends Screen {
         if (b.progress < 1) g.drawString(font, String.format("%s %d%%", b.upgrading ? "Upgrading" : "Building", Math.round(b.progress * 100)), x, y + 22, ENERGY);
         if (b.producing >= 0) g.drawString(font, String.format("Training %s %d%%", name(UnitDef.ALL.get(b.producing).id()), Math.round(b.produceFrac * 100)), x, y + 33, METAL);
         if (b.researching >= 0) g.drawString(font, String.format("Researching %s %d%%", name(TechDef.ALL.get(b.researching).id()), Math.round(b.researchFrac * 100)), x, y + 44, 0xFFB08CFF);
+        int ty = y + 55, w = (b.team == s.myTeam ? 190 : width - x - 8);
+        List<String> about = new ArrayList<>();
+        about.add(String.format("%d HP  |  %s footprint  |  %d metal, %d energy", d.hp(), d.footprint(), d.metal(), d.energy()));
+        if (!d.effect().isEmpty() && !d.effect().equals("none")) about.add("Effect: " + d.effect().replace('_', ' ') + (d.valuePerLevel().isEmpty() ? "" : " " + d.valuePerLevel() + " (per level)"));
+        if (!d.produces().isEmpty() && !d.produces().equals("none")) about.add("Trains: " + d.produces().replace('_', ' ').replace(";", ", "));
+        if (d.blastRadius() > 0) about.add(String.format("Explodes when destroyed: %d damage in %d blocks", d.blastDamage(), d.blastRadius()));
+        for (String l : about) for (String part : wrap(l, w)) { if (ty > height - 10) return; g.drawString(font, part, x, ty, DIM); ty += 10; }
     }
 
     void drawBuildMenu(GuiGraphics g, Snapshot s, int x, int y) {
@@ -705,11 +779,11 @@ public final class RtsScreen extends Screen {
         String[] lines = {
                 "HOTKEYS  (H to close)",
                 "Left-drag: box select   Double-click: all of that type on screen   Shift: add / queue",
-                "Right-click: move / attack   Right-drag: line formation   A: attack-move   P: patrol   S: stop",
+                "Right-click: move / attack   Right-drag: line formation   F: attack-move   P: patrol   X: stop",
                 "Ctrl+A: select army   I: next idle builder   Ctrl+1-9: set group   1-9: select group (twice: jump)",
                 "B: build menu   (walls: drag to place a line)   U: upgrade building   R: factory repeat",
                 "Space: jump to last alert   Home: commander   Ctrl+F5-F8: save camera   F5-F8: recall camera",
-                "Arrows / screen edges / middle-drag: pan   Wheel: zoom (far = strategic icons)   Q / E: rotate",
+                "WASD / arrows / screen edges / middle-drag: pan   Wheel: zoom (far = strategic icons)   Q / E: rotate",
                 "Shift+wheel or PgUp/PgDn: tilt, Ctrl+wheel: turn toward the horizon   Alt+middle-drag: turn and tilt   Shift+Alt+wheel: turn   End: reset tilt",
                 "Pause or F9: pause (single player)   + / -: game speed   Alt: health bars for everyone",
                 "V or Esc: leave the RTS view",
