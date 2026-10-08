@@ -115,7 +115,23 @@ final class Architecture {
         if (race.equals("ancient_world")) ancient(p, kind, level);
         else if (race.equals("kingdoms")) kingdoms(p, kind, level);
         else Structures.generic(p, b, level);
+        weather(p, b.id);
         return p.ordered();
+    }
+
+    /** Wear and texture: a sprinkle of cracked and mossy blocks so walls don't look freshly printed (stable per building). */
+    static void weather(Plan p, int seed) {
+        for (var e : p.parts.entrySet()) {
+            Part q = e.getValue(); Block blk = q.s().getBlock();
+            int h = Math.floorMod((q.x() * 73856093) ^ (q.y() * 19349663) ^ (q.z() * 83492791) ^ (seed * 31), 23);
+            Block to = null;
+            if (blk == Blocks.STONE_BRICKS) to = h == 0 || h == 7 ? Blocks.CRACKED_STONE_BRICKS : h == 3 ? Blocks.MOSSY_STONE_BRICKS : null;
+            else if (blk == Blocks.COBBLESTONE) to = h % 5 == 0 ? Blocks.MOSSY_COBBLESTONE : null;
+            else if (blk == Blocks.MUD_BRICKS) to = h == 4 ? Blocks.PACKED_MUD : null;
+            else if (blk == Blocks.SMOOTH_SANDSTONE) to = h == 2 ? Blocks.SANDSTONE : null;
+            else if (blk == Blocks.QUARTZ_BRICKS) to = h == 5 ? Blocks.CHISELED_QUARTZ_BLOCK : null;
+            if (to != null) e.setValue(new Part(q.x(), q.y(), q.z(), to.defaultBlockState()));
+        }
     }
 
     // =================================================================================================================
