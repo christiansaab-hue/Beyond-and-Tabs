@@ -180,6 +180,12 @@ final class Weapons {
         m.prismW(x + d[0] * .45f * k, y + d[1] * .45f * k, z + d[2] * .45f * k, x + d[0] * .62f * k, y + d[1] * .62f * k, z + d[2] * .62f * k, .05f * k, .01f * k, 4, Look.TILE_RED);
     }
 
+    /** Just the off-hand shield (for units whose weapon is a real Minecraft item, see Gear). */
+    static void shieldOnly(Mesh m, UnitModels.Ctx c) {
+        String key = c.key;
+        shield(m, c, c.x(Rig.HAND_L), c.y(Rig.HAND_L), c.z(Rig.HAND_L), c.scale, key.contains("ROMAN") || key.contains("KNIGHT"), key.contains("HOPLITE") ? 0xC9973F : -1);
+    }
+
     static void shield(Mesh m, UnitModels.Ctx c, float x, float y, float z, float k, boolean rect, int rim) {
         float cx = x + c.fx * .12f * k, cz = z + c.fz * .12f * k, cy = y + .1f * k;
         if (rect) {

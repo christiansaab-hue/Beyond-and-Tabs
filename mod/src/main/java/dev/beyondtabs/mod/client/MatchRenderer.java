@@ -48,7 +48,7 @@ public final class MatchRenderer {
     static final MultiBufferSource.BufferSource SOLID_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 20));
     static final MultiBufferSource.BufferSource TRANS_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 18));
     /** Blocky skinned units (vanilla entity render type, world-lit). */
-    static final MultiBufferSource.BufferSource ENTITY_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 19));
+    static final MultiBufferSource.BufferSource ENTITY_SRC = MultiBufferSource.immediateWithBuffers(Gear.buffers(), new BufferBuilder(1 << 16));
     static final MultiBufferSource.BufferSource ADD_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 18));
     static final Mesh ADD = new Mesh();
     static Matrix4f POSE; static org.joml.Matrix3f NORMAL;
@@ -123,6 +123,7 @@ public final class MatchRenderer {
         for (Runnable g : ghosts) g.run();
         SOLID_SRC.endBatch();
         ENTITY_SRC.endBatch();
+        mc.renderBuffers().bufferSource().endBatch();   // held items
         TRANS_SRC.endBatch();
         ADD_SRC.endBatch();
 
@@ -402,7 +403,14 @@ public final class MatchRenderer {
                 Minecraft mcI = Minecraft.getInstance();
                 int light = mcI.level == null ? 0xF000F0 : net.minecraft.client.renderer.LevelRenderer.getLightColor(mcI.level, net.minecraft.core.BlockPos.containing(xz[0], gy + 1.2, xz[1]));
                 float[] arms = BlockyUnits.humanoid(ENTITY_SRC.getBuffer(BlockyUnits.TYPE), POSE, NORMAL, c, Math.max(0, u.def), light, !u.alive);
-                float[] keep = c.p; int sides = c.sides; c.p = arms; c.sides = 4; Weapons.draw(m, c); c.p = keep; c.sides = sides;   // square-section weapons to match
+                Gear.Kit kit = Gear.of(d);
+                if (kit != null && (c.near || mid)) BlockyUnits.armour(ENTITY_SRC, kit.armour(), team, k, !u.alive);
+                float[] keep = c.p; int sides = c.sides; c.p = arms; c.sides = 4;
+                if (kit != null && (kit.right() != null || kit.left() != null)) {   // real Minecraft items in the hands
+                    if (c.near || mid) Gear.items(kit, c, arms, POSE, mcI.renderBuffers().bufferSource(), light, camX, camY, camZ);
+                    if (kit.shield()) Weapons.shieldOnly(m, c);
+                } else Weapons.draw(m, c);   // hand-made weapon models (square-section to match)
+                c.p = keep; c.sides = sides;
             }
             else UnitModels.hull(m, c, gy, u.yaw, u.walkPhase, u.walkAmount);
             if (u.knocked && u.alive && c.near) {   // dizzy stars
