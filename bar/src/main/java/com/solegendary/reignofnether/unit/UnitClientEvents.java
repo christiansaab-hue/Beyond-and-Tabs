@@ -49,6 +49,7 @@ import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
 import com.solegendary.reignofnether.tutorial.TutorialClientEvents;
 import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.*;
+import com.solegendary.reignofnether.unit.packets.UnitBatchSyncClientboundPacket;
 import com.solegendary.reignofnether.unit.packets.UnitActionServerboundPacket;
 import com.solegendary.reignofnether.unit.packets.UnitSyncServerboundPacket;
 import com.solegendary.reignofnether.unit.units.monsters.*;
@@ -234,19 +235,40 @@ public class UnitClientEvents {
         markSelectedUnitsChanged();
     }
 
+    // Per-owner population of tracked + virtual units, memoised per client tick (keyed also on the list sizes so a
+    // unit joining/leaving mid-tick is reflected). This was recomputed per call - with a List.contains per virtual
+    // unit, ie. O(units x virtualUnits) - and is called every frame by the HUD and per production item per tick.
+    private static final HashMap<String, Integer> unitPopulationCache = new HashMap<>();
+    private static long unitPopulationCacheTick = Long.MIN_VALUE;
+    private static int unitPopulationCacheUnits = -1;
+    private static int unitPopulationCacheVirtual = -1;
+
+    private static int getUnitPopulation(String playerName) {
+        long tick = MC.level != null ? MC.level.getGameTime() : Long.MIN_VALUE;
+        if (tick != unitPopulationCacheTick || allUnits.size() != unitPopulationCacheUnits ||
+                MinimapClientEvents.virtualUnits.size() != unitPopulationCacheVirtual) {
+            unitPopulationCache.clear();
+            HashSet<Integer> allUnitIds = new HashSet<>(allUnits.size() * 2);
+            for (LivingEntity entity : allUnits) {
+                allUnitIds.add(entity.getId());
+                if (entity instanceof Unit unit)
+                    unitPopulationCache.merge(unit.getOwnerName(), unit.getCost().population, Integer::sum);
+            }
+            for (VirtualUnit virtualUnit : MinimapClientEvents.virtualUnits) {
+                if (!allUnitIds.contains(virtualUnit.id))
+                    unitPopulationCache.merge(virtualUnit.ownerName, virtualUnit.population, Integer::sum);
+            }
+            unitPopulationCacheTick = tick;
+            unitPopulationCacheUnits = allUnits.size();
+            unitPopulationCacheVirtual = MinimapClientEvents.virtualUnits.size();
+        }
+        return unitPopulationCache.getOrDefault(playerName, 0);
+    }
+
     public static int getCurrentPopulation(String playerName) {
         int currentPopulation = 0;
         if (MC.level != null) {
-            List<Integer> allUnitIds = allUnits.stream().map(Entity::getId).toList();
-            for (LivingEntity entity : allUnits) {
-                if (entity instanceof Unit unit)
-                    if (unit.getOwnerName().equals(playerName))
-                        currentPopulation += unit.getCost().population;
-            }
-            for (VirtualUnit virtualUnit : MinimapClientEvents.virtualUnits) {
-                if (virtualUnit.ownerName.equals(playerName) && !allUnitIds.contains(virtualUnit.id))
-                    currentPopulation += virtualUnit.population;
-            }
+            currentPopulation += getUnitPopulation(playerName);
             for (BuildingPlacement building : BuildingClientEvents.getBuildings())
                 if (building.ownerName.equals(playerName))
                     if (building instanceof ProductionPlacement prodBuilding) {
@@ -492,17 +514,29 @@ public class UnitClientEvents {
     public static void syncUnitStats(int entityId, float health, float absorb, Vec3 pos, String ownerName, int population) {
         if (MC.level == null)
             return;
-        boolean isLoadedClientside = MC.level.getEntity(entityId) != null;
-
+        LivingEntity found = null;
         for (LivingEntity entity : allUnits) {
             if (entity.getId() == entityId) {
-                if (!isLoadedClientside) {
-                    entity.setHealth(health);
-                    entity.setPos(pos);
-                }
-                entity.setAbsorptionAmount(absorb);
-                return;
+                found = entity;
+                break;
             }
+        }
+        applyUnitStats(found, entityId, health, absorb, pos, ownerName, population);
+    }
+
+    // trackedEntity = the allUnits entry with this id, or null if there is none
+    private static void applyUnitStats(@Nullable LivingEntity trackedEntity, int entityId, float health, float absorb, Vec3 pos, String ownerName, int population) {
+        if (MC.level == null)
+            return;
+        boolean isLoadedClientside = MC.level.getEntity(entityId) != null;
+
+        if (trackedEntity != null) {
+            if (!isLoadedClientside) {
+                trackedEntity.setHealth(health);
+                trackedEntity.setPos(pos);
+            }
+            trackedEntity.setAbsorptionAmount(absorb);
+            return;
         }
         // if the unit doesn't exist at all clientside, create a VirtualUnit to track its minimap position and population usage
         if (!isLoadedClientside) {
@@ -528,14 +562,18 @@ public class UnitClientEvents {
         for(LivingEntity entity : allUnits) {
             if (entity.getId() == entityId && MC.level != null) {
                 if (entity instanceof Unit unit) {
-                    unit.getItems().removeIf(i -> !ItemUtil.isEdibleFoodOrDrink(i.getItem()));
-                    unit.getItems().add(new ItemStack(Items.SUGAR, res.food));
-                    unit.getItems().add(new ItemStack(Items.STICK, res.wood));
-                    unit.getItems().add(new ItemStack(Items.STONE, res.ore));
-                    unit.getItems().add(new ItemStack(Items.EMERALD, res.emerald));
+                    applyUnitResources(unit, res);
                 }
             }
         }
+    }
+
+    private static void applyUnitResources(Unit unit, Resources res) {
+        unit.getItems().removeIf(i -> !ItemUtil.isEdibleFoodOrDrink(i.getItem()));
+        unit.getItems().add(new ItemStack(Items.SUGAR, res.food));
+        unit.getItems().add(new ItemStack(Items.STICK, res.wood));
+        unit.getItems().add(new ItemStack(Items.STONE, res.ore));
+        unit.getItems().add(new ItemStack(Items.EMERALD, res.emerald));
     }
 
     public static void syncAnchorPos(int entityId, BlockPos bp) {
@@ -557,6 +595,38 @@ public class UnitClientEvents {
                     break;
                 }
             }
+        }
+    }
+
+    /**
+     * Apply a UnitBatchSyncClientboundPacket: the same state updates the old per-unit packets made (syncUnitResources,
+     * syncUnitStats, syncAnchorPos/removeAnchorPos, makeVillagerVeteran, syncWorkerUnit, ItemClientEvents.syncInventory),
+     * but with one id->unit map built per batch instead of a linear scan of allUnits per packet.
+     */
+    public static void applyBatchSync(List<UnitBatchSyncClientboundPacket.Entry> entries) {
+        if (MC.level == null)
+            return;
+        HashMap<Integer, LivingEntity> byId = new HashMap<>(allUnits.size() * 2);
+        for (LivingEntity le : allUnits)
+            byId.putIfAbsent(le.getId(), le); // first match, like the old loops
+        for (UnitBatchSyncClientboundPacket.Entry e : entries) {
+            LivingEntity entity = byId.get(e.id);
+            if (e.has(UnitBatchSyncClientboundPacket.Field.RESOURCES) && entity instanceof Unit unit)
+                applyUnitResources(unit, new Resources("", e.food, e.wood, e.ore, e.emerald));
+            if (e.has(UnitBatchSyncClientboundPacket.Field.STATS))
+                applyUnitStats(entity, e.id, e.health, e.absorb, new Vec3(e.x, e.y, e.z), e.ownerName, e.population);
+            if (e.has(UnitBatchSyncClientboundPacket.Field.ANCHOR) && entity instanceof Unit unit)
+                unit.setAnchor(e.anchor);
+            if (e.has(UnitBatchSyncClientboundPacket.Field.VETERAN) && entity instanceof VillagerUnit vUnit)
+                vUnit.isVeteran = true;
+            if (e.has(UnitBatchSyncClientboundPacket.Field.WORKER) && entity instanceof WorkerUnit workerUnit) {
+                BlockPos gatherPos = e.gatherPos == null || e.gatherPos.equals(new BlockPos(0, 0, 0)) ? null : e.gatherPos;
+                workerUnit.getBuildRepairGoal().setIsBuildingServerside(e.isBuilding);
+                workerUnit.getGatherResourceGoal().setIsGatheringServerside(e.isGathering);
+                workerUnit.getGatherResourceGoal().syncFromServer(e.gatherName, gatherPos, e.gatherTicks);
+            }
+            if (e.has(UnitBatchSyncClientboundPacket.Field.INVENTORY))
+                ItemClientEvents.syncInventory(e.id, e.items);
         }
     }
 

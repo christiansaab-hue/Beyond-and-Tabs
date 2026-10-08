@@ -110,6 +110,8 @@ public class ReignOfNether {
         BuildingSelectorOptions.bootStrap();
         ResourceObjectiveCriteria.init();
         CreativeModeTabsRegistrar.init(mlctx);
+        // clears stale per-unit Forge forced chunks from old saves; unit chunk loading is now UnitChunkLoader
+        com.solegendary.reignofnether.unit.UnitChunkLoader.registerForgeValidationCallback();
         
         final ClientEventRegistrar clientRegistrar = new ClientEventRegistrar();
         DistExecutor.safeRunWhenOn(Dist.CLIENT, () -> clientRegistrar::registerClientEvents);

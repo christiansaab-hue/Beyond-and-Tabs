@@ -1,5 +1,7 @@
 package com.solegendary.reignofnether.items;
 
+import com.solegendary.reignofnether.unit.packets.UnitBatchSyncClientboundPacket;
+import com.solegendary.reignofnether.unit.UnitSyncBatcher;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import net.minecraft.core.BlockPos;
@@ -25,6 +27,8 @@ public class ItemClientboundPacket {
     private final BlockPos shopPos;
 
     public static void syncInventory(int unitId, List<ItemStack> items) {
+        // out-of-band inventory sync: make the next batched unit sync re-send the authoritative inventory
+        UnitSyncBatcher.invalidate(unitId, UnitBatchSyncClientboundPacket.Field.INVENTORY);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new ItemClientboundPacket(unitId, items));
     }
 

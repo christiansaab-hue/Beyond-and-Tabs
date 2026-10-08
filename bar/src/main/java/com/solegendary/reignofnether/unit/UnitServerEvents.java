@@ -82,6 +82,7 @@ import net.minecraftforge.common.world.ForgeChunkManager;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.*;
 import net.minecraftforge.event.entity.living.*;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.Event;
@@ -117,8 +118,8 @@ public class UnitServerEvents {
     public static List<UnitActionItem> getUnitActionSlowQueue() { return unitActionSlowQueue; }
 
     private static final ArrayList<LivingEntity> allUnits = new ArrayList<>();
-
-    private static final HashMap<Integer, ChunkAccess> forcedUnitChunks = new HashMap<>();
+    // bumped whenever allUnits gains/loses a unit here; part of the population cache key
+    private static int allUnitsModCount = 0;
 
     private static final Random RANDOM = new Random();
 
@@ -127,7 +128,13 @@ public class UnitServerEvents {
     // A* in the same tick. With RTS pathfinding on, moves dispatch immediately (UnitActionItem) since the
     // worker pool queues + backpressures off-thread, so this queue stays empty. LinkedHashMap preserves
     // insertion order while letting a re-queued unit overwrite its old target (supersession).
-    private static final int FORMATION_DISPATCH_PER_TICK = 5;
+    // Was a flat 5 orders/tick (200 units = 2 s before the last one moved). Now dispatches as many as fit in a
+    // main-thread time budget each tick, with a hard cap: cheap requests (short/obvious paths) all go out in the
+    // first tick, while a batch of expensive vanilla A* searches is still spread out instead of freezing the tick.
+    // FORMATION_DISPATCH_MIN_PER_TICK are always dispatched regardless of the budget so progress is guaranteed.
+    private static final int FORMATION_DISPATCH_MIN_PER_TICK = 10;
+    private static final int FORMATION_DISPATCH_MAX_PER_TICK = 200;
+    private static final long FORMATION_DISPATCH_BUDGET_NANOS = 8_000_000L; // 8 ms of the 50 ms tick
     // unit -> formation slot. Queued so a large vanilla selection's moves dispatch time-sliced across ticks
     // instead of running N concurrent synchronous A* searches in one tick.
     private record FormationOrder(LivingEntity unit, BlockPos target) {}
@@ -145,6 +152,33 @@ public class UnitServerEvents {
         return allUnits;
     }
 
+    // Per-owner sum of unit population, memoised for the current server tick. getCurrentPopulation used to scan
+    // every unit on every call, and it's called per active production item per tick (ProductionItem
+    // .isBelowPopulationSupply), for every queue/afford check, graveyards, scoreboard, etc. Keyed by
+    // (server tick, allUnits size, allUnitsModCount) so a unit spawning/dying mid-tick is reflected immediately.
+    // Only the unit part is cached: production queues are still counted live, so queuing several items in the
+    // same tick is checked exactly as before. (A unit changing owner or pop cost - slime resize - is picked up
+    // on the next tick at the latest.)
+    private static final HashMap<String, Integer> unitPopulationCache = new HashMap<>();
+    private static long unitPopulationCacheTick = Long.MIN_VALUE;
+    private static int unitPopulationCacheSize = -1;
+    private static int unitPopulationCacheModCount = -1;
+
+    private static int getUnitPopulation(String ownerName) {
+        long tick = serverLevel != null ? serverLevel.getGameTime() : Long.MIN_VALUE + 1;
+        if (tick != unitPopulationCacheTick || allUnits.size() != unitPopulationCacheSize ||
+                allUnitsModCount != unitPopulationCacheModCount || serverLevel == null) {
+            unitPopulationCache.clear();
+            for (LivingEntity entity : allUnits)
+                if (entity instanceof Unit unit)
+                    unitPopulationCache.merge(unit.getOwnerName(), unit.getCost().population, Integer::sum);
+            unitPopulationCacheTick = tick;
+            unitPopulationCacheSize = allUnits.size();
+            unitPopulationCacheModCount = allUnitsModCount;
+        }
+        return unitPopulationCache.getOrDefault(ownerName, 0);
+    }
+
     public static final ArrayList<TargetResourcesSave> savedTargetResources = new ArrayList<>();
 
     private static boolean isServerStopping = false;
@@ -156,6 +190,9 @@ public class UnitServerEvents {
         if (evt.phase != TickEvent.Phase.END)
             return;
         saveTicks += 1;
+        // once a second: recompute the deduplicated set of chunks units need loaded (see UnitChunkLoader)
+        if (evt.getServer().getTickCount() % 20 == 0)
+            UnitChunkLoader.update(evt.getServer(), allUnits);
         if (saveTicks >= SAVE_TICKS_MAX) {
             ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);
             if (level != null) {
@@ -173,8 +210,10 @@ public class UnitServerEvents {
             saveFallenHeroUnits(level);
             saveGatherTargets(level);
             allUnits.clear();
-            forcedUnitChunks.clear();
+            allUnitsModCount++;
         }
+        UnitChunkLoader.clear();
+        UnitSyncBatcher.clear();
     }
 
     public static void addUnitPoofs(Level level, Entity entity) {
@@ -260,13 +299,7 @@ public class UnitServerEvents {
     }
 
     public static int getCurrentPopulation(String ownerName) {
-        int currentPopulation = 0;
-        for (LivingEntity entity : allUnits)
-            if (entity instanceof Unit unit) {
-                if (unit.getOwnerName().equals(ownerName)) {
-                    currentPopulation += unit.getCost().population;
-                }
-            }
+        int currentPopulation = getUnitPopulation(ownerName);
         for (BuildingPlacement building : BuildingServerEvents.getBuildings())
             if (building.ownerName.equals(ownerName)) {
                 if (building instanceof ProductionPlacement prodPlacement) {
@@ -410,6 +443,7 @@ public class UnitServerEvents {
         if (evt.getEntity() instanceof Unit unit && evt.getEntity() instanceof LivingEntity entity
             && !evt.getLevel().isClientSide) {
             allUnits.add(entity);
+            allUnitsModCount++;
 
             if (unit instanceof WorkerUnit wUnit) {
                 synchronized (savedTargetResources) {
@@ -433,17 +467,8 @@ public class UnitServerEvents {
             } else if (isWearingPumpkin) {
                 entity.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.AIR));
             }
-
-            ChunkAccess chunk = evt.getLevel().getChunk(entity.getOnPos());
-            ForgeChunkManager.forceChunk((ServerLevel) evt.getLevel(),
-                ReignOfNether.MOD_ID,
-                entity,
-                chunk.getPos().x,
-                chunk.getPos().z,
-                true,
-                true
-            );
-            forcedUnitChunks.put(entity.getId(), chunk);
+            // chunk forcing for units is handled centrally by UnitChunkLoader (was a per-unit Forge forced chunk
+            // that was never released when the unit died)
         }
 
         if (evt.getEntity() instanceof Projectile proj) {
@@ -458,7 +483,8 @@ public class UnitServerEvents {
         if (evt.getEntity() instanceof Unit && evt.getEntity() instanceof LivingEntity entity
             && !evt.getLevel().isClientSide) {
 
-            allUnits.removeIf(e -> e.getId() == entity.getId());
+            if (allUnits.removeIf(e -> e.getId() == entity.getId()))
+                allUnitsModCount++;
             UnitSyncClientboundPacket.sendLeavePacket(entity);
 
             //ChunkAccess chunk = evt.getLevel().getChunk(entity.getOnPos());
@@ -471,9 +497,13 @@ public class UnitServerEvents {
         synchronized (allUnits) {
             try {
                 if (evt.getEntity() instanceof Unit unit) {
+                    // only "does the owner have any unit left" matters, so stop at the first one found
                     var unitsOwned = 0;
                     for (LivingEntity u : allUnits) {
-                        if ((u instanceof Unit unit1 && unit1.getOwnerName().equals(unit.getOwnerName()))) unitsOwned++;
+                        if ((u instanceof Unit unit1 && unit1.getOwnerName().equals(unit.getOwnerName()))) {
+                            unitsOwned++;
+                            break;
+                        }
                     }
                     if (!SandboxServer.isSandboxPlayer(unit.getOwnerName()) &&
                             unitsOwned == 0 && isRTSPlayer(unit.getOwnerName())
@@ -741,8 +771,11 @@ public class UnitServerEvents {
             if (formationDispatchQueue.isEmpty())
                 return;
             int processed = 0;
+            long startNanos = System.nanoTime();
             Iterator<FormationOrder> it = formationDispatchQueue.values().iterator();
-            while (processed < FORMATION_DISPATCH_PER_TICK && it.hasNext()) {
+            while (processed < FORMATION_DISPATCH_MAX_PER_TICK && it.hasNext() &&
+                    (processed < FORMATION_DISPATCH_MIN_PER_TICK ||
+                     System.nanoTime() - startNanos < FORMATION_DISPATCH_BUDGET_NANOS)) {
                 FormationOrder order = it.next();
                 it.remove();
                 LivingEntity le = order.unit();
@@ -767,54 +800,11 @@ public class UnitServerEvents {
             unitSyncTicks = UNIT_SYNC_TICKS_MAX;
             UnitIdleWorkerClientBoundPacket.sendIdleWorkerPacket();
 
-            for (LivingEntity entity : allUnits) {
-                if (entity instanceof Unit unit && evt.level.getServer() != null) {
-                    UnitSyncClientboundPacket.sendSyncResourcesPacket(unit);
-                    UnitSyncClientboundPacket.sendSyncStatsPacket(evt.level.getServer().getPlayerList().getPlayers(), entity);
-
-                    if (unit.getAnchor() != null)
-                        UnitSyncClientboundPacket.sendSyncAnchorPosPacket(entity, unit.getAnchor());
-                    else
-                        UnitSyncClientboundPacket.sendRemoveAnchorPosPacket(entity);
-                    if (entity instanceof VillagerUnit vUnit && vUnit.isVeteran())
-                        UnitSyncClientboundPacket.makeVillagerVeteran(vUnit);
-                }
-                if (entity instanceof WorkerUnit) {
-                    UnitSyncWorkerClientBoundPacket.sendSyncWorkerPacket(entity);
-                }
-                if (entity instanceof UnitInventory inv) {
-                    ItemClientboundPacket.syncInventory(entity.getId(), inv.getAllItems());
-                }
-
-                // remove old chunk // add current chunk
-                ChunkAccess newChunk = evt.level.getChunk(entity.getOnPos());
-                ChunkAccess oldChunk = forcedUnitChunks.get(entity.getId());
-                boolean chunkNeedsUpdate = oldChunk != null && (
-                    oldChunk.getPos().x != newChunk.getPos().x || oldChunk.getPos().z != newChunk.getPos().z
-                );
-
-                if (chunkNeedsUpdate) {
-                    ForgeChunkManager.forceChunk((ServerLevel) evt.level,
-                        ReignOfNether.MOD_ID,
-                        entity,
-                        oldChunk.getPos().x,
-                        oldChunk.getPos().z,
-                        false,
-                        true
-                    );
-                    ForgeChunkManager.forceChunk((ServerLevel) evt.level,
-                        ReignOfNether.MOD_ID,
-                        entity,
-                        newChunk.getPos().x,
-                        newChunk.getPos().z,
-                        true,
-                        true
-                    );
-                    forcedUnitChunks.put(entity.getId(), newChunk);
-                    //ReignOfNether.LOGGER.info("Updated forced chunk for entity: " + entity.getId() + " at: " +
-                    // newChunk.getPos().x + "," + newChunk.getPos().z);
-                }
-            }
+            // One batched, delta-compressed packet per player instead of up to (players + 4) packets per unit.
+            // Same data, same fog gating for stats; see UnitSyncBatcher. (Chunk forcing that used to live in this
+            // loop is now UnitChunkLoader, run from onServerTick.)
+            if (evt.level.getServer() != null)
+                UnitSyncBatcher.sync(evt.level.getServer().getPlayerList().getPlayers(), allUnits);
         }
         synchronized (unitActionSlowQueue) {
             UnitActionItem actionedItem = null;
@@ -838,6 +828,27 @@ public class UnitServerEvents {
                 actionItem.action(evt.level);
             unitActionFastQueue.clear();
         }
+    }
+
+    // A client (un)loading a unit entity resets its client-only state (anchor, carried resources, worker state...)
+    // or switches it between "real entity" and "virtual minimap unit", so the batched delta sync must re-send that
+    // unit's full state to that player.
+    @SubscribeEvent
+    public static void onStartTracking(PlayerEvent.StartTracking evt) {
+        if (evt.getTarget() instanceof Unit && !evt.getEntity().level().isClientSide())
+            UnitSyncBatcher.invalidateForPlayer(evt.getEntity().getUUID(), evt.getTarget().getId());
+    }
+
+    @SubscribeEvent
+    public static void onStopTracking(PlayerEvent.StopTracking evt) {
+        if (evt.getTarget() instanceof Unit && !evt.getEntity().level().isClientSide())
+            UnitSyncBatcher.invalidateForPlayer(evt.getEntity().getUUID(), evt.getTarget().getId());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent evt) {
+        if (!evt.getEntity().level().isClientSide())
+            UnitSyncBatcher.onPlayerLeft(evt.getEntity().getUUID());
     }
 
     @SubscribeEvent
