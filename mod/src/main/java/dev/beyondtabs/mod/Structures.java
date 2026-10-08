@@ -57,10 +57,32 @@ public final class Structures {
         match.terrain.invalidate();
     }
 
+    /** Removing or swapping blocks: clients are told but neighbours are not, so nothing (scaffolding, lanterns) pops off as items. */
+    static final int QUIET = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
+
+    /** Positions highest first (taking a structure down from the top). */
+    static List<BlockPos> topDown(java.util.Collection<BlockPos> c) { List<BlockPos> l = new ArrayList<>(c); l.sort((a, b) -> Integer.compare(b.getY(), a.getY())); return l; }
+
     void clear(State st) {
-        for (BlockPos pos : st.scaffold) match.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-        for (BlockPos pos : st.placed.keySet()) match.level.setBlock(pos, st.ground.getOrDefault(pos, Blocks.AIR.defaultBlockState()), 3);
+        for (BlockPos pos : topDown(st.scaffold)) match.level.setBlock(pos, Blocks.AIR.defaultBlockState(), QUIET);
+        for (BlockPos pos : topDown(st.placed.keySet())) match.level.setBlock(pos, st.ground.getOrDefault(pos, Blocks.AIR.defaultBlockState()), QUIET);
         st.scaffold.clear(); st.placed.clear(); st.ground.clear(); st.scaffolded = false;
+    }
+
+    /** A new match (or /bt clear): every block this match placed goes, and the item clutter around the sites with it. */
+    public void clearAll() {
+        for (var e : states.entrySet()) { State st = e.getValue(); java.util.Set<BlockPos> area = new java.util.HashSet<>(st.placed.keySet()); area.addAll(st.scaffold); clear(st); sweep(area); }
+        states.clear();
+        match.terrain.invalidate();
+    }
+
+    /** Removes dropped items lying in or next to a set of block positions (safety net against clutter). */
+    void sweep(java.util.Collection<BlockPos> area) {
+        if (area.isEmpty()) return;
+        int x0 = Integer.MAX_VALUE, y0 = Integer.MAX_VALUE, z0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, y1 = Integer.MIN_VALUE, z1 = Integer.MIN_VALUE;
+        for (BlockPos p : area) { x0 = Math.min(x0, p.getX()); y0 = Math.min(y0, p.getY()); z0 = Math.min(z0, p.getZ()); x1 = Math.max(x1, p.getX()); y1 = Math.max(y1, p.getY()); z1 = Math.max(z1, p.getZ()); }
+        var box = new net.minecraft.world.phys.AABB(x0 - 3, y0 - 3, z0 - 3, x1 + 4, y1 + 4, z1 + 4);
+        for (var it : match.level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, box)) it.discard();
     }
 
     /** Simple palette structures for races that don't have hand-designed architecture yet. */
@@ -124,8 +146,8 @@ public final class Structures {
             for (Architecture.Part q : parts) want.put(new BlockPos(x0 + q.x(), st.baseY + q.y(), z0 + q.z()), teamBanner(q.s(), b.team));
             // a level change: blocks the new plan no longer has go away (ground goes back to what it was)
             if (st.level >= 0 && b.level != st.level)
-                for (var e : new ArrayList<>(st.placed.entrySet()))
-                    if (!want.containsKey(e.getKey())) { match.level.setBlock(e.getKey(), st.ground.getOrDefault(e.getKey(), Blocks.AIR.defaultBlockState()), 3); st.placed.remove(e.getKey()); }
+                for (BlockPos pos : topDown(st.placed.keySet()))
+                    if (!want.containsKey(pos)) { match.level.setBlock(pos, st.ground.getOrDefault(pos, Blocks.AIR.defaultBlockState()), QUIET); st.placed.remove(pos); }
             boolean done = b.done() || b.upgrading;
             int n = (int) Math.ceil(want.size() * (done ? 1.0 : Math.max(.04, bucket / 50.0)));
             // battle damage: a top-weighted, stable selection of blocks is knocked out
@@ -138,7 +160,7 @@ public final class Structures {
                 if (cur == target) continue;
                 if (pos.getY() < st.baseY && !st.ground.containsKey(pos)) st.ground.put(pos, cur);
                 if (target.isAir() && !cur.isAir() && fx < 3) { match.level.levelEvent(2001, pos, Block.getId(cur)); fx++; }   // break particles + sound
-                match.level.setBlock(pos, target, 3);
+                match.level.setBlock(pos, target, target.isAir() ? QUIET : 3);
                 if (!target.isAir()) {
                     st.placed.put(pos, target);
                     if (!done && fx < 3 && st.bucket >= 0) { placeFx(pos, target); fx++; }
@@ -159,14 +181,16 @@ public final class Structures {
             if (b != null && b.alive) continue;
             State st = e.getValue();
             if (b != null && blocks) collapseFx(b, st);
-            for (BlockPos pos : st.scaffold) match.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-            for (BlockPos pos : st.placed.keySet()) {
-                if (st.ground.containsKey(pos)) { match.level.setBlock(pos, Math.floorMod(pos.getX() * 7 + pos.getZ() * 3, 3) == 0 ? Blocks.COARSE_DIRT.defaultBlockState() : st.ground.get(pos), 3); continue; }
+            java.util.Set<BlockPos> area = new java.util.HashSet<>(st.placed.keySet()); area.addAll(st.scaffold);
+            for (BlockPos pos : topDown(st.scaffold)) match.level.setBlock(pos, Blocks.AIR.defaultBlockState(), QUIET);
+            for (BlockPos pos : topDown(st.placed.keySet())) {
+                if (st.ground.containsKey(pos)) { match.level.setBlock(pos, Math.floorMod(pos.getX() * 7 + pos.getZ() * 3, 3) == 0 ? Blocks.COARSE_DIRT.defaultBlockState() : st.ground.get(pos), QUIET); continue; }
                 int r = Math.floorMod(pos.getX() * 31 + pos.getZ() * 17, 5);
                 BlockState rubble = pos.getY() == st.baseY ? (r == 0 ? Blocks.GRAVEL.defaultBlockState() : r == 1 ? Blocks.COBBLESTONE.defaultBlockState() : Blocks.AIR.defaultBlockState())
                         : pos.getY() == st.baseY + 1 && r == 2 ? Blocks.COBBLESTONE_SLAB.defaultBlockState() : Blocks.AIR.defaultBlockState();
-                match.level.setBlock(pos, rubble, 3);
+                match.level.setBlock(pos, rubble, QUIET);
             }
+            sweep(area);
             it.remove(); changed = true;
         }
         if (changed) match.terrain.invalidate();
@@ -229,7 +253,8 @@ public final class Structures {
     /** Scaffolding at the corners while a building is going up; removed once it is finished. */
     void scaffolding(Building b, State st, Map<BlockPos, BlockState> want, boolean done) {
         if (done) {
-            for (BlockPos pos : st.scaffold) if (!want.containsKey(pos)) match.level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+            for (BlockPos pos : topDown(st.scaffold)) if (!want.containsKey(pos)) match.level.setBlock(pos, Blocks.AIR.defaultBlockState(), QUIET);
+            sweep(st.scaffold);
             st.scaffold.clear(); st.scaffolded = false; return;
         }
         if (st.scaffolded || b.fw < 3 || b.fh < 3) return;

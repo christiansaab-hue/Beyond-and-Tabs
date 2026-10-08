@@ -106,6 +106,8 @@ public final class World {
         if (def.effect().equals("metal_per_s") && nearestFreeSpot(x, z, 3f) == null) return false;
         String[] f = def.footprint().split("x"); float hw = Integer.parseInt(f[0].trim()) / 2f, hh = Integer.parseInt(f[1].trim()) / 2f;
         for (Building o : buildings) if (o.alive && Math.abs(o.x - x) < o.hw + hw + gap(o.def, def) && Math.abs(o.z - z) < o.hh + hh + gap(o.def, def)) return false;
+        // no building on water: centre, corners and edge midpoints of the footprint must be dry
+        for (float fx = -1; fx <= 1; fx++) for (float fz = -1; fz <= 1; fz++) if (terrain.waterDepth(x + fx * hw, z + fz * hh) > .3f) return false;
         return true;
     }
 
@@ -259,9 +261,11 @@ public final class World {
             Order o = u.orders.peek();
             if (o.type() != Order.Type.BUILD) continue;
             Building b = o.building();
-            if (!b.alive || b.progress >= 1) { u.orders.poll(); continue; }
+            boolean repair = b.alive && b.done() && b.hp < b.maxHp() - .5f;
+            if (!b.alive || (b.progress >= 1 && !repair)) { u.orders.poll(); continue; }
             if (b.distTo(u.x, u.z) > 2.5f) continue;
             double bp = "commander".equals(u.def.role()) ? eco("commander_build_power") : eco("builder_build_power") * Math.max(1, u.def.tier());
+            if (repair) { b.hp = Math.min(b.maxHp(), b.hp + (float) (bp * ASSIST_REPAIR * DT)); continue; }   // repairs are free, as in BAR
             BuildingDef d = b.def;
             jobs.get(u.team).add(new Job(u, d.metal() * bp / d.buildWork(), d.energy() * bp / d.buildWork(), bp, r -> {
                 float step = (float) (bp * r * DT / d.buildWork());

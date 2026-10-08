@@ -51,7 +51,7 @@ public final class LobbyServer {
         if (a.op == LobbyAction.Op.RETURN) {
             Match m = ServerEvents.MATCHES.get(level);
             if (!host && (m == null || m.world.winner < 0)) { p.displayClientMessage(Component.literal("Only the host can end a match early."), true); return; }
-            if (m != null) { TacticsStore.save(m.world); ServerEvents.MATCHES.remove(level); }
+            if (m != null) { TacticsStore.save(m.world); m.structures.clearAll(); ServerEvents.MATCHES.remove(level); }
             lb.started = false;
             for (ServerPlayer q : level.players()) Network.sendLobby(q, lb, true);
             return;
@@ -111,6 +111,30 @@ public final class LobbyServer {
 
     static final List<ResourceKey<Biome>> BIOMES = List.of(Biomes.PLAINS, Biomes.PLAINS, Biomes.DESERT, Biomes.SNOWY_PLAINS, Biomes.FOREST, Biomes.SAVANNA, Biomes.BADLANDS, Biomes.MEADOW);
 
+    /** Share of water columns in the battlefield disc (sampled every 12 blocks; surface above the sea floor = water). */
+    static float waterFraction(ServerLevel level, int cx, int cz, float r) {
+        int water = 0, n = 0; float rr = r + 18;
+        for (int dx = (int) -rr; dx <= rr; dx += 12) for (int dz = (int) -rr; dz <= rr; dz += 12) {
+            if (dx * dx + dz * dz > rr * rr) continue;
+            int x = cx + dx, z = cz + dz; n++;
+            if (level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) > level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.OCEAN_FLOOR, x, z)) water++;
+        }
+        return n == 0 ? 0 : water / (float) n;
+    }
+
+    /** The driest battlefield near the chosen spot: spiral outwards, take the first nearly dry one (else the driest seen). */
+    static BlockPos dryCenter(ServerLevel level, BlockPos start, float r) {
+        BlockPos best = start; float bestW = waterFraction(level, start.getX(), start.getZ(), r);
+        for (int ring = 1; ring <= 6 && bestW > .04f; ring++)
+            for (int k = 0; k < 8 && bestW > .04f; k++) {
+                double a = k * Math.PI / 4 + ring * .4;
+                int x = start.getX() + (int) (Math.cos(a) * ring * 96), z = start.getZ() + (int) (Math.sin(a) * ring * 96);
+                float wf = waterFraction(level, x, z, r);
+                if (wf < bestW) { bestW = wf; best = new BlockPos(x, start.getY(), z); }
+            }
+        return best;
+    }
+
     /** Builds the match: finds the battlefield, lays out the bases, seats the players and starts the AIs. */
     static void start(ServerPlayer hostPlayer, Lobby lb) {
         ServerLevel level = hostPlayer.serverLevel();
@@ -122,8 +146,10 @@ public final class LobbyServer {
             if (found != null) center = found.getFirst();
             else hostPlayer.sendSystemMessage(Component.literal("No " + Lobby.MAP_NAMES[lb.map] + " nearby; fighting right here instead."));
         }
+        float radius = Lobby.SIZE_RADIUS[Math.max(0, Math.min(2, lb.size))];
+        center = dryCenter(level, center, radius);
         Match m = new Match(level);
-        ServerEvents.MATCHES.put(level, m);
+        ServerEvents.replace(level, m);
         Random rng = new Random(level.getGameTime() ^ center.asLong());
         List<RaceDef> races = Lobby.playable();
         List<Skirmish.Player> players = new ArrayList<>();
@@ -136,7 +162,6 @@ public final class LobbyServer {
             players.add(new Skirmish.Player(race, s.team > 0 ? s.team - 1 : -1, s.spawn, ai));
             slotOfPlayer.add(i);
         }
-        float radius = Lobby.SIZE_RADIUS[Math.max(0, Math.min(2, lb.size))];
         List<Skirmish.Start> starts = Skirmish.setup(m.world, center.getX() + .5f, center.getZ() + .5f, radius, Lobby.POSITIONS, players, rng.nextLong());
         for (int k = 0; k < starts.size(); k++) {
             Lobby.Slot s = lb.slots[slotOfPlayer.get(k)];

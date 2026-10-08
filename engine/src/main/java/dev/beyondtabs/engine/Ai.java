@@ -109,9 +109,26 @@ public final class Ai {
             for (int k = 0; k < 12; k++) {
                 double a = facing + k * Math.PI / 6 + r * .37;
                 float x = nearX + (float) Math.cos(a) * r, z = nearZ + (float) Math.sin(a) * r;
-                if (w.canPlace(team, def, x, z)) return w.startConstruction(team, def, x, z);
+                if (w.canPlace(team, def, x, z) && roomy(def, x, z, 2)) return w.startConstruction(team, def, x, z);
+            }
+        // a crowded base: settle for the normal lane rather than not building at all
+        for (int r = 6; r <= 52; r += 3)
+            for (int k = 0; k < 12; k++) {
+                double a = facing + k * Math.PI / 6 + r * .37;
+                float x = nearX + (float) Math.cos(a) * r, z = nearZ + (float) Math.sin(a) * r;
+                if (w.canPlace(team, def, x, z) && roomy(def, x, z, 1)) return w.startConstruction(team, def, x, z);
             }
         return null;
+    }
+
+    /** Streets between buildings: at least `gap` blocks to any other non-wall building (walls and extractors may hug). */
+    boolean roomy(BuildingDef def, float x, float z, float gap) {
+        String[] f = def.footprint().split("x"); float hw = Integer.parseInt(f[0].trim()) / 2f, hh = Integer.parseInt(f[1].trim()) / 2f;
+        for (Building o : w.buildings) {
+            if (!o.alive || o.def.footprint().equals("1x1")) continue;
+            if (Math.abs(o.x - x) < o.hw + hw + gap && Math.abs(o.z - z) < o.hh + hh + gap) return false;
+        }
+        return true;
     }
 
     /** Sends the least busy builder to a construction site (commander helps only near the base). */

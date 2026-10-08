@@ -65,6 +65,9 @@ public final class RtsScreen extends Screen {
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_LEFT)) right -= 1;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_Q)) RtsCamera.yaw -= 90 * dt;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_E)) RtsCamera.yaw += 90 * dt;
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_PAGE_UP)) RtsCamera.tiltBy(60 * dt);
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_PAGE_DOWN)) RtsCamera.tiltBy(-60 * dt);
+        if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_END)) RtsCamera.resetView();
         // screen-edge panning (BAR style)
         double mx = mc.mouseHandler.xpos() * width / Math.max(1, mc.getWindow().getScreenWidth());
         double my = mc.mouseHandler.ypos() * height / Math.max(1, mc.getWindow().getScreenHeight());
@@ -82,12 +85,20 @@ public final class RtsScreen extends Screen {
             RtsCamera.focusZ = mini[4] + (float) Math.max(0, Math.min(1, (my - mini[1]) / mini[2])) * mini[5];
             return true;
         }
+        if (button == 2 && hasAltDown()) {   // BAR-style: Alt + middle-drag turns and tilts the view
+            RtsCamera.yaw += (float) dx * .35f; RtsCamera.tiltBy((float) dy * .35f); return true;
+        }
         if (button == 2) { RtsCamera.pan((float) -dx * .05f, (float) dy * .05f, .5f); return true; }
         if (button == 1 && rightDown && lineStart != null) { float[] g = Proj.now().toGround(mx, my); if (g != null) lineEnd = new float[]{g[0], g[2]}; return true; }
         return super.mouseDragged(mx, my, button, dx, dy);
     }
 
-    @Override public boolean mouseScrolled(double mx, double my, double delta) { RtsCamera.zoom(delta); return true; }
+    /** Wheel zooms; Alt+wheel tilts toward the horizon (Shift+Alt+wheel turns), like BAR. */
+    @Override public boolean mouseScrolled(double mx, double my, double delta) {
+        if (hasAltDown() && hasShiftDown()) { RtsCamera.yaw += (float) delta * 15; return true; }
+        if (hasAltDown()) { RtsCamera.tiltBy((float) delta * 6); return true; }
+        RtsCamera.zoom(delta); return true;
+    }
 
     @Override public boolean mouseClicked(double mx, double my, int button) {
         for (Btn b : buttons) if (mx >= b.x && my >= b.y && mx < b.x + b.w && my < b.y + b.h) {
@@ -119,8 +130,11 @@ public final class RtsScreen extends Screen {
             if (!selected.isEmpty()) {
                 Snapshot.U enemy = unitAt(s, p, mx, my, false);
                 Snapshot.B eb = enemy == null && g != null ? buildingAt(s, g[0], g[2], false) : null;
+                Snapshot.B ob = enemy == null && eb == null && g != null ? buildingAt(s, g[0], g[2], true) : null;
+                if (ob != null && !ob.upgrading && (ob.progress < 1 || ob.hp < .999f)) eb = null; else ob = null;
                 RtsAction a = new RtsAction(); a.kind = RtsAction.Kind.ORDER; a.queue = queue; a.ids = ids();
-                if (enemy != null) { a.orderType = Order.Type.ATTACK.ordinal(); a.targetUnit = enemy.id; }
+                if (ob != null) { a.orderType = Order.Type.BUILD.ordinal(); a.targetBuilding = ob.id; }   // finish or repair our own building
+                else if (enemy != null) { a.orderType = Order.Type.ATTACK.ordinal(); a.targetUnit = enemy.id; }
                 else if (eb != null) { a.orderType = Order.Type.ATTACK.ordinal(); a.targetBuilding = eb.id; }
                 else if (g != null) { rightDown = true; lineStart = new float[]{g[0], g[2]}; lineEnd = null; return true; }   // sent on release (click or line)
                 else return true;
@@ -659,6 +673,7 @@ public final class RtsScreen extends Screen {
                 "B: build menu   (walls: drag to place a line)   U: upgrade building   R: factory repeat",
                 "Space: jump to last alert   Home: commander   Ctrl+F5-F8: save camera   F5-F8: recall camera",
                 "Arrows / screen edges / middle-drag: pan   Wheel: zoom (far = strategic icons)   Q / E: rotate",
+                "Alt+wheel or PgUp/PgDn: tilt toward the horizon   Alt+middle-drag: turn and tilt   Shift+Alt+wheel: turn   End: reset tilt",
                 "Pause or F9: pause (single player)   + / -: game speed   Alt: health bars for everyone",
                 "V or Esc: leave the RTS view",
         };

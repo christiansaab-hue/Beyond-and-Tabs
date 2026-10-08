@@ -74,13 +74,27 @@ public final class Skirmish {
     }
 
     /** Moves a point off deep water, towards the middle of the map, so nobody starts in a lake. */
+    /** Nearest spot to (x, z) where the whole base footprint area is dry land (spiral search), else nudged inland. */
     static float[] dry(World w, float x, float z, float cx, float cz) {
+        if (dryArea(w, x, z)) return new float[]{x, z};
+        for (int r = 4; r <= 40; r += 4)
+            for (int k = 0; k < 16; k++) {
+                double a = k * Math.PI / 8;
+                float px = x + (float) Math.cos(a) * r, pz = z + (float) Math.sin(a) * r;
+                if (dryArea(w, px, pz)) return new float[]{px, pz};
+            }
         for (int i = 0; i < 20 && w.terrain.waterDepth(x, z) > .6f; i++) { x += (cx - x) * .1f; z += (cz - z) * .1f; }
         return new float[]{x, z};
     }
 
+    /** No water within 14 blocks (the core of a base). */
+    static boolean dryArea(World w, float x, float z) {
+        for (int dx = -14; dx <= 14; dx += 7) for (int dz = -14; dz <= 14; dz += 7) if (w.terrain.waterDepth(x + dx, z + dz) > .2f) return false;
+        return true;
+    }
+
     static void addSpot(World w, float x, float z) {
-        if (w.terrain.waterDepth(x, z) > .6f) return;
+        if (w.terrain.waterDepth(x, z) > .2f) return;   // extractors only on dry land
         for (float[] s : w.metalSpots) if (Math.abs(s[0] - x) < 3 && Math.abs(s[1] - z) < 3) return;
         w.metalSpots.add(new float[]{x, z});
     }

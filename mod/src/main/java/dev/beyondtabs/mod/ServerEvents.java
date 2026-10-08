@@ -83,7 +83,7 @@ public final class ServerEvents {
             .then(Commands.literal("watch").executes(c -> start(c, "ancient_world", "kingdoms", "normal", true))
                 .then(Commands.argument("difficulty", StringArgumentType.word()).executes(c -> start(c, "ancient_world", "kingdoms", StringArgumentType.getString(c, "difficulty"), true))))
             .then(Commands.literal("battle").then(Commands.argument("perSide", IntegerArgumentType.integer(1, 400)).executes(this::battle)))
-            .then(Commands.literal("clear").executes(c -> { Match old = MATCHES.remove(c.getSource().getLevel()); if (old != null) TacticsStore.save(old.world); say(c, "Match cleared."); return 1; }))
+            .then(Commands.literal("clear").executes(c -> { Match old = MATCHES.remove(c.getSource().getLevel()); if (old != null) { TacticsStore.save(old.world); old.structures.clearAll(); } say(c, "Match cleared."); return 1; }))
             .then(Commands.literal("tactics").executes(ServerEvents::tactics))
             .then(Commands.literal("lobby").executes(c -> { ServerPlayer p = c.getSource().getPlayer(); if (p != null) LobbyServer.open(p); return 1; }))
             .then(Commands.literal("style").then(Commands.argument("style", StringArgumentType.word())
@@ -114,6 +114,12 @@ public final class ServerEvents {
         return 1;
     }
 
+    /** Starts a new match on a level: the previous match's buildings come down first. */
+    public static void replace(ServerLevel level, Match m) {
+        Match old = MATCHES.put(level, m);
+        if (old != null && old != m) { TacticsStore.save(old.world); old.structures.clearAll(); }
+    }
+
     static Match match(ServerLevel l) { return MATCHES.computeIfAbsent(l, Match::new); }
 
     private int start(CommandContext<CommandSourceStack> c, String race, String enemy, String difficulty, boolean watch) {
@@ -126,7 +132,7 @@ public final class ServerEvents {
         catch (IllegalArgumentException e) { say(c, "Difficulty: easy, normal or hard"); return 0; }
         ServerLevel level = c.getSource().getLevel();
         ServerPlayer player = c.getSource().getPlayer();
-        Match m = new Match(level); MATCHES.put(level, m);
+        Match m = new Match(level); replace(level, m);
         World w = m.world;
         w.addTeam(race); w.addTeam(enemy);
         TacticsStore.load(w);
@@ -194,7 +200,7 @@ public final class ServerEvents {
     /** Builds every building of the playable races at every level in rows ahead of the player (architecture preview). */
     private int showcase(CommandContext<CommandSourceStack> c) {
         ServerLevel level = c.getSource().getLevel();
-        Match m = new Match(level); MATCHES.put(level, m); World w = m.world;
+        Match m = new Match(level); replace(level, m); World w = m.world;
         w.addTeam("ancient_world"); w.addTeam("kingdoms");
         if (c.getSource().getPlayer() != null) m.playerTeams.put(c.getSource().getPlayer().getUUID(), 0);
         Vec3 p = c.getSource().getPosition();
@@ -266,6 +272,12 @@ public final class ServerEvents {
                             else continue;
                         }
                         case GUARD -> { Unit t = unit(w, a.targetUnit); if (t == null || !t.alive) continue; o = Order.guard(t); }
+                        case BUILD -> {   // resume an unfinished site or repair a damaged building; non-builders just walk over
+                            Building b = building(w, a.targetBuilding);
+                            if (b == null || !b.alive || b.team != team) continue;
+                            boolean builder = "builder".equals(u.def.role()) || "commander".equals(u.def.role());
+                            o = builder ? Order.build(b) : new Order(Order.Type.MOVE, b.x, b.z + b.hh + 2, 0, null, null);
+                        }
                         case STOP -> o = new Order(Order.Type.STOP, u.x, u.z, 0, null, null);
                         case AREA_ATTACK -> o = Order.areaAttack(a.x, a.z, Math.max(3, a.radius));
                         default -> {   // formation: front-liners ahead, archers behind, no crossing paths
