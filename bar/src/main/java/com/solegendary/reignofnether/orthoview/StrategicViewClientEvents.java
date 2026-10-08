@@ -152,6 +152,13 @@ public class StrategicViewClientEvents {
         }
     }
 
+    /** Commanders are tagged serverside, but tags don't sync - their translatable custom name does. */
+    private static boolean isCommander(LivingEntity entity) {
+        return entity.hasCustomName()
+                && entity.getCustomName().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc
+                && "unit.reignofnether.commander".equals(tc.getKey());
+    }
+
     private static int teamColour(LivingEntity entity) {
         if (entity instanceof Unit unit && PlayerClientEvents.isRTSPlayer(unit.getOwnerName()))
             return PlayerColors.getPlayerDisplayColorHex(unit.getOwnerName()) & 0xFFFFFF;
@@ -216,6 +223,27 @@ public class StrategicViewClientEvents {
             drawUnitIcon(bb, mat, entity, partialTick, selected.contains(entity), preselected.contains(entity));
 
         BufferUploader.drawWithShader(bb.end());
+
+        // building icons on top of their plates, once the plate is big enough to carry one
+        for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
+            if (!building.isExploredClientside || building.getBuilding() instanceof AbstractBridge)
+                continue;
+            net.minecraft.resources.ResourceLocation icon = building.getBuilding().icon;
+            if (icon == null)
+                continue;
+            double y = building.minCorner.getY() + 1;
+            double cx = (building.minCorner.getX() + building.maxCorner.getX() + 1) / 2.0;
+            double cz = (building.minCorner.getZ() + building.maxCorner.getZ() + 1) / 2.0;
+            float sx = projX(cx, y, cz);
+            float sy = projY(cx, y, cz);
+            float plate = Math.min(Math.abs(projX(building.maxCorner.getX() + 1, y, cz) - projX(building.minCorner.getX(), y, cz)),
+                                   Math.abs(projY(cx, y, building.maxCorner.getZ() + 1) - projY(cx, y, building.minCorner.getZ())));
+            int size = (int) Mth.clamp(plate * 0.7f, 6f, 16f);
+            if (plate < 8 || sx < -20 || sx > guiW + 20 || sy < -20 || sy > guiH + 20)
+                continue;
+            gg.blit(icon, (int) (sx - size / 2f), (int) (sy - size / 2f), size, size, 0, 0, 16, 16, 16, 16);
+        }
+
         RenderSystem.enableDepthTest();
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
@@ -254,6 +282,9 @@ public class StrategicViewClientEvents {
         float r = Mth.clamp(2.2f + entity.getBbWidth() * 1.5f, 3f, 7f);
         if (entity instanceof HeroUnit)
             r += 1f;
+        boolean commander = isCommander(entity);
+        if (commander)
+            r += 2.5f;
         int fill = 0xFF000000 | teamColour(entity);
         int outline;
         float outlineW;
@@ -271,7 +302,9 @@ public class StrategicViewClientEvents {
             fill = 0xFF000000 | brighten(fill & 0xFFFFFF, 0.25f);
 
         Shape shape;
-        if (entity instanceof HeroUnit)
+        if (commander)
+            shape = Shape.STAR;
+        else if (entity instanceof HeroUnit)
             shape = Shape.DIAMOND;
         else if (entity instanceof WorkerUnit)
             shape = Shape.CIRCLE;
@@ -282,6 +315,8 @@ public class StrategicViewClientEvents {
         else
             shape = Shape.CIRCLE;
 
+        if (commander)
+            drawShape(bb, mat, Shape.CIRCLE, sx, sy, r + outlineW + 2f, isSelected ? 0xFFFFFFFF : 0xFFFFC83C);   // gold ring: the player's life
         drawShape(bb, mat, shape, sx, sy, r + outlineW, outline);
         drawShape(bb, mat, shape, sx, sy, r, fill);
 
@@ -297,7 +332,7 @@ public class StrategicViewClientEvents {
         }
     }
 
-    private enum Shape { SQUARE, TRIANGLE, CIRCLE, DIAMOND }
+    private enum Shape { SQUARE, TRIANGLE, CIRCLE, DIAMOND, STAR }
 
     private static void drawShape(BufferBuilder bb, Matrix4f mat, Shape shape, float cx, float cy, float r, int argb) {
         switch (shape) {
@@ -307,6 +342,19 @@ public class StrategicViewClientEvents {
                 tri(bb, mat, cx - r, cy, cx + r, cy, cx, cy + r, argb);
             }
             case TRIANGLE -> tri(bb, mat, cx, cy - r * 1.1f, cx + r * 1.05f, cy + r * 0.8f, cx - r * 1.05f, cy + r * 0.8f, argb);
+            case STAR -> {   // five points, two fans
+                int n = 10;
+                float[] px = new float[n];
+                float[] py = new float[n];
+                for (int i = 0; i < n; i++) {
+                    double a = -Math.PI / 2 + Math.PI * i / 5;
+                    float rr = (i % 2 == 0) ? r : r * 0.45f;
+                    px[i] = cx + (float) Math.cos(a) * rr;
+                    py[i] = cy + (float) Math.sin(a) * rr;
+                }
+                for (int i = 0; i < n; i++)
+                    tri(bb, mat, cx, cy, px[i], py[i], px[(i + 1) % n], py[(i + 1) % n], argb);
+            }
             case CIRCLE -> {
                 int n = 14;
                 float r2 = r * 0.92f;

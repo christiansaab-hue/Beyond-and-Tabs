@@ -102,11 +102,59 @@ public class BotServerEvents {
             default -> BotPlayer.Difficulty.MEDIUM;
         };
         String name = "Bot" + botNumber++ + " (" + difficultyName.toLowerCase() + ")";
-        Vec3 pos = caller.position();
+        Vec3 pos = findBotStart(caller);
         PlayerServerEvents.startRTSBot(name, pos, faction);
         brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
-        caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " at your position - give it room and watch it build."));
+        caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "
+                + (int) pos.distanceTo(caller.position()) + " blocks away - scout it before it scouts you."));
         return 1;
+    }
+
+    /**
+     * A base site for a new bot: far from the caller and from every existing RTS player, on dry, fairly flat ground.
+     * Searches rings of 180-260 blocks in 24 directions and keeps the best-scoring spot.
+     */
+    static Vec3 findBotStart(ServerPlayer caller) {
+        ServerLevel level = caller.serverLevel();
+        Vec3 from = caller.position();
+        Vec3 best = from.add(180, 0, 0);
+        double bestScore = -1e18;
+        for (int r = 180; r <= 260; r += 40) {
+            for (int k = 0; k < 24; k++) {
+                double a = Math.PI * 2 * k / 24;
+                int x = (int) (from.x + Math.cos(a) * r);
+                int z = (int) (from.z + Math.sin(a) * r);
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z);
+                if (!level.getBlockState(new BlockPos(x, y - 1, z)).getFluidState().isEmpty())
+                    continue;   // water
+                int minY = y, maxY = y;
+                boolean wet = false;
+                for (int dx = -12; dx <= 12; dx += 12)
+                    for (int dz = -12; dz <= 12; dz += 12) {
+                        int yy = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x + dx, z + dz);
+                        minY = Math.min(minY, yy);
+                        maxY = Math.max(maxY, yy);
+                        if (!level.getBlockState(new BlockPos(x + dx, yy - 1, z + dz)).getFluidState().isEmpty())
+                            wet = true;
+                    }
+                if (wet || maxY - minY > 10)
+                    continue;
+                double nearest = 1e9;
+                synchronized (PlayerServerEvents.rtsPlayers) {
+                    for (RTSPlayer other : PlayerServerEvents.rtsPlayers) {
+                        BlockPos home = findHome(level, other.name);
+                        if (home != null)
+                            nearest = Math.min(nearest, home.distSqr(new BlockPos(x, y, z)));
+                    }
+                }
+                double score = Math.min(nearest, 300 * 300) - (maxY - minY) * 500;
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = new Vec3(x + 0.5, y, z + 0.5);
+                }
+            }
+        }
+        return best;
     }
 
     static int removeBots(ServerPlayer caller) {

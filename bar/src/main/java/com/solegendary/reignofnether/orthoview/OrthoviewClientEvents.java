@@ -78,7 +78,7 @@ public class OrthoviewClientEvents {
         return hideLeavesMethod != LeafHideMethod.NONE;
     }
 
-    public static LeafHideMethod hideLeavesMethod = LeafHideMethod.NONE;
+    public static LeafHideMethod hideLeavesMethod = LeafHideMethod.AROUND_UNITS_AND_CURSOR;   // RTS default: the canopy never hides a fight
     public static int enabledCount = 0;
     public static boolean enabled = false;
     private static boolean cameraMovingByMouse = false; // excludes edgepanning
