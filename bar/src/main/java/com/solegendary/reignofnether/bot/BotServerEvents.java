@@ -90,10 +90,11 @@ public class BotServerEvents {
         Faction faction = switch (factionName.toLowerCase()) {
             case "monsters", "monster" -> Factions.MONSTERS;
             case "villagers", "villager" -> Factions.VILLAGERS;
+            case "piglins", "piglin" -> Factions.PIGLINS;
             default -> null;
         };
         if (faction == null) {
-            caller.sendSystemMessage(Component.literal("Bots can play villagers or monsters (piglins need nether ground)."));
+            caller.sendSystemMessage(Component.literal("Bots can play villagers, monsters or piglins."));
             return 0;
         }
         BotPlayer.Difficulty difficulty = switch (difficultyName.toLowerCase()) {

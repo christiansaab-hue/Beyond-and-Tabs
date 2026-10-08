@@ -509,6 +509,18 @@ public class HudClientEvents {
             else if ((hudSelBuildingOwned || !PlayerClientEvents.isRTSPlayer()) && hudSelectedPlacement instanceof ProductionPlacement selProdBuilding) {
                 blitY = screenHeight - iconFrameSize * 2 - 5;
 
+                if (hudSelBuildingOwned && selProdBuilding.isBuilt) {   // BAR repeat queue toggle (R)
+                    final ProductionPlacement prodForRepeat = selProdBuilding;
+                    com.solegendary.reignofnether.hud.buttons.Button repeatButton = new com.solegendary.reignofnether.hud.buttons.BooleanButton(
+                            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue"),
+                            selProdBuilding.repeatQueue,
+                            () -> com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleRepeat(prodForRepeat.originPos),
+                            com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue.tooltip")
+                    );
+                    repeatButton.render(evt.getGuiGraphics(), blitX - 5, blitY - 24, mouseX, mouseY);
+                    renderedButtons.add(repeatButton);
+                }
+
                 for (int i = 0; i < selProdBuilding.productionQueue.size(); i++) {
                     Button button = selProdBuilding.productionQueue.get(i)
                             .item.getCancelButton(selProdBuilding, i == 0);

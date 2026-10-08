@@ -39,11 +39,15 @@ public class BotPlayer {
 
     public enum Difficulty { EASY, MEDIUM, HARD }
 
-    /** What each faction uses for each job. Piglins need nether ground, so bots can't play them yet. */
+    /** What each faction uses for each job. */
     record Kit(Building capitol, Building house, Building farm, Building extractor, Building wind, Building armyBuilding,
                ProductionItem worker, List<ProductionItem> army) { }
 
     static Kit kitFor(Faction faction) {
+        if (faction.equals(Factions.PIGLINS))
+            return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, Buildings.NETHERWART_FARM,
+                    Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.BASTION,
+                    ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER));
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, Buildings.HAUNTED_HOUSE, Buildings.PUMPKIN_FARM,
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,

@@ -131,6 +131,11 @@ public class BuildingValidators {
         if (building instanceof PortalBasic || building instanceof PortalPocket) {
             return true;
         }
+        // the shared economy buildings follow the metal patches and the wind, not the nether
+        if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
+                || building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator) {
+            return true;
+        }
         return isOnNetherBlocks(level, blocks, originPos, true);
     }
 

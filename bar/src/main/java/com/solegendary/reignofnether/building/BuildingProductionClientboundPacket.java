@@ -81,6 +81,12 @@ public class BuildingProductionClientboundPacket {
         );
     }
 
+    public static void toggleRepeat(String ownerName, BlockPos buildingPos, boolean on) {
+        sendFiltered(ownerName, buildingPos,
+                new BuildingProductionClientboundPacket(BuildingAction.TOGGLE_REPEAT, on ? "on" : "off", buildingPos)
+        );
+    }
+
     public static void completeProduction(String ownerName, BlockPos buildingPos, String itemName) {
         sendFiltered(ownerName, buildingPos,
                 new BuildingProductionClientboundPacket(BuildingAction.COMPLETE_PRODUCTION, itemName, buildingPos)
@@ -160,6 +166,10 @@ public class BuildingProductionClientboundPacket {
                                 productionItem,
                                 false
                         );
+                    }
+                    case TOGGLE_REPEAT -> {
+                        if (building instanceof ProductionPlacement pBuilding)
+                            pBuilding.repeatQueue = "on".equals(this.itemName);
                     }
                     case CLEAR_PRODUCTION -> {
                         if (building instanceof ProductionPlacement pBuilding) {

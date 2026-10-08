@@ -28,6 +28,10 @@ public class BuildingProductionServerboundPacket {
     public BlockPos buildingPos; // used to identify the relevant production building
     public BuildingAction action;
 
+    public static void toggleRepeat(net.minecraft.core.BlockPos buildingPos) {
+        PacketHandler.INSTANCE.sendToServer(new BuildingProductionServerboundPacket(BuildingAction.TOGGLE_REPEAT, "", buildingPos));
+    }
+
     public static void startProduction(ProductionItem item) {
         BuildingClientEvents.switchHudToIdlestBuilding();
         if (HudClientEvents.hudSelectedPlacement instanceof ProductionPlacement pp) {
@@ -107,7 +111,10 @@ public class BuildingProductionServerboundPacket {
                 return;
             }
             if (building instanceof ProductionPlacement pBuilding) {
-                if (this.action == BuildingAction.REQUEST_PRODUCTION_SYNC) {
+                if (this.action == BuildingAction.TOGGLE_REPEAT) {
+                    pBuilding.repeatQueue = !pBuilding.repeatQueue;
+                    BuildingProductionClientboundPacket.toggleRepeat(pBuilding.ownerName, buildingPos, pBuilding.repeatQueue);
+                } else if (this.action == BuildingAction.REQUEST_PRODUCTION_SYNC) {
                     for (ActiveProduction activeProd : pBuilding.productionQueue) {
                         BuildingProductionClientboundPacket.startProduction(
                                 pBuilding.ownerName,

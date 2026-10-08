@@ -18,6 +18,7 @@ public enum BuildingAction {
     COMPLETE_PRODUCTION, // don't let client complete items themselves, only via reflected clientbound packets for consistency
     CANCEL_PRODUCTION, // remove ProductionItem from front of queue
     CANCEL_BACK_PRODUCTION, // remove ProductionItem from back of queue
+    TOGGLE_REPEAT, // BAR-style repeat queue: completed unit production re-queues itself at the back
     CHECK_STOCKPILE_CHEST, // check stockpile chests for resources to consume
     CHANGE_PORTAL, // changes a portal clientside to match server when another player upgrades it
     CHANGE_BEACON,

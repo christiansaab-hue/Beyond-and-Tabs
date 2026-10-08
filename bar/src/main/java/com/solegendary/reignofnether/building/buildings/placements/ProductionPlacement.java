@@ -54,6 +54,8 @@ public class ProductionPlacement extends BuildingPlacement {
     protected LivingEntity rallyPointEntity;
     public List<Button> productionButtons;
     public final List<ActiveProduction> productionQueue = new ArrayList<>();
+    /** BAR's repeat queue: when on, a completed trained unit re-queues itself at the back. */
+    public boolean repeatQueue = false;
     public boolean attackRally = false;
     public ResourceName rallyResourceName = ResourceName.NONE; // used to set worker resource targets
 
@@ -363,6 +365,9 @@ public class ProductionPlacement extends BuildingPlacement {
                 if (!tickLevel.isClientSide()) {
                     productionQueue.remove(0);
                     BuildingProductionClientboundPacket.completeProduction(this.ownerName, this.originPos, nextItem.item.getItemName());
+                    if (repeatQueue && nextItem.item.dupeRule == com.solegendary.reignofnether.building.production.ProdDupeRule.ALLOW
+                            && startProductionItem(nextItem.item))
+                        BuildingProductionClientboundPacket.startProduction(this.ownerName, this.originPos, nextItem.item.getItemName());
                 }
             }
         }
