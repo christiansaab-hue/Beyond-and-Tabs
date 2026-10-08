@@ -41,20 +41,20 @@ public class BotPlayer {
 
     /** What each faction uses for each job. */
     record Kit(Building capitol, Building house, Building farm, Building extractor, Building wind, Building armyBuilding,
-               ProductionItem worker, List<ProductionItem> army) { }
+               Building tower, ProductionItem worker, List<ProductionItem> army) { }
 
     static Kit kitFor(Faction faction) {
         if (faction.equals(Factions.PIGLINS))
             return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, Buildings.NETHERWART_FARM,
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.BASTION,
-                    ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER));
+                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER));
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, Buildings.HAUNTED_HOUSE, Buildings.PUMPKIN_FARM,
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,
-                    ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON));
+                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON));
         return new Kit(Buildings.TOWN_CENTRE, Buildings.VILLAGER_HOUSE, Buildings.WHEAT_FARM,
                 Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Buildings.BARRACKS,
-                ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER));
+                Buildings.WATCHTOWER, ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER));
     }
 
     public final String name;
@@ -138,6 +138,17 @@ public class BotPlayer {
                 placeNear(level, kit.house(), home.offset(rng.nextInt(29) - 14, 0, rng.nextInt(29) - 14), workers, 1);
             else if (armyBuildings < 1 + (int) (minutes / 4) && minutes >= 1 && !workers.isEmpty())
                 placeNear(level, kit.armyBuilding(), home.offset(rng.nextInt(25) - 12, 0, rng.nextInt(25) - 12), workers, 2);
+            else if (kit.tower() != null && count(buildings, kit.tower()) < 1 + (int) (minutes / 5) && minutes >= 2 && !workers.isEmpty()) {
+                // a tower between home and the nearest threat
+                BlockPos threat = nearestEnemyBuilding(home);
+                BlockPos want = home;
+                if (threat != null) {
+                    double dx = threat.getX() - home.getX(), dz = threat.getZ() - home.getZ();
+                    double len = Math.max(1, Math.hypot(dx, dz));
+                    want = home.offset((int) (dx / len * 20), 0, (int) (dz / len * 20));
+                }
+                placeNear(level, kit.tower(), want, workers, 1);
+            }
         }
 
         // 4b) tech: research tier 2 from ~5 minutes, then refit home extractors one at a time
