@@ -19,7 +19,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class Network {
-    static final String VERSION = "6";
+    static final String VERSION = "7";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(BeyondTabs.MODID, "main"), () -> VERSION, VERSION::equals, VERSION::equals);
     static final float DETAIL_RANGE = 72f;   // blocks: full ragdoll particles sent within this distance of the player's camera
@@ -93,6 +93,14 @@ public final class Network {
             s.buildings.add(sb);
         }
         for (Projectile pr : w.projectiles) s.projectiles.add(new float[]{pr.x, pr.y, pr.z, pr.vx, pr.vy, pr.vz, Snapshot.visual(pr.visual)});
+        for (World.Fx e : w.fx) {
+            int look = switch (e.kind()) {
+                case World.FX_DEATH -> UnitDef.ALL.indexOf(UnitDef.byId(e.visual()));
+                case World.FX_FALL -> BuildingDef.ALL.indexOf(BuildingDef.byId(e.visual()));
+                default -> "melee".equals(e.visual()) ? -1 : (int) Snapshot.visual(e.visual());
+            };
+            s.fx.add(new float[]{e.kind(), look, e.x(), e.y(), e.z(), e.x2(), e.y2(), e.z2(), e.size()});
+        }
         if (withSpots) {
             s.hasSpots = true; s.metalSpots = new float[w.metalSpots.size() * 2];
             for (int i = 0; i < w.metalSpots.size(); i++) { s.metalSpots[i * 2] = w.metalSpots.get(i)[0]; s.metalSpots[i * 2 + 1] = w.metalSpots.get(i)[1]; }

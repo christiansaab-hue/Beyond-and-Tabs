@@ -49,6 +49,8 @@ public final class MatchRenderer {
     static final MultiBufferSource.BufferSource TRANS_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 18));
     /** Blocky skinned units (vanilla entity render type, world-lit). */
     static final MultiBufferSource.BufferSource ENTITY_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 19));
+    static final MultiBufferSource.BufferSource ADD_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 18));
+    static final Mesh ADD = new Mesh();
     static Matrix4f POSE; static org.joml.Matrix3f NORMAL;
     static final float INK_BUILDING = .035f;
 
@@ -112,6 +114,8 @@ public final class MatchRenderer {
         if (!strategic) {
             spots(m, s);
             units(m, s, a, t, fr, camX, camY, camZ);
+            ADD.to(ADD_SRC.getBuffer(BTRender.ADDITIVE), pose); ADD.vt = ADD.vc; ADD.reset(); ADD.glow = true;
+            m.reset(); Fx.render(m, ADD, t);
             projectiles(m, s, a);
             assistCrews(m, s, t);
         }
@@ -120,6 +124,7 @@ public final class MatchRenderer {
         SOLID_SRC.endBatch();
         ENTITY_SRC.endBatch();
         TRANS_SRC.endBatch();
+        ADD_SRC.endBatch();
 
         // 3) thin overlay lines
         VertexConsumer lines = buf.getBuffer(RenderType.lines());
@@ -264,8 +269,9 @@ public final class MatchRenderer {
             if (vl < 1e-3f) continue;
             float dx = pr[3] / vl, dy = pr[4] / vl, dz = pr[5] / vl;
             String v = Snapshot.VISUALS.get(Math.max(0, Math.min(Snapshot.VISUALS.size() - 1, (int) pr[6])));
+            Fx.trail(v, x, y, z, dx, dy, dz);
             switch (v) {
-                case "laser" -> { m.glow = true; m.prismW(x - dx * 1.4f, y - dy * 1.4f, z - dz * 1.4f, x, y, z, .05f, .05f, 4, 0x7FE8FF); m.prismW(x - dx * .9f, y - dy * .9f, z - dz * .9f, x, y, z, .025f, .025f, 4, 0xFFFFFF); m.glow = false; }
+                case "laser" -> { }   // drawn as an instant beam by Fx when fired
                 case "rail" -> { m.glow = true; m.prismW(x - dx * 4f, y - dy * 4f, z - dz * 4f, x, y, z, .07f, .02f, 4, 0xE8F6FF); m.glow = false; }
                 case "plasma" -> { m.glow = true; m.ballW(x, y, z, .28f, .28f, .28f, 8, 5, 0x9CFF7A, 1, 0); m.ballW(x, y, z, .16f, .16f, .16f, 6, 4, 0xFFFFFF, 1, 0); m.glow = false; }
                 case "missile" -> {

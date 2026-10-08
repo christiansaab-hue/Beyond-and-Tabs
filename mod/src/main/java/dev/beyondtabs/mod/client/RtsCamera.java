@@ -17,6 +17,9 @@ public final class RtsCamera {
     public static float tilt, targetTilt;
     static final float MIN_PITCH = 14, MAX_PITCH = 89;
     static Marker eye;
+    /** Camera shake from nearby blasts (blocks of jitter), decaying quickly. */
+    static float shake; static long lastNanos;
+    static void kick(float a) { shake = Math.min(1.2f, shake + a); }
     static final float MIN_DIST = 6, MAX_DIST = 260;
 
     static float ground(float x, float z) {
@@ -58,6 +61,12 @@ public final class RtsCamera {
         pitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, 48 + 30 * t + tilt));   // zoom sets the base angle, the player tilts on top
         float base = 48 + 30 * t; targetTilt = Math.max(MIN_PITCH - base, Math.min(MAX_PITCH - base, targetTilt));
         double[] p = eyePos();
+        long nowN = System.nanoTime(); float dt = lastNanos == 0 ? 0 : Math.min(.1f, (nowN - lastNanos) / 1e9f); lastNanos = nowN;
+        if (shake > .002f) {
+            float tt = nowN / 1e9f, j = shake * (.6f + dist / 120f);
+            p[0] += Math.sin(tt * 53) * j * .5; p[1] += Math.sin(tt * 61 + 1) * j * .35; p[2] += Math.cos(tt * 47) * j * .5;
+            shake *= (float) Math.pow(.015, dt);
+        } else shake = 0;
         eye.setPos(p[0], p[1], p[2]); eye.xo = eye.xOld = p[0]; eye.yo = eye.yOld = p[1]; eye.zo = eye.zOld = p[2];
         eye.setYRot(yaw); eye.yRotO = yaw; eye.setXRot(pitch); eye.xRotO = pitch;
     }

@@ -18,6 +18,8 @@ public final class Snapshot {
     public final List<U> units = new ArrayList<>();
     public final List<B> buildings = new ArrayList<>();
     public final List<float[]> projectiles = new ArrayList<>();
+    /** Effect events since the last snapshot: {kind, look, x, y, z, x2, y2, z2, size} (see World.Fx). */
+    public final List<float[]> fx = new ArrayList<>();
     public float[] metalSpots = new float[0];    // x,z pairs (sent every second)
     public boolean hasSpots;
     /** Buildings are real Minecraft blocks (true) or client-drawn models (false). */
@@ -79,6 +81,8 @@ public final class Snapshot {
         }
         b.writeVarInt(projectiles.size());
         for (float[] p : projectiles) for (float f : p) b.writeFloat(f);
+        b.writeVarInt(fx.size());
+        for (float[] e : fx) { b.writeByte((int) e[0]); b.writeShort((int) e[1]); for (int i = 2; i < 9; i++) b.writeFloat(e[i]); }
         b.writeBoolean(hasSpots);
         if (hasSpots) { b.writeVarInt(metalSpots.length); for (float f : metalSpots) b.writeFloat(f); }
     }
@@ -116,6 +120,8 @@ public final class Snapshot {
         }
         int pn = b.readVarInt();
         for (int k = 0; k < pn; k++) { float[] p = new float[7]; for (int i = 0; i < 7; i++) p[i] = b.readFloat(); s.projectiles.add(p); }
+        int en = b.readVarInt();
+        for (int k = 0; k < en; k++) { float[] e = new float[9]; e[0] = b.readByte(); e[1] = b.readShort(); for (int i = 2; i < 9; i++) e[i] = b.readFloat(); s.fx.add(e); }
         s.hasSpots = b.readBoolean();
         if (s.hasSpots) { int sn = b.readVarInt(); s.metalSpots = new float[sn]; for (int i = 0; i < sn; i++) s.metalSpots[i] = b.readFloat(); }
         return s;

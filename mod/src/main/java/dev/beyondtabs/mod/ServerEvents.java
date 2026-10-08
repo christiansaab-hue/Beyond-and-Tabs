@@ -49,6 +49,7 @@ public final class ServerEvents {
                     m.teamOf(p.getUUID()) == w.winner ? "Victory! The enemy commander has fallen." : "Defeat. Your commander has fallen."));
         boolean spots = level.getGameTime() % 20 == 0;
         for (ServerPlayer p : level.players()) Network.sendSnapshot(p, m, spots);
+        w.fx.clear();
     }
 
     @SubscribeEvent

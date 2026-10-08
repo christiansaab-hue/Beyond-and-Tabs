@@ -23,6 +23,16 @@ public final class World {
     public final List<Unit> units = new ArrayList<>();
     public final List<Building> buildings = new ArrayList<>();
     public final List<Projectile> projectiles = new ArrayList<>();
+    /**
+     * Cosmetic events for the client's effects (muzzle flashes, beams, impacts, blasts, deaths). The game layer drains
+     * this after each snapshot; the sim never reads it. Each: {kind, x, y, z, x2, y2, z2, size} plus the visual name.
+     */
+    public final List<Fx> fx = new ArrayList<>();
+    public record Fx(int kind, String visual, float x, float y, float z, float x2, float y2, float z2, float size) { }
+    public static final int FX_SHOT = 0, FX_HIT = 1, FX_BLAST = 2, FX_DEATH = 3, FX_FALL = 4;
+    void fx(int kind, String visual, float x, float y, float z, float x2, float y2, float z2, float size) {
+        if (fx.size() < 4096) fx.add(new Fx(kind, visual, x, y, z, x2, y2, z2, size));
+    }
     public final List<float[]> metalSpots = new ArrayList<>();
     public final List<Ai> ais = new ArrayList<>();
     final SpatialHash hash;
@@ -150,6 +160,7 @@ public final class World {
     int[] order = new int[256]; final Random orderRng = new Random(0x5EED);
 
     public void tick() {
+        if (fx.size() > 3000) fx.clear();   // nobody is draining (headless sims, benches)
         long t0 = System.nanoTime();
         tick++; time += DT;
         hash.clear();
@@ -590,6 +601,7 @@ public final class World {
             case "melee" -> {
                 if (dist(u.x, u.z, t.x, t.z) > u.range + u.radius + t.radius + .6f) { meleeWhiffs++; return; }   // whiffed: target moved away
                 meleeHits++;
+                fx(FX_HIT, "melee", (u.x + t.x) * .5f, terrain.groundY(t.x, t.z) + 1.1f * t.ragdoll.scale, (u.z + t.z) * .5f, t.x - u.x, 1, t.z - u.z, (float) w.aoe());
                 float dmg = (float) w.damage() * Abilities.strikeMul(this, u, t);
                 if (w.aoe() > 0) areaDamage(u.team, t.x, t.z, (float) w.aoe(), dmg, (float) w.knockback(), u.x, u.z, u);
                 else damage(t, dmg, (float) w.knockback(), u.x, u.z, Rig.TORSO, u);
@@ -607,7 +619,7 @@ public final class World {
 
     void strikeBuilding(Unit u, Building b) {
         var w = u.weapon;
-        if ("melee".equals(w.kind())) { if (b.distTo(u.x, u.z) <= u.range + u.radius + .6f) damageBuilding(b, (float) w.damage()); }
+        if ("melee".equals(w.kind())) { if (b.distTo(u.x, u.z) <= u.range + u.radius + .6f) { damageBuilding(b, (float) w.damage()); fx(FX_HIT, "melee", u.x, terrain.groundY(u.x, u.z) + 1f, u.z, b.x - u.x, 2, b.z - u.z, 0); } }
         else if (!"support".equals(w.kind())) launchAt(u, b.x, b.z, terrain.groundY(b.x, b.z) + 1.5f, 0, 0);
     }
 
@@ -638,6 +650,7 @@ public final class World {
         float r = b.def.blastRadius(), dmg = b.def.blastDamage();
         if (r <= 0 || dmg <= 0) return;
         b.detonated = true;
+        fx(FX_BLAST, "", b.x, terrain.groundY(b.x, b.z), b.z, 0, 0, 0, r);
         for (Unit o : units) {
             if (!o.alive) continue;
             float d = dist(b.x, b.z, o.x, o.z);
@@ -656,7 +669,7 @@ public final class World {
         if (!b.alive) return;
         b.hp -= dmg;
         if (dmg > 0 && b.team < teams.size()) teams.get(b.team).alert(time, b.x, b.z, true);
-        if (b.hp <= 0) { b.alive = false; b.hp = 0; recomputeStorage(teams.get(b.team)); detonate(b); }
+        if (b.hp <= 0) { b.alive = false; b.hp = 0; recomputeStorage(teams.get(b.team)); fx(FX_FALL, b.def.id(), b.x, terrain.groundY(b.x, b.z), b.z, b.hw, 0, 0, b.team); detonate(b); }
     }
 
     Building nearestEnemyBuilding(int team, float cx, float cz, float r) {
@@ -731,6 +744,7 @@ public final class World {
         float vx = (lx - sx) / T, vz = (lz - sz) / T, vy = (ty - sy - .5f * g * T * T) / T;
         int volley = Math.max(Math.max(1, w.count()), u.volleyShots); u.volleyShots = 0;
         float dmg = (float) w.damage() * Abilities.strikeMul(this, u, u.target);
+        fx(FX_SHOT, vis, sx, sy, sz, lx, ty, lz, volley);
         for (int i = 0; i < volley; i++) {
             float j = volley > 1 ? (rng.nextFloat() - .5f) * 3 : 0;
             projectiles.add(new Projectile(u, sx, sy, sz, vx + j, vy, vz + j * .7f, dmg, (float) w.aoe(), (float) w.knockback(), g, vis));
@@ -761,6 +775,7 @@ public final class World {
             if (hit != null || hitB != null || hitGround || p.life <= 0) {
                 float ox = p.x - p.vx * .1f, oz = p.z - p.vz * .1f;
                 boolean keep = false;
+                fx(FX_HIT, p.visual, p.x, Math.max(p.y, terrain.groundY(p.x, p.z)), p.z, p.vx, hit != null ? 1 : hitB != null ? 2 : 0, p.vz, p.aoe);
                 if (p.aoe > 0) {
                     areaDamage(p.team, p.x, p.z, p.aoe, p.damage, p.knockback, ox, oz, p.owner);
                     for (Building b : buildings) if (b.alive && !ally(b.team, p.team) && b.distTo(p.x, p.z) < p.aoe) damageBuilding(b, p.damage);
@@ -841,6 +856,7 @@ public final class World {
     void die(Unit t, float kx, float kz) {
         closeEngagement(t, true);
         t.charging = t.spinning = t.leaping = t.bracing = false;
+        fx(FX_DEATH, t.def.id(), t.x, terrain.groundY(t.x, t.z), t.z, kx, 0, kz, t.ragdoll.scale);
         t.alive = false; t.hp = 0; t.ragdoll.limp = true; t.ragdoll.down = true; t.ragdoll.sleeping = false; t.knocked = true;
         t.ragdoll.impulseAll(kx * 30, 40, kz * 30, DT, 1);
         teams.get(t.team).supplyUsed -= t.def.supply();

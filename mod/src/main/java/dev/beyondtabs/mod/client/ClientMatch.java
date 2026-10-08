@@ -20,6 +20,7 @@ public final class ClientMatch {
         if (cur != null) for (Snapshot.U u : cur.units) prevById.put(u.id, u);
         if (s.hasSpots) metalSpots = s.metalSpots;
         MatchRenderer.noteRuins(cur, s);
+        Fx.ingest(s);
         prev = cur; cur = s; curAtNanos = System.nanoTime();
         if (poseBodies.size() > s.units.size() * 2 + 64) poseBodies.keySet().retainAll(s.units.stream().map(u -> u.id).toList());
         RtsScreen.pruneSelection(s);
@@ -67,5 +68,5 @@ public final class ClientMatch {
         });
     }
 
-    public static void clear() { prev = cur = null; prevById.clear(); poseBodies.clear(); metalSpots = new float[0]; }
+    public static void clear() { Fx.clear(); prev = cur = null; prevById.clear(); poseBodies.clear(); metalSpots = new float[0]; }
 }
