@@ -93,8 +93,23 @@ public class QuickBattle {
             LevelSettings settings = new LevelSettings(WORLD_NAME, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
                     rules, WorldDataConfiguration.DEFAULT);
             mc.createWorldOpenFlows().createFreshLevel(WORLD_DIR, settings,
-                    new WorldOptions(WorldOptions.randomSeed(), true, false), WorldPresets::createNormalWorldDimensions);
+                    new WorldOptions(WorldOptions.randomSeed(), true, false), QuickBattle::battlefieldDimensions);
         }
+    }
+
+    /** The Battlefield world preset (gentle rolling grassland built for matches); vanilla terrain as the fallback. */
+    static net.minecraft.world.level.levelgen.WorldDimensions battlefieldDimensions(net.minecraft.core.RegistryAccess registryAccess) {
+        try {
+            var presets = registryAccess.registryOrThrow(net.minecraft.core.registries.Registries.WORLD_PRESET);
+            var key = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.WORLD_PRESET,
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "battlefield"));
+            var preset = presets.get(key);
+            if (preset != null)
+                return preset.createWorldDimensions();
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[QuickBattle] battlefield preset unavailable, using vanilla terrain", e);
+        }
+        return WorldPresets.createNormalWorldDimensions(registryAccess);
     }
 
     @SubscribeEvent
