@@ -176,7 +176,8 @@ public final class Structures {
     static java.util.Set<BlockPos> brokenSet(Map<BlockPos, BlockState> want, int baseY, int damage) {
         java.util.Set<BlockPos> out = new java.util.HashSet<>();
         if (damage <= 0) return out;
-        int top = baseY; for (BlockPos p : want.keySet()) top = Math.max(top, p.getY());
+        int hi = baseY; for (BlockPos p : want.keySet()) hi = Math.max(hi, p.getY());
+        final int top = hi;
         List<BlockPos> cand = new ArrayList<>();
         for (BlockPos p : want.keySet()) if (p.getY() > baseY) cand.add(p);
         cand.sort((a, c) -> Double.compare(score(c, baseY, top), score(a, baseY, top)));

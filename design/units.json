@@ -110,7 +110,7 @@
    "base_cost": 56,
    "ability": "none",
    "name": "Bonecrusher",
-   "tune": 1.426
+   "tune": 1.289
   },
   {
    "id": "aw_protector",
@@ -132,7 +132,7 @@
    "base_cost": 80,
    "ability": "shield_block",
    "name": "Hide Shield",
-   "tune": 1.244
+   "tune": 1.125
   },
   {
    "id": "aw_spear_thrower",
@@ -154,7 +154,7 @@
    "base_cost": 120,
    "ability": "none",
    "name": "Javelineer",
-   "tune": 0.964
+   "tune": 0.872
   },
   {
    "id": "aw_headbutter",
@@ -176,7 +176,7 @@
    "base_cost": 90,
    "ability": "headbutt",
    "name": "Skullbasher",
-   "tune": 1.07
+   "tune": 0.967
   },
   {
    "id": "aw_hoplite",
@@ -198,7 +198,7 @@
    "base_cost": 180,
    "ability": "shield_block",
    "name": "Bronze Hoplite",
-   "tune": 1.342
+   "tune": 1.213
   },
   {
    "id": "aw_stoner",
@@ -220,7 +220,7 @@
    "base_cost": 160,
    "ability": "none",
    "name": "Boulder Hurler",
-   "tune": 0.601
+   "tune": 0.543
   },
   {
    "id": "aw_bone_mage",
@@ -242,7 +242,7 @@
    "base_cost": 675,
    "ability": "none",
    "name": "Bone Shaman",
-   "tune": 0.878
+   "tune": 0.794
   },
   {
    "id": "aw_brawler",
@@ -264,7 +264,7 @@
    "base_cost": 140,
    "ability": "dodge",
    "name": "Pit Brawler",
-   "tune": 1.281
+   "tune": 1.158
   },
   {
    "id": "aw_ice_archer",
@@ -286,7 +286,7 @@
    "base_cost": 160,
    "ability": "frost",
    "name": "Frostbow",
-   "tune": 0.407
+   "tune": 0.368
   },
   {
    "id": "aw_berserker",
@@ -308,7 +308,7 @@
    "base_cost": 250,
    "ability": "whirlwind",
    "name": "Berserker",
-   "tune": 1.326
+   "tune": 1.199
   },
   {
    "id": "aw_shield_bearer",
@@ -330,7 +330,7 @@
    "base_cost": 84,
    "ability": "shield_bash",
    "name": "Legion Shield",
-   "tune": 0.795
+   "tune": 0.719
   },
   {
    "id": "aw_sarissa",
@@ -352,7 +352,7 @@
    "base_cost": 200,
    "ability": "brace",
    "name": "Phalangite",
-   "tune": 1.415
+   "tune": 1.279
   },
   {
    "id": "aw_snake_archer",
@@ -374,7 +374,7 @@
    "base_cost": 180,
    "ability": "poison",
    "name": "Viper Archer",
-   "tune": 0.574
+   "tune": 0.519
   },
   {
    "id": "aw_valkyrie",
@@ -396,7 +396,7 @@
    "base_cost": 500,
    "ability": "leap",
    "name": "Valkyrie",
-   "tune": 1.683
+   "tune": 1.522
   },
   {
    "id": "aw_jarl",
@@ -418,7 +418,7 @@
    "base_cost": 595,
    "ability": "war_cry",
    "name": "Jarl",
-   "tune": 2.189
+   "tune": 1.979
   },
   {
    "id": "aw_minotaur",
@@ -440,7 +440,7 @@
    "base_cost": 700,
    "ability": "charge",
    "name": "Minotaur",
-   "tune": 1.778
+   "tune": 1.607
   },
   {
    "id": "aw_mammoth",
@@ -462,7 +462,7 @@
    "base_cost": 2200,
    "ability": "trample",
    "name": "War Mammoth",
-   "tune": 2.069
+   "tune": 1.87
   },
   {
    "id": "aw_ballista",
@@ -484,7 +484,7 @@
    "base_cost": 405,
    "ability": "pierce",
    "name": "Ballista",
-   "tune": 1.887
+   "tune": 1.706
   },
   {
    "id": "aw_longship",
@@ -506,7 +506,7 @@
    "base_cost": 1000,
    "ability": "none",
    "name": "Raider Longship",
-   "tune": 1.887
+   "tune": 1.706
   },
   {
    "id": "aw_zeus",
@@ -528,7 +528,7 @@
    "base_cost": 2000,
    "ability": "chain_lightning",
    "name": "Thunder Titan",
-   "tune": 1.656
+   "tune": 1.497
   },
   {
    "id": "kd_commander",
@@ -616,7 +616,7 @@
    "base_cost": 60,
    "ability": "inspire",
    "name": "War Bard",
-   "tune": 0.845
+   "tune": 0.919
   },
   {
    "id": "kd_squire",
@@ -638,7 +638,7 @@
    "base_cost": 100,
    "ability": "shield_block",
    "name": "Squire",
-   "tune": 0.891
+   "tune": 0.969
   },
   {
    "id": "kd_archer",
@@ -660,7 +660,7 @@
    "base_cost": 252,
    "ability": "volley",
    "name": "Longbowman",
-   "tune": 0.697
+   "tune": 0.758
   },
   {
    "id": "kd_fencer",
@@ -682,7 +682,7 @@
    "base_cost": 150,
    "ability": "riposte",
    "name": "Duelist",
-   "tune": 0.938
+   "tune": 1.02
   },
   {
    "id": "kd_painter",
@@ -704,7 +704,7 @@
    "base_cost": 30,
    "ability": "none",
    "name": "Mad Painter",
-   "tune": 0.742
+   "tune": 0.807
   },
   {
    "id": "kd_healer",
@@ -726,7 +726,7 @@
    "base_cost": 180,
    "ability": "heal_pulse",
    "name": "Cleric",
-   "tune": 0.906
+   "tune": 0.985
   },
   {
    "id": "kd_samurai",
@@ -748,7 +748,7 @@
    "base_cost": 500,
    "ability": "cleave",
    "name": "Samurai",
-   "tune": 1.276
+   "tune": 1.388
   },
   {
    "id": "kd_monk",
@@ -770,7 +770,7 @@
    "base_cost": 250,
    "ability": "push_wave",
    "name": "Iron Monk",
-   "tune": 0.906
+   "tune": 0.985
   },
   {
    "id": "kd_ninja",
@@ -792,7 +792,7 @@
    "base_cost": 500,
    "ability": "shadowstep",
    "name": "Shadow Ninja",
-   "tune": 0.834
+   "tune": 0.907
   },
   {
    "id": "kd_halberd",
@@ -814,7 +814,7 @@
    "base_cost": 400,
    "ability": "brace",
    "name": "Halberdier",
-   "tune": 1.722
+   "tune": 1.873
   },
   {
    "id": "kd_musketeer",
@@ -836,7 +836,7 @@
    "base_cost": 300,
    "ability": "none",
    "name": "Musketeer",
-   "tune": 0.894
+   "tune": 0.972
   },
   {
    "id": "kd_balloon_archer",
@@ -858,7 +858,7 @@
    "base_cost": 162,
    "ability": "none",
    "name": "Balloon Archer",
-   "tune": 0.799
+   "tune": 0.869
   },
   {
    "id": "kd_knight",
@@ -880,7 +880,7 @@
    "base_cost": 650,
    "ability": "cleave",
    "name": "Crown Knight",
-   "tune": 0.676
+   "tune": 0.735
   },
   {
    "id": "kd_jouster",
@@ -902,7 +902,7 @@
    "base_cost": 450,
    "ability": "charge",
    "name": "Lancer",
-   "tune": 0.313
+   "tune": 0.34
   },
   {
    "id": "kd_firework_archer",
@@ -924,7 +924,7 @@
    "base_cost": 2700,
    "ability": "volley",
    "name": "Firelance Archer",
-   "tune": 0.971
+   "tune": 1.056
   },
   {
    "id": "kd_monkey_king",
@@ -946,7 +946,7 @@
    "base_cost": 1400,
    "ability": "leap",
    "name": "Monkey King",
-   "tune": 0.74
+   "tune": 0.805
   },
   {
    "id": "kd_catapult",
@@ -968,7 +968,7 @@
    "base_cost": 750,
    "ability": "none",
    "name": "Catapult",
-   "tune": 0.589
+   "tune": 0.641
   },
   {
    "id": "kd_hwacha",
@@ -990,7 +990,7 @@
    "base_cost": 1125,
    "ability": "none",
    "name": "Hwacha",
-   "tune": 0.589
+   "tune": 0.641
   },
   {
    "id": "kd_davinci_tank",
@@ -1012,7 +1012,7 @@
    "base_cost": 4000,
    "ability": "none",
    "name": "Clockwork Tank",
-   "tune": 0.589
+   "tune": 0.641
   },
   {
    "id": "kd_dragon",
@@ -1034,7 +1034,7 @@
    "base_cost": 1560,
    "ability": "burn",
    "name": "Imperial Dragon",
-   "tune": 0.313
+   "tune": 0.34
   },
   {
    "id": "sf_commander",
@@ -1122,7 +1122,7 @@
    "icon": "ranged_t1",
    "ability": "none",
    "unverified": [],
-   "tune": 1.27
+   "tune": 1.253
   },
   {
    "id": "sf_guard",
@@ -1144,7 +1144,7 @@
    "icon": "inf_t1",
    "ability": "shield_block",
    "unverified": [],
-   "tune": 1.019
+   "tune": 1.005
   },
   {
    "id": "sf_blade",
@@ -1166,7 +1166,7 @@
    "icon": "inf_t1",
    "ability": "dodge",
    "unverified": [],
-   "tune": 0.927
+   "tune": 0.915
   },
   {
    "id": "sf_medic",
@@ -1188,7 +1188,7 @@
    "icon": "support_t2",
    "ability": "heal_pulse",
    "unverified": [],
-   "tune": 1.258
+   "tune": 1.242
   },
   {
    "id": "sf_pulse",
@@ -1210,7 +1210,7 @@
    "icon": "support_t2",
    "ability": "push_wave",
    "unverified": [],
-   "tune": 1.258
+   "tune": 1.242
   },
   {
    "id": "sf_sniper",
@@ -1232,7 +1232,7 @@
    "icon": "ranged_t2",
    "ability": "pierce",
    "unverified": [],
-   "tune": 0.745
+   "tune": 0.735
   },
   {
    "id": "sf_rocketeer",
@@ -1254,7 +1254,7 @@
    "icon": "ranged_t2",
    "ability": "volley",
    "unverified": [],
-   "tune": 0.667
+   "tune": 0.658
   },
   {
    "id": "sf_gunship",
@@ -1276,7 +1276,7 @@
    "icon": "ranged_t2",
    "ability": "none",
    "unverified": [],
-   "tune": 3.123
+   "tune": 3.082
   },
   {
    "id": "sf_strider",
@@ -1298,7 +1298,7 @@
    "icon": "hero_t3",
    "ability": "shield_bash",
    "unverified": [],
-   "tune": 1.181
+   "tune": 1.165
   },
   {
    "id": "sf_hover_lancer",
@@ -1320,7 +1320,7 @@
    "icon": "cavalry_t3",
    "ability": "charge",
    "unverified": [],
-   "tune": 0.477
+   "tune": 0.47
   },
   {
    "id": "sf_arc_projector",
@@ -1342,7 +1342,7 @@
    "icon": "ranged_t3",
    "ability": "chain_lightning",
    "unverified": [],
-   "tune": 0.812
+   "tune": 0.801
   },
   {
    "id": "sf_titan",
@@ -1364,7 +1364,7 @@
    "icon": "hero_t3",
    "ability": "cleave",
    "unverified": [],
-   "tune": 1.585
+   "tune": 1.564
   },
   {
    "id": "sf_plasma_tank",
@@ -1386,7 +1386,7 @@
    "icon": "siege_t3",
    "ability": "none",
    "unverified": [],
-   "tune": 0.899
+   "tune": 0.887
   },
   {
    "id": "sf_ion_artillery",
@@ -1408,7 +1408,7 @@
    "icon": "siege_t3",
    "ability": "none",
    "unverified": [],
-   "tune": 0.899
+   "tune": 0.887
   }
  ]
 }
