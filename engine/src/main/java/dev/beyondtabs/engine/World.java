@@ -45,6 +45,11 @@ public final class World {
     void tele(String id, int k, double v) { if (telemetry != null) telemetry.computeIfAbsent(id, x -> new double[3])[k] += v; }
     public Function<UnitDef, Rig> rigs = d -> ("humanoid".equals(d.body()) || "large".equals(d.body())) ? Rig.humanoidDefault() : blobFor(d);
     int nextId = 1; public long tick; public float time;
+    /**
+     * BAR-style combat (default): nobody is knocked down or sent stumbling; big hits only shove a little. Off = the
+     * old TABS-style physics brawl (knockdowns, flying units), kept for experiments.
+     */
+    public boolean cleanCombat = true;
     /** Team id of the winner once every other team is defeated, else -1. */
     public int winner = -1;
 
@@ -323,7 +328,7 @@ public final class World {
         // knockdown state machine: balance is drained by hits and recovers over time. Only a real hit can trip a unit
         // up: being jostled by friends or stepping off a ledge never does.
         boolean recentlyHit = time - u.lastHit < .8f;
-        if (!u.knocked && !u.leaping && (r.balance < .3f || (recentlyHit && u.lod < 2 && r.poseError() > .9f * r.scale))) {
+        if (!cleanCombat && !u.knocked && !u.leaping && (r.balance < .3f || (recentlyHit && u.lod < 2 && r.poseError() > .9f * r.scale))) {
             u.knocked = true; r.down = true; u.downFor = 0; knockdowns++;
             cancelAbility(u);
         }
@@ -842,7 +847,10 @@ public final class World {
         float shove = knockback * massK;
         // footing: units set for a fight, bracing or under a war cry are much harder to topple
         float resist = Math.min(.75f, (t.inCombat ? .25f : 0) + (t.bracing ? .4f : 0) + t.buffStab * .6f);
-        if (knockback > 0) {
+        if (knockback > 0 && cleanCombat) {   // a small shove, no stagger
+            float k = Math.min(1.5f, shove * .35f * (1 - resist));
+            t.vx += dx * k; t.vz += dz * k; t.lastHit = time;
+        } else if (knockback > 0) {
             t.ragdoll.impulse(Math.min(part, t.ragdoll.rig.n - 1), dx * shove * 40f * (1 - resist * .5f), shove * 18f, dz * shove * 40f * (1 - resist * .5f), DT);
             t.ragdoll.balance = Math.max(0, t.ragdoll.balance - shove * .22f * (1 - resist));
             t.vx += dx * shove * .8f * (1 - resist * .5f); t.vz += dz * shove * .8f * (1 - resist * .5f);

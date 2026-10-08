@@ -163,6 +163,12 @@ public final class LobbyServer {
             slotOfPlayer.add(i);
         }
         List<Skirmish.Start> starts = Skirmish.setup(m.world, center.getX() + .5f, center.getZ() + .5f, radius, Lobby.POSITIONS, players, rng.nextLong());
+        // tidy the fields we build and fight on, leave the forests elsewhere
+        float cx = center.getX() + .5f, cz = center.getZ() + .5f;
+        Clearing.disc(level, cx, cz, 14);
+        for (Skirmish.Start st : starts) { Clearing.disc(level, st.x(), st.z(), 28); Clearing.lane(level, st.x(), st.z(), cx, cz, 7); }
+        for (float[] sp : m.world.metalSpots) Clearing.disc(level, sp[0], sp[1], 2.5f);
+        m.terrain.invalidate();
         for (int k = 0; k < starts.size(); k++) {
             Lobby.Slot s = lb.slots[slotOfPlayer.get(k)];
             Skirmish.Start st = starts.get(k);
