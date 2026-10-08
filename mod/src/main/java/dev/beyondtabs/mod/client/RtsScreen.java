@@ -48,6 +48,18 @@ public final class RtsScreen extends Screen {
 
     @Override public boolean isPauseScreen() { return false; }
 
+    /**
+     * The RTS HUD keeps its own size whatever Minecraft's GUI scale is (at scale 4 the panel ate 40% of the screen):
+     * about 2 px per HUD unit on 1080p, 3 on 1440p. K = our scale / Minecraft's; width/height are in HUD units.
+     */
+    static float K = 1;
+    @Override public void init(Minecraft mc, int w, int h) {
+        double gui = mc.getWindow().getGuiScale();
+        int target = (int) Math.max(1, Math.min(gui, Math.round(mc.getWindow().getHeight() / 520.0)));
+        K = (float) (target / gui);
+        super.init(mc, Math.round(w / K), Math.round(h / K));
+    }
+
     static void pruneSelection(Snapshot s) {
         Set<Integer> alive = new java.util.HashSet<>();
         for (Snapshot.U u : s.units) if (u.alive && u.team == s.myTeam) alive.add(u.id);
@@ -56,9 +68,15 @@ public final class RtsScreen extends Screen {
     }
 
     // ---------------------------------------------------------------- input
-    @Override public void tick() {
+    @Override public void tick() { }
+
+    static long panNanos;
+
+    /** Keyboard / screen-edge panning, rotating and tilting: every frame with the real frame time, so it glides. */
+    void framePan() {
         Minecraft mc = Minecraft.getInstance(); long w = mc.getWindow().getWindow();
-        float dt = .05f, right = 0, fwd = 0;
+        long now = System.nanoTime(); float dt = panNanos == 0 ? 0 : Math.min(.05f, (now - panNanos) / 1e9f); panNanos = now;
+        float right = 0, fwd = 0;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_UP)) fwd += 1;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_DOWN)) fwd -= 1;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_RIGHT)) right += 1;
@@ -68,18 +86,21 @@ public final class RtsScreen extends Screen {
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_PAGE_UP)) RtsCamera.tiltBy(60 * dt);
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_PAGE_DOWN)) RtsCamera.tiltBy(-60 * dt);
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_END)) RtsCamera.resetView();
-        // screen-edge panning (BAR style)
-        double mx = mc.mouseHandler.xpos() * width / Math.max(1, mc.getWindow().getScreenWidth());
-        double my = mc.mouseHandler.ypos() * height / Math.max(1, mc.getWindow().getScreenHeight());
-        if (mx <= 2) right -= 1;
-        if (mx >= width - 3) right += 1;
-        if (my <= 2) fwd += 1;
-        if (my >= height - 3) fwd -= 1;
+        // screen-edge panning (BAR style), only while the game window has focus
+        if (mc.isWindowActive()) {
+            double sx = mc.mouseHandler.xpos(), sy = mc.mouseHandler.ypos();
+            int ww = Math.max(1, mc.getWindow().getScreenWidth()), wh = Math.max(1, mc.getWindow().getScreenHeight());
+            if (sx <= 3) right -= 1;
+            if (sx >= ww - 4) right += 1;
+            if (sy <= 3) fwd += 1;
+            if (sy >= wh - 4) fwd -= 1;
+        }
         if (right != 0 || fwd != 0) RtsCamera.pan(right, fwd, dt);
     }
 
     /** Middle-drag pans the map. */
-    @Override public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+    @Override public boolean mouseDragged(double mx, double my, int button, double dx, double dy) { return mouseDraggedUi(mx / K, my / K, button, dx / K, dy / K); }
+    boolean mouseDraggedUi(double mx, double my, int button, double dx, double dy) {
         if (button == 0 && minimapDrag && mini != null) {
             RtsCamera.focusX = mini[3] + (float) Math.max(0, Math.min(1, (mx - mini[0]) / mini[2])) * mini[5];
             RtsCamera.focusZ = mini[4] + (float) Math.max(0, Math.min(1, (my - mini[1]) / mini[2])) * mini[5];
@@ -88,19 +109,25 @@ public final class RtsScreen extends Screen {
         if (button == 2 && hasAltDown()) {   // BAR-style: Alt + middle-drag turns and tilts the view
             RtsCamera.yaw += (float) dx * .35f; RtsCamera.tiltBy((float) dy * .35f); return true;
         }
-        if (button == 2) { RtsCamera.pan((float) -dx * .05f, (float) dy * .05f, .5f); return true; }
+        if (button == 2) {   // grab the map: the ground under the cursor follows it
+            float perUnit = (float) (2 * RtsCamera.dist * Math.tan(Math.toRadians(Proj.FOV / 2)) / Math.max(1, height));
+            RtsCamera.move((float) -dx * perUnit, (float) dy * perUnit / Math.max(.5f, (float) Math.sin(Math.toRadians(RtsCamera.pitch))));
+            return true;
+        }
         if (button == 1 && rightDown && lineStart != null) { float[] g = Proj.now().toGround(mx, my); if (g != null) lineEnd = new float[]{g[0], g[2]}; return true; }
-        return super.mouseDragged(mx, my, button, dx, dy);
+        return super.mouseDragged(mx * K, my * K, button, dx * K, dy * K);
     }
 
     /** Wheel zooms; Alt+wheel tilts toward the horizon (Shift+Alt+wheel turns), like BAR. */
-    @Override public boolean mouseScrolled(double mx, double my, double delta) {
+    @Override public boolean mouseScrolled(double mx, double my, double delta) { return mouseScrolledUi(mx / K, my / K, delta); }
+    boolean mouseScrolledUi(double mx, double my, double delta) {
         if (hasAltDown() && hasShiftDown()) { RtsCamera.yaw += (float) delta * 15; return true; }
         if (hasAltDown()) { RtsCamera.tiltBy((float) delta * 6); return true; }
-        RtsCamera.zoom(delta); return true;
+        RtsCamera.zoomAt(delta, Proj.now().toGround(mx, my)); return true;
     }
 
-    @Override public boolean mouseClicked(double mx, double my, int button) {
+    @Override public boolean mouseClicked(double mx, double my, int button) { return mouseClickedUi(mx / K, my / K, button); }
+    boolean mouseClickedUi(double mx, double my, int button) {
         for (Btn b : buttons) if (mx >= b.x && my >= b.y && mx < b.x + b.w && my < b.y + b.h) {
             if (button == 0 && b.left != null) b.left.run(); if (button == 1 && b.right != null) b.right.run();
             return true;
@@ -149,7 +176,8 @@ public final class RtsScreen extends Screen {
         return false;
     }
 
-    @Override public boolean mouseReleased(double mx, double my, int button) {
+    @Override public boolean mouseReleased(double mx, double my, int button) { return mouseReleasedUi(mx / K, my / K, button); }
+    boolean mouseReleasedUi(double mx, double my, int button) {
         if (button == 1 && rightDown) {
             rightDown = false;
             if (lineStart != null && !selected.isEmpty()) {
@@ -388,6 +416,12 @@ public final class RtsScreen extends Screen {
     static final int BG = 0xC0101418, PANEL = 0xD0181E24, EDGE = 0xFF3A4652, TXT = 0xFFE8E2D4, DIM = 0xFF9AA4AE, METAL = 0xFFB8C4D0, ENERGY = 0xFFF2C94C;
 
     @Override public void render(GuiGraphics g, int mx, int my, float partial) {
+        framePan();
+        g.pose().pushPose(); g.pose().scale(K, K, 1);
+        try { renderUi(g, Math.round(mx / K), Math.round(my / K), partial); } finally { g.pose().popPose(); }
+    }
+
+    void renderUi(GuiGraphics g, int mx, int my, float partial) {
         buttons.clear();
         Snapshot s = ClientMatch.cur;
         Proj p = Proj.now();

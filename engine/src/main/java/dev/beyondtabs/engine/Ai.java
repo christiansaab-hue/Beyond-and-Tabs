@@ -17,6 +17,7 @@ import java.util.Random;
  * scouted enemies), army (stage, attack when strong enough, defend the base), micro (pull back badly hurt units).
  */
 public final class Ai {
+    int stageSlot;
     public enum Difficulty { EASY, NORMAL, HARD }
 
     final World w; public final int team; public final Difficulty diff; final Random rng;
@@ -296,7 +297,11 @@ public final class Ai {
             for (Building b : w.buildings) if (b.alive && b.team == team && b.distTo(e.x, e.z) < 18) { intruder = e; break; }
             if (intruder != null) break;
         }
-        if (intruder != null) { for (Unit u : army) w.order(u, Order.attackMove(intruder.x, intruder.z), false); return; }
+        if (intruder != null) {
+            float[][] slots = Formation.block(army, intruder.x, intruder.z);
+            for (int i = 0; i < army.size(); i++) w.order(army.get(i), Order.attackMove(slots[i][0], slots[i][1]), false);
+            return;
+        }
         if (Float.isNaN(enemyX)) return;
         // estimate the enemy army near their base from what we have seen (fallback: count everything, a cautious guess)
         float theirs = 0;
@@ -310,9 +315,17 @@ public final class Ai {
             Building target = null; float bd = Float.MAX_VALUE;   // nearest enemy building to our base
             for (Building b : w.buildings) if (b.alive && !w.ally(b.team, team) && World.dist(b.x, b.z, enemyX, enemyZ) < 70) { float d = World.dist(baseX, baseZ, b.x, b.z); if (d < bd) { bd = d; target = b; } }
             if (target != null) { tx = target.x; tz = target.z; }
-            for (Unit u : army) { w.order(u, Order.attackMove(tx, tz), false); w.order(u, Order.attackMove(enemyX, enemyZ), true); }
+            float[][] slots = Formation.block(army, tx, tz);   // march as a block, not a ball
+            for (int i = 0; i < army.size(); i++) {
+                Unit u = army.get(i); float ox = slots[i][0] - tx, oz = slots[i][1] - tz;
+                w.order(u, Order.attackMove(slots[i][0], slots[i][1]), false); w.order(u, Order.attackMove(enemyX + ox, enemyZ + oz), true);
+            }
         } else if (!attacking) {
-            for (Unit u : army) if (u.orders.isEmpty() && World.dist(u.x, u.z, stageX(), stageZ()) > 10) w.order(u, Order.move(stageX() + (rng.nextFloat() - .5f) * 8, stageZ() + (rng.nextFloat() - .5f) * 8), false);
+            int k = 0;
+            for (Unit u : army) if (u.orders.isEmpty() && World.dist(u.x, u.z, stageX(), stageZ()) > 12) {
+                float[] p = Formation.spread(stageX(), stageZ(), stageSlot++ % 90, Math.max(1.5f, u.radius * 2 + .6f)); k++;
+                w.order(u, Order.move(p[0], p[1]), false);
+            }
         }
     }
 

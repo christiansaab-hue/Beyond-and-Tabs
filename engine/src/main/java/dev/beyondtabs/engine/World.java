@@ -311,7 +311,8 @@ public final class World {
         float ang = (float) Math.atan2(b.rallyX - b.x, b.rallyZ - b.z);
         float sx = b.x + (float) Math.sin(ang) * 3.5f, sz = b.z + (float) Math.cos(ang) * 3.5f;
         Unit u = spawn(b.team, d, sx, sz, ang);
-        order(u, Order.move(b.rallyX + (rng.nextFloat() - .5f) * 3, b.rallyZ + (rng.nextFloat() - .5f) * 3), false);
+        float[] slot = Formation.spread(b.rallyX, b.rallyZ, b.rallyN++ % 60, Math.max(1.5f, u.radius * 2 + .6f));   // fan out round the rally point
+        order(u, Order.move(slot[0], slot[1]), false);
     }
 
     // ---------------- unit behaviour ----------------

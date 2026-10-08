@@ -8,7 +8,7 @@ import java.util.ArrayDeque;
 public final class Building {
     public final int id; public final int team; public final BuildingDef def; public final float x, z;
     /** Footprint in blocks (from the sheet, e.g. "5x5") and half extents. */
-    public final int fw, fh; public final float hw, hh; public float cooldown;
+    public int rallyN; public final int fw, fh; public final float hw, hh; public float cooldown;
     public int level = 1; public float hp; public boolean alive = true;
     /** 0..1 while being constructed or upgraded; 1 = done. */
     public float progress; public boolean upgrading;

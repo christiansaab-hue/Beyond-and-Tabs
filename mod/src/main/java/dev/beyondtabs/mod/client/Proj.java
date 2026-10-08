@@ -15,7 +15,8 @@ final class Proj {
         p.rx = -Math.cos(yr); p.rz = -Math.sin(yr);
         // up = right x forward
         p.ux = 0 * p.fz - p.rz * p.fy; p.uy = p.rz * p.fx - p.rx * p.fz; p.uz = p.rx * p.fy - 0 * p.fx;
-        p.gw = mc.getWindow().getGuiScaledWidth(); p.gh = mc.getWindow().getGuiScaledHeight();
+        if (mc.screen instanceof RtsScreen rs) { p.gw = rs.width; p.gh = rs.height; }   // HUD units (see RtsScreen.K)
+        else { p.gw = mc.getWindow().getGuiScaledWidth(); p.gh = mc.getWindow().getGuiScaledHeight(); }
         p.aspect = (double) mc.getWindow().getWidth() / Math.max(1, mc.getWindow().getHeight());
         p.tanHalf = Math.tan(Math.toRadians(FOV / 2));
         return p;

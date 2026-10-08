@@ -75,4 +75,10 @@ public final class Formation {
         }
         return out;
     }
+
+    /** Slot k of a sunflower spiral around (x, z): evenly packed, any count, nobody lands on anybody. */
+    public static float[] spread(float x, float z, int k, float sp) {
+        double r = sp * .62 * Math.sqrt(k + .5), a = k * 2.399963;
+        return new float[]{x + (float) (Math.cos(a) * r), z + (float) (Math.sin(a) * r)};
+    }
 }
