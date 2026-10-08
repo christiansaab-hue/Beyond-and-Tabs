@@ -148,6 +148,7 @@ public final class RtsScreen extends Screen {
             }
             return true;
         }
+        if (overHud(mx, my)) return true;   // clicked a panel, not the world
         if (button == 0) {
             if (placing != null) {
                 if (placing.footprint().equals("1x1") && ghost != null) { wallStart = ghost.clone(); return true; }   // drag a line of walls
@@ -452,7 +453,7 @@ public final class RtsScreen extends Screen {
     }
 
     void renderUi(GuiGraphics g, int mx, int my, float partial) {
-        buttons.clear();
+        buttons.clear(); hudRects.clear();
         Snapshot s = ClientMatch.cur;
         Proj p = Proj.now();
         if (s == null) { g.drawCenteredString(font, "No match running — type /bt start in chat first (press V to leave)", width / 2, 20, TXT); return; }
@@ -472,9 +473,9 @@ public final class RtsScreen extends Screen {
         drawTopBar(g, s);
         drawBottomPanel(g, s, mx, my);
         drawAlert(g, s);
-        if (!dragging && placing == null && my < height - 96) drawHover(g, s, p, mx, my);
+        if (!dragging && placing == null && !overHud(mx, my)) drawHover(g, s, p, mx, my);
         if (help) drawHelp(g);
-        if (attackMode || patrolNext) g.drawCenteredString(font, (patrolNext ? "Patrol" : "Attack-move") + ": right-click a destination", width / 2, height - 118, 0xFFFF7060);
+        if (attackMode || patrolNext) g.drawCenteredString(font, (patrolNext ? "Patrol" : "Attack-move") + ": right-click a destination", width / 2, height - CARD_H - 18, 0xFFFF7060);
         if (s.winner >= 0) {
             boolean won = s.myTeam >= 0 && ClientMatch.ally(s.winner, s.myTeam);
             String msg = s.myTeam < 0 ? "BATTLE OVER" : won ? "VICTORY" : "DEFEAT";
@@ -490,20 +491,100 @@ public final class RtsScreen extends Screen {
     static boolean sizeOdd(BuildingDef d, int axis) { return Integer.parseInt(d.footprint().split("x")[axis]) % 2 == 1; }
 
     void drawTopBar(GuiGraphics g, Snapshot s) {
-        int w = 420, x = width / 2 - w / 2;
-        g.fill(x, 0, x + w, 22, BG); g.hLine(x, x + w, 22, EDGE);
-        bar(g, x + 8, 4, 150, "Metal", s.metal, s.metalMax, s.metalIncome, s.metalSpend, METAL);
-        bar(g, x + 166, 4, 150, "Energy", s.energy, s.energyMax, s.energyIncome, s.energySpend, ENERGY);
-        g.drawString(font, "Supply " + s.supplyUsed + "/" + s.supplyCap, x + 326, 4, s.supplyUsed >= s.supplyCap ? 0xFFFF6A6A : TXT);
-        if (s.efficiency < .99f) g.drawString(font, String.format("Build %d%%", Math.round(s.efficiency * 100)), x + 326, 13, 0xFFFF9A4A);
+        // resources, top-left: item icon, amount / storage with a fill bar, income and spend
+        int x = 4, y = 4, w = 168, rows = s.efficiency < .99f ? 4 : 3;
+        panel(g, x, y, w, rows * 18 + 6);
+        resRow(g, x + 4, y + 4, w - 8, ICON_METAL, s.metal, s.metalMax, s.metalIncome, s.metalSpend, METAL);
+        resRow(g, x + 4, y + 22, w - 8, ICON_ENERGY, s.energy, s.energyMax, s.energyIncome, s.energySpend, ENERGY);
+        g.renderItem(ICON_SUPPLY, x + 4, y + 40);
+        g.drawString(font, s.supplyUsed + " / " + s.supplyCap + " supply", x + 24, y + 44, s.supplyUsed >= s.supplyCap ? 0xFFFF6A6A : TXT);
+        if (rows == 4) { g.renderItem(ICON_BUILD, x + 4, y + 58); g.drawString(font, String.format("Building at %d%% speed (low resources)", Math.round(s.efficiency * 100)), x + 24, y + 62, 0xFFFF9A4A); }
+        hud(x, y, w, rows * 18 + 6);
         int idle = idleBuilders(s);
         if (idle > 0) {
-            String t = idle + " idle builder" + (idle > 1 ? "s" : "") + " (I)";
-            int bw = font.width(t) + 10;
-            button(g, x + w + 6, 2, bw, 16, t, "Select the next builder with nothing to do", () -> selectIdleBuilder(s), null, false, true);
+            String t = idle + " idle builder" + (idle > 1 ? "s" : "") + "  (I)";
+            iconButton(g, x, y + rows * 18 + 10, 20, ICON_BUILD, -1, "Select the next builder with nothing to do", () -> selectIdleBuilder(s), null, false, true, String.valueOf(idle));
+            g.drawString(font, t, x + 24, y + rows * 18 + 16, 0xFFFFD27A);
         }
-        if (s.paused) g.drawCenteredString(font, "PAUSED  (Pause / F9 to resume)", width / 2, 28, 0xFFFFD27A);
-        else if (s.speed != 1) g.drawCenteredString(font, "Speed " + (s.speed == .5f ? "0.5" : String.valueOf((int) s.speed)) + "x", width / 2, 28, 0xFFFFD27A);
+        if (s.paused) g.drawCenteredString(font, "PAUSED  (Pause / F9 to resume)", width / 2, 8, 0xFFFFD27A);
+        else if (s.speed != 1) g.drawCenteredString(font, "Speed " + (s.speed == .5f ? "0.5" : String.valueOf((int) s.speed)) + "x", width / 2, 8, 0xFFFFD27A);
+    }
+
+    static final net.minecraft.world.item.ItemStack ICON_METAL = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_INGOT),
+            ICON_ENERGY = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLOWSTONE_DUST),
+            ICON_SUPPLY = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET),
+            ICON_BUILD = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_PICKAXE);
+
+    void resRow(GuiGraphics g, int x, int y, int w, net.minecraft.world.item.ItemStack icon, float v, float max, float inc, float spend, int color) {
+        g.renderItem(icon, x, y);
+        int bx = x + 20, bw = w - 20;
+        g.drawString(font, String.format("%d / %d", Math.round(v), Math.round(max)), bx, y + 1, TXT);
+        String rate = String.format("+%.0f -%.0f", inc, spend);
+        g.drawString(font, rate, x + w - font.width(rate), y + 1, inc >= spend ? 0xFF7CDC7C : 0xFFFF8A6A);
+        g.fill(bx, y + 11, bx + bw, y + 14, 0xFF2A323A);
+        g.fill(bx, y + 11, bx + (int) (bw * Math.min(1, v / Math.max(1, max))), y + 14, color);
+    }
+
+    /** HUD panels this frame (clicks and hover over them don't reach the world). */
+    final List<int[]> hudRects = new ArrayList<>();
+    void hud(int x, int y, int w, int h) { hudRects.add(new int[]{x, y, w, h}); }
+    boolean overHud(double mx, double my) { for (int[] r : hudRects) if (mx >= r[0] && my >= r[1] && mx < r[0] + r[2] && my < r[1] + r[3]) return true; return false; }
+
+    /** A framed, slightly see-through panel in the Minecraft inventory spirit. */
+    void panel(GuiGraphics g, int x, int y, int w, int h) {
+        g.fill(x, y, x + w, y + h, 0xD8222A30);
+        outline(g, x, y, w, h, 0xFF0E1216);
+        g.hLine(x + 1, x + w - 2, y + 1, 0xFF4A5560); g.vLine(x + 1, y + 1, y + h - 2, 0xFF4A5560);
+        g.hLine(x + 1, x + w - 2, y + h - 2, 0xFF15191D); g.vLine(x + w - 2, y + 1, y + h - 2, 0xFF15191D);
+        hud(x, y, w, h);
+    }
+
+    /** Square icon button: an item icon (or a unit face when face >= 0), optional badge (count / hotkey). */
+    void iconButton(GuiGraphics g, int x, int y, int sz, net.minecraft.world.item.ItemStack icon, int face, String tip, Runnable left, Runnable right, boolean on, boolean enabled, String badge) {
+        boolean hover = false;
+        g.fill(x, y, x + sz, y + sz, on ? 0xFF3E6A48 : enabled ? 0xFF39424C : 0xFF23292F);
+        outline(g, x, y, sz, sz, on ? 0xFF7CDC7C : 0xFF0E1216);
+        g.hLine(x + 1, x + sz - 2, y + 1, enabled ? 0xFF5A6670 : 0xFF2E353C);
+        int o = (sz - 16) / 2;
+        if (face >= 0) face(g, face, x + 2, y + 2, sz - 4);
+        else if (icon != null) g.renderItem(icon, x + o, y + o);
+        if (!enabled) g.fill(x + 1, y + 1, x + sz - 1, y + sz - 1, 0x99101418);
+        if (badge != null && !badge.isEmpty()) {
+            g.pose().pushPose(); g.pose().translate(0, 0, 200);
+            g.drawString(font, badge, x + sz - 1 - font.width(badge), y + sz - 8, 0xFFFFFFFF, true);
+            g.pose().popPose();
+        }
+        buttons.add(new Btn(x, y, sz, sz, "", tip, left, right, on));
+    }
+
+    /** A unit's face from its skin (face + hat layer), like a player head. */
+    void face(GuiGraphics g, int def, int x, int y, int size) {
+        if (!VanillaUnits.ready() || def < 0 || def >= VanillaUnits.SKINS.length || VanillaUnits.SKINS[def] == null) { g.fill(x, y, x + size, y + size, 0xFF6A5A4A); return; }
+        var tex = VanillaUnits.SKINS[def];
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        g.blit(tex, x, y, size, size, 8, 8, 8, 8, 64, 64);
+        g.blit(tex, x, y, size, size, 40, 8, 8, 8, 64, 64);
+    }
+
+    static net.minecraft.world.item.ItemStack buildingIcon(BuildingDef d) {
+        net.minecraft.world.item.Item it;
+        String id = d.id();
+        if (d.blastRadius() > 0) it = net.minecraft.world.item.Items.BEACON;
+        else it = switch (d.effect()) {
+            case "metal_per_s" -> net.minecraft.world.item.Items.RAW_IRON;
+            case "energy_per_s" -> d.race().equals("starforge") ? net.minecraft.world.item.Items.END_CRYSTAL : net.minecraft.world.item.Items.GLOWSTONE_DUST;
+            case "energy_to_metal_per_s" -> net.minecraft.world.item.Items.BLAST_FURNACE;
+            case "storage" -> net.minecraft.world.item.Items.CHEST;
+            case "unlock_tier" -> net.minecraft.world.item.Items.ENCHANTING_TABLE;
+            case "ranged_dps" -> net.minecraft.world.item.Items.CROSSBOW;
+            case "hp" -> net.minecraft.world.item.Items.COBBLESTONE_WALL;
+            case "assist_power" -> net.minecraft.world.item.Items.ANVIL;
+            default -> id.contains("siege") || id.contains("works") ? net.minecraft.world.item.Items.TNT
+                    : id.contains("court") || id.contains("legends") || id.contains("titan") ? net.minecraft.world.item.Items.GOLDEN_HELMET
+                    : id.contains("workshop") || id.contains("lodge") || id.contains("mech") ? net.minecraft.world.item.Items.IRON_AXE
+                    : net.minecraft.world.item.Items.IRON_SWORD;
+        };
+        return new net.minecraft.world.item.ItemStack(it);
     }
 
     void bar(GuiGraphics g, int x, int y, int w, String label, float v, float max, float inc, float spend, int color) {
@@ -514,46 +595,201 @@ public final class RtsScreen extends Screen {
         g.drawString(font, rate, x + w - font.width(rate), y - 1, inc >= spend ? 0xFF7CDC7C : 0xFFFF8A6A);
     }
 
+    static final int CELL = 22, COLS = 6, ROWS = 3, CARD_H = 3 * 22 + 10;
+
     void drawBottomPanel(GuiGraphics g, Snapshot s, int mx, int my) {
-        int h = 96, y = height - h;
-        g.fill(0, y, width, height, PANEL); g.hLine(0, width, y, EDGE);
-        // selection summary
+        int gridW = COLS * (CELL + 2) + 6, gy = height - CARD_H - 4;
+        // command grid, bottom-left
+        panel(g, 4, gy, gridW, CARD_H);
+        commandGrid(g, s, 7, gy + 5);
+        // minimap, bottom-right
+        int mm = CARD_H + 26, mx0 = width - mm - 4, my0 = height - mm - 4;
+        panel(g, mx0, my0, mm, mm);
+        drawMinimap(g, s, mx0 + 3, my0 + 3, mm - 6);
+        // portrait card in between
+        int cx = 4 + gridW + 6, cw = Math.max(160, mx0 - 6 - cx);
+        panel(g, cx, gy, cw, CARD_H);
+        selectionCard(g, s, cx + 5, gy + 5, cw - 10, CARD_H - 10);
+    }
+
+    /** What the selection can do, as icon buttons: buildings for builders, training / research / upgrade for buildings, orders for armies. */
+    void commandGrid(GuiGraphics g, Snapshot s, int x, int y) {
+        List<Runnable> cells = new ArrayList<>();
+        int[] i = {0};
+        java.util.function.BiConsumer<Integer, Integer> at = (c, r) -> { };
+        Snapshot.B sb = selectedBuilding >= 0 ? s.buildings.stream().filter(q -> q.id == selectedBuilding).findFirst().orElse(null) : null;
+        boolean builders = !selected.isEmpty() && canBuild(s);
+        if (builders && buildMenu) {
+            for (BuildingDef d : BuildingDef.ALL) {
+                if (!d.race().equals(s.myRace)) continue;
+                boolean ok = d.requiresTech().equals("none") || s.researched.contains(d.requiresTech());
+                final BuildingDef fd = d;
+                String tip = String.format("%s\n%d metal, %d energy  |  %s footprint  |  %d levels%s\n%s", name(d.id()), d.metal(), d.energy(), d.footprint(), d.levels(),
+                        ok ? "" : "\nNeeds " + name(d.requiresTech()), buildingAbout(d));
+                cell(g, x, y, i[0]++, buildingIcon(d), -1, tip, ok ? () -> { placing = fd; } : null, () -> { placing = null; }, placing == d, ok, "");
+            }
+        } else if (sb != null && sb.team == s.myTeam && selected.isEmpty()) {
+            BuildingDef d = BuildingDef.ALL.get(sb.def);
+            if (d.kind().equals("factory") && sb.progress >= 1) {
+                for (UnitDef u : UnitDef.ALL) {
+                    if (!u.factory().equals(d.id())) continue;
+                    int idx = UnitDef.ALL.indexOf(u); int queued = 0; for (short q : sb.queue) if (q == idx) queued++;
+                    boolean unlocked = u.tier() <= 1 || s.researched.stream().anyMatch(t -> t.endsWith("_tech_t" + u.tier()));
+                    cell(g, x, y, i[0]++, null, idx, unitTip(u) + String.format("\n%d metal, %d energy, supply %d%s\nLeft: train (Shift +5)   Right: remove", u.metal(), u.energy(), u.supply(), unlocked ? "" : "\nNeeds tier " + u.tier() + " research"),
+                            unlocked ? () -> act(RtsAction.Kind.ENQUEUE, idx, hasShiftDown() ? 5 : 1) : null, () -> act(RtsAction.Kind.DEQUEUE, idx, 1), false, unlocked, queued > 0 ? String.valueOf(queued) : "");
+                }
+                cell(g, x, y, i[0]++, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REPEATER), -1, "Repeat the queue (R)", () -> act(RtsAction.Kind.REPEAT, -1, 1), null, sb.repeat, true, "R");
+            } else if (d.kind().equals("tech") && sb.progress >= 1) {
+                for (TechDef t : TechDef.ALL) {
+                    if (!t.researchedAt().equals(d.id())) continue;
+                    boolean done = s.researched.contains(t.id());
+                    boolean ok = !done && sb.level >= t.minBuildingLevel() && (t.requires().equals("none") || s.researched.contains(t.requires()));
+                    int idx = TechDef.ALL.indexOf(t);
+                    cell(g, x, y, i[0]++, new net.minecraft.world.item.ItemStack(done ? net.minecraft.world.item.Items.ENCHANTED_BOOK : net.minecraft.world.item.Items.BOOK), -1,
+                            name(t.id()) + (done ? " (done)" : "") + String.format("\n%d metal, %d energy, %ds - needs building level %d", t.metal(), t.energy(), t.seconds(), t.minBuildingLevel()),
+                            ok ? () -> act(RtsAction.Kind.RESEARCH, idx, 1) : null, null, done, ok, "");
+                }
+            }
+            if (sb.level < d.levels() && sb.progress >= 1)
+                cell(g, x, y, COLS * ROWS - 1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.EXPERIENCE_BOTTLE), -1,
+                        String.format("Upgrade to level %d (U)\n%d metal, %d energy", sb.level + 1, Math.round(d.metal() * .6), Math.round(d.energy() * .6)),
+                        () -> act(RtsAction.Kind.UPGRADE, -1, 1), null, false, true, "U");
+        } else if (!selected.isEmpty()) {
+            cell(g, x, y, 0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_SWORD), -1, "Attack-move (F): walk there, fighting anything on the way", () -> { attackMode = true; }, null, attackMode, true, "F");
+            cell(g, x, y, 1, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BARRIER), -1, "Stop (X)", () -> order(Order.Type.STOP), null, false, true, "X");
+            cell(g, x, y, 2, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COMPASS), -1, "Patrol (P): walk back and forth, fighting", () -> { attackMode = false; patrolNext = true; }, null, patrolNext, true, "P");
+            if (canBuild(s)) cell(g, x, y, 3, ICON_BUILD, -1, "Build menu (B)", () -> { buildMenu = true; }, null, buildMenu, true, "B");
+            cell(g, x, y, COLS, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_HELMET), -1, "Select the whole army (Ctrl+A)", () -> { Snapshot c = ClientMatch.cur; if (c != null) selectArmy(c); }, null, false, true, "");
+        } else {
+            g.drawString(font, "Select units or", x + 2, y + 4, DIM);
+            g.drawString(font, "a building.", x + 2, y + 15, DIM);
+            g.drawString(font, "H: all hotkeys", x + 2, y + 34, DIM);
+        }
+    }
+
+    void cell(GuiGraphics g, int x, int y, int idx, net.minecraft.world.item.ItemStack icon, int face, String tip, Runnable left, Runnable right, boolean on, boolean enabled, String badge) {
+        if (idx >= COLS * ROWS) return;
+        iconButton(g, x + (idx % COLS) * (CELL + 2), y + (idx / COLS) * (CELL + 2), CELL, icon, face, tip, left, right, on, enabled, badge);
+    }
+
+    static String buildingAbout(BuildingDef d) {
+        List<String> a = new ArrayList<>();
+        if (!d.effect().isEmpty() && !d.effect().equals("none")) a.add(d.effect().replace('_', ' ') + (d.valuePerLevel().isEmpty() ? "" : " " + d.valuePerLevel()));
+        if (!d.produces().isEmpty() && !d.produces().equals("none")) a.add("trains " + d.produces().replace('_', ' ').replace(";", ", "));
+        if (d.blastRadius() > 0) a.add("explodes when destroyed");
+        return String.join("  |  ", a);
+    }
+
+    /** The middle card: portrait and stats of what is selected (or inspected). */
+    void selectionCard(GuiGraphics g, Snapshot s, int x, int y, int w, int h) {
         Map<Short, Integer> counts = new LinkedHashMap<>();
         for (Snapshot.U u : s.units) if (selected.contains(u.id)) counts.merge(u.def, 1, Integer::sum);
-        int mm = h - 6; drawMinimap(g, s, 3, y + 3, mm);
-        int x = mm + 10, ty = y + 6;
-        if (!counts.isEmpty()) {
-            g.drawString(font, selected.size() + " selected", x, ty, TXT); ty += 11;
+        Snapshot.U one = null;
+        if (counts.size() == 1) for (Snapshot.U u : s.units) if (selected.contains(u.id)) { one = u; break; }
+        if (counts.isEmpty() && inspectUnit >= 0) for (Snapshot.U u : s.units) if (u.id == inspectUnit) { one = u; break; }
+        if (one != null) { unitPortrait(g, s, one, x, y, w, h, counts.isEmpty() ? 1 : selected.size()); return; }
+        if (counts.size() > 1) {   // mixed selection: a face per type with its count
+            int i = 0;
             for (var e : counts.entrySet()) {
-                if (ty > height - 12) break;
+                int cols = Math.max(1, w / (CELL + 2));
+                if (i >= cols * 3) break;
                 UnitDef d = UnitDef.ALL.get(e.getKey()); final short def = e.getKey();
-                String label = e.getValue() + "x " + name(d.id());
-                button(g, x, ty, Math.max(120, font.width(label) + 10), 11, label, unitTip(d) + "\nLeft: select only these.  Right: drop these.",
+                iconButton(g, x + (i % cols) * (CELL + 2), y + (i / cols) * (CELL + 2), CELL, null, def, unitTip(d) + "\nLeft: select only these.  Right: drop these.",
                         () -> { Snapshot c = ClientMatch.cur; if (c != null) selected.removeIf(id -> c.units.stream().anyMatch(u -> u.id == id && u.def != def)); },
                         () -> { Snapshot c = ClientMatch.cur; if (c != null) selected.removeIf(id -> c.units.stream().anyMatch(u -> u.id == id && u.def == def)); },
-                        false, true);
-                ty += 12;
+                        false, true, String.valueOf(e.getValue()));
+                i++;
             }
-            if (counts.size() == 1) {   // one kind selected: its full stat card
-                Snapshot.U one = null; for (Snapshot.U u : s.units) if (selected.contains(u.id)) { one = u; break; }
-                if (one != null) drawUnitCard(g, s, one, x, ty + 2, (buildMenu ? mm + 200 : width) - x - 8, selected.size() == 1);
-            }
-        } else if (inspectUnit >= 0) {
-            Snapshot.U o = null; for (Snapshot.U u : s.units) if (u.id == inspectUnit) { o = u; break; }
-            if (o != null) drawUnitCard(g, s, o, x, ty, width - x - 8, true); else inspectUnit = -1;
-        } else if (selectedBuilding >= 0) {
-            Snapshot.B b = s.buildings.stream().filter(q -> q.id == selectedBuilding).findFirst().orElse(null);
-            if (b != null) drawBuildingInfo(g, s, b, x, ty);
-        } else {
-            g.drawString(font, "Left-drag select, right-click order (right-drag = line formation). WASD/edges move the camera, F attack-move, X stop, B build.", x, ty, DIM);
-            g.drawString(font, "Ctrl+A army, I idle builder, Space last alert, Home commander, Ctrl+1-9 groups, H all hotkeys.", x, ty + 11, DIM);
+            return;
         }
-        int bx = mm + 200;
-        if (buildMenu && !selected.isEmpty()) drawBuildMenu(g, s, bx, y + 6);
-        if (selectedBuilding >= 0 && selected.isEmpty()) {
+        if (selectedBuilding >= 0) {
             Snapshot.B b = s.buildings.stream().filter(q -> q.id == selectedBuilding).findFirst().orElse(null);
-            if (b != null && b.team == s.myTeam) drawBuildingActions(g, s, b, bx, y + 6);
+            if (b != null) { buildingPortrait(g, s, b, x, y, w, h); return; }
         }
+        g.drawString(font, "Left-drag: select   Right-click: move / attack   Right-drag: line formation", x, y + 2, DIM);
+        g.drawString(font, "WASD / edges / middle-drag: camera   Wheel: zoom   Shift+wheel: tilt", x, y + 13, DIM);
+        g.drawString(font, "F attack-move   X stop   B build   I idle builder   Space last alert", x, y + 24, DIM);
+        g.drawString(font, "Click any unit or building - even the enemy's - to read its stats", x, y + 35, DIM);
+    }
+
+    void unitPortrait(GuiGraphics g, Snapshot s, Snapshot.U u, int x, int y, int w, int h, int count) {
+        UnitDef d = UnitDef.ALL.get(Math.max(0, u.def));
+        var st = dev.beyondtabs.engine.UnitStats.fallback(d); var wp = st.weapon();
+        var ab = dev.beyondtabs.engine.gen.AbilityDef.byId(d.ability());
+        boolean mine = u.team == s.myTeam, friend = !mine && ClientMatch.ally(u.team, s.myTeam);
+        int ps = h - 12;
+        g.fill(x - 1, y - 1, x + ps + 1, y + ps + 1, Look.teamArgb(u.team) | 0xFF000000);
+        face(g, Math.max(0, u.def), x, y, ps);
+        // health bar under the portrait
+        float hpFrac = Math.max(0, Math.min(1, u.hp));
+        g.fill(x, y + ps + 3, x + ps, y + ps + 8, 0xFF2A0E0E);
+        g.fill(x, y + ps + 3, x + (int) (ps * hpFrac), y + ps + 8, hpFrac > .5f ? 0xFF4CD05A : hpFrac > .25f ? 0xFFE0C040 : 0xFFE04848);
+        int tx = x + ps + 8;
+        int col = mine ? TXT : friend ? 0xFF9AE6A0 : s.myTeam < 0 ? (Look.teamArgb(u.team) | 0xFF000000) : 0xFFFF8A8A;
+        String title = (count > 1 ? count + "x " : "") + (mine || friend || s.myTeam < 0 ? "" : "Enemy ") + name(d.id());
+        g.drawString(font, title, tx, y, col);
+        g.drawString(font, d.role() + ", tier " + d.tier() + "   " + Math.round(st.hp() * hpFrac) + " / " + Math.round(st.hp()) + " HP", tx, y + 10, DIM);
+        // stat icons
+        int sy = y + 22, sx = tx;
+        sx = stat(g, sx, sy, Items_ICON.SWORD, String.valueOf(wp.damage() * Math.max(1, wp.count())), "Damage per attack" + (wp.count() > 1 ? " (" + wp.count() + " shots)" : ""));
+        sx = stat(g, sx, sy, Items_ICON.CLOCK, String.format("%.1fs", wp.cooldown()), "Time between attacks");
+        sx = stat(g, sx, sy, Items_ICON.BOW, String.format("%.0f", wp.range()), "Range (blocks)");
+        sx = stat(g, sx, sy, Items_ICON.FEATHER, String.format("x%.1f", st.speedMult()), "Speed");
+        if (wp.aoe() > 0) sx = stat(g, sx, sy, Items_ICON.TNT, String.format("%.1f", wp.aoe()), "Splash radius");
+        sx = stat(g, sx, sy, Items_ICON.HELMET, String.valueOf(d.supply()), "Supply used");
+        if (!ab.id().equals("none")) {
+            List<String> lines = wrap(ab.name() + ": " + ab.description(), w - (tx - x));
+            int ly = y + 42;
+            for (String l : lines) { if (ly > y + h - 8) break; g.drawString(font, l, tx, ly, 0xFFB8C4D0); ly += 9; }
+        }
+    }
+
+    /** One stat: item icon and value, with a tooltip. Returns the next x. */
+    int stat(GuiGraphics g, int x, int y, net.minecraft.world.item.ItemStack icon, String v, String tip) {
+        g.renderItem(icon, x, y);
+        g.drawString(font, v, x + 17, y + 5, TXT);
+        int w = 17 + font.width(v) + 6;
+        buttons.add(new Btn(x, y, w, 16, "", tip, null, null, false));
+        return x + w;
+    }
+
+    static final class Items_ICON {
+        static final net.minecraft.world.item.ItemStack SWORD = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_SWORD),
+                CLOCK = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CLOCK), BOW = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOW),
+                FEATHER = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FEATHER), TNT = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.TNT),
+                HELMET = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_HELMET), HEART = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GOLDEN_APPLE);
+    }
+
+    void buildingPortrait(GuiGraphics g, Snapshot s, Snapshot.B b, int x, int y, int w, int h) {
+        BuildingDef d = BuildingDef.ALL.get(b.def);
+        int ps = h - 12;
+        g.fill(x - 1, y - 1, x + ps + 1, y + ps + 1, Look.teamArgb(b.team) | 0xFF000000);
+        g.fill(x, y, x + ps, y + ps, 0xFF39424C);
+        g.pose().pushPose(); g.pose().translate(x + ps / 2f - 8 * ps / 18f, y + ps / 2f - 8 * ps / 18f, 0); g.pose().scale(ps / 18f, ps / 18f, 1);
+        g.renderItem(buildingIcon(d), 0, 0); g.pose().popPose();
+        g.fill(x, y + ps + 3, x + ps, y + ps + 8, 0xFF2A0E0E);
+        g.fill(x, y + ps + 3, x + (int) (ps * Math.max(0, Math.min(1, b.hp))), y + ps + 8, 0xFF4CD05A);
+        int tx = x + ps + 8;
+        boolean mine = b.team == s.myTeam;
+        g.drawString(font, (mine || s.myTeam < 0 ? "" : "Enemy ") + name(d.id()) + "  (level " + b.level + "/" + d.levels() + ")", tx, y, mine ? TXT : 0xFFFF8A8A);
+        g.drawString(font, Math.round(d.hp() * b.hp) + " / " + d.hp() + " HP   |   " + d.footprint() + "   |   " + d.metal() + " metal, " + d.energy() + " energy", tx, y + 10, DIM);
+        int ly = y + 22;
+        if (b.progress < 1) { progress(g, tx, ly, Math.min(160, w - (tx - x)), b.progress, (b.upgrading ? "Upgrading " : "Building ") + Math.round(b.progress * 100) + "%", 0xFFE0C040); ly += 13; }
+        if (b.producing >= 0) {
+            face(g, b.producing, tx, ly, 11);
+            progress(g, tx + 14, ly, Math.min(146, w - (tx - x) - 14), b.produceFrac, "Training " + name(UnitDef.ALL.get(b.producing).id()), 0xFF7CB8FF);
+            for (int q = 0; q < Math.min(8, b.queue.length); q++) face(g, b.queue[q], tx + 166 + q * 13, ly, 11);
+            ly += 13;
+        }
+        if (b.researching >= 0) { progress(g, tx, ly, Math.min(160, w - (tx - x)), b.researchFrac, "Researching " + name(TechDef.ALL.get(b.researching).id()), 0xFFB08CFF); ly += 13; }
+        for (String l : wrap(buildingAbout(d), w - (tx - x))) { if (ly > y + h - 8) break; g.drawString(font, l, tx, ly, 0xFFB8C4D0); ly += 9; }
+    }
+
+    void progress(GuiGraphics g, int x, int y, int w, float f, String label, int color) {
+        g.fill(x, y, x + w, y + 11, 0xFF20262C);
+        g.fill(x, y, x + (int) (w * Math.max(0, Math.min(1, f))), y + 11, (color & 0x00FFFFFF) | 0x99000000);
+        outline(g, x, y, w, 11, 0xFF0E1216);
+        g.drawString(font, label, x + 3, y + 2, TXT);
     }
 
     /** Minimap: [screenX, screenY, size, worldMinX, worldMinZ, worldSpan] of the last drawn minimap (north = up). */

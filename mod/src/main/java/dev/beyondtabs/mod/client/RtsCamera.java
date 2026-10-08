@@ -11,8 +11,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
  */
 public final class RtsCamera {
     public static boolean active;
-    public static float focusX, focusZ, dist = 32, yaw, pitch = 55;   // yaw/pitch in degrees, Minecraft convention
-    static float targetDist = 32, smoothX, smoothZ;
+    public static float focusX, focusZ, dist = 26, yaw, pitch = 58;   // yaw/pitch in degrees, Minecraft convention
+    static float targetDist = 26, smoothX, smoothZ;
     /** Player tilt on top of the zoom-based pitch (BAR: Alt+wheel / Alt+middle-drag). Negative = toward the horizon. */
     public static float tilt, targetTilt;
     static final float MIN_PITCH = 14, MAX_PITCH = 89;
@@ -43,7 +43,7 @@ public final class RtsCamera {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
         focusX = smoothX = (float) mc.player.getX(); focusZ = smoothZ = (float) mc.player.getZ();
-        yaw = mc.player.getYRot(); dist = targetDist = 32;
+        yaw = mc.player.getYRot(); dist = targetDist = 26;
         eye = new Marker(EntityType.MARKER, mc.level);
         update(1f);
         mc.setCameraEntity(eye);
@@ -96,7 +96,7 @@ public final class RtsCamera {
         smoothX += (focusX - smoothX) * pk; smoothZ += (focusZ - smoothZ) * pk;
         float t = (float) ((Math.log(dist) - Math.log(MIN_DIST)) / (Math.log(MAX_DIST) - Math.log(MIN_DIST)));
         tilt += (targetTilt - tilt) * zk;
-        float base = 50 + 34 * t * t;   // BAR: an angled view up close that turns to near top-down as you zoom out
+        float base = 56 + 30 * t * t;   // BAR: an angled view up close that turns to near top-down as you zoom out
         pitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, base + tilt));
         targetTilt = Math.max(MIN_PITCH - base, Math.min(MAX_PITCH - base, targetTilt));
         double[] p = eyePos();
