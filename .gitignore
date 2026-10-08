@@ -10,3 +10,7 @@ mod/.gradle/
 
 # our own original art ships with the mod (game assets stay excluded by the rule above)
 !mod/src/main/resources/assets/beyondtabs/**/*.png
+
+# Reign of Nether fork assets (textures, icons) and agent worktrees
+!bar/src/main/resources/**/*.png
+.claude/
