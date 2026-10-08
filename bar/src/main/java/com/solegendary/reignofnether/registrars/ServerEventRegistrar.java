@@ -71,5 +71,6 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(CustomButtonServerEvents.class);
         vanillaEventBus.register(ItemServerEvents.class);
         vanillaEventBus.register(TaskSchedulerServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxServerEvents.class);
     }
 }

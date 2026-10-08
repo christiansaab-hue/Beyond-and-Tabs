@@ -320,6 +320,8 @@ public class WardenUnit extends Warden implements Unit, AttackerUnit, RangeIndic
     public void doEntitySonicBoom(LivingEntity targetEntity, Vec3 startPos, float damageMult) {
         Vec3 targetPos = targetEntity.getEyePosition().subtract(startPos);
         Vec3 normTargetPos = targetPos.normalize();
+        com.solegendary.reignofnether.barfx.BarFx.shot(this.level(), startPos, targetEntity.getBoundingBox().getCenter(),
+                com.solegendary.reignofnether.barfx.BarFx.K_SONIC);
 
         this.playSound(SoundEvents.WARDEN_SONIC_BOOM, 3.0F, 1.0F);
         if (!this.level().isClientSide()) {
@@ -343,6 +345,8 @@ public class WardenUnit extends Warden implements Unit, AttackerUnit, RangeIndic
                 targetBuilding.centrePos.getZ() + 0.5f)
                 .subtract(startPos);
         Vec3 normTargetPos = targetPos.normalize();
+        com.solegendary.reignofnether.barfx.BarFx.shot(this.level(), startPos, startPos.add(targetPos),
+                com.solegendary.reignofnether.barfx.BarFx.K_SONIC);
 
         this.playSound(SoundEvents.WARDEN_SONIC_BOOM, 3.0F, 1.0F);
         if (!this.level().isClientSide()) {

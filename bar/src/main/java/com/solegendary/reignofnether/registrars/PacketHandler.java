@@ -451,5 +451,10 @@ public final class PacketHandler {
                 .decoder(UnitBatchSyncClientboundPacket::new)
                 .consumerMainThread(UnitBatchSyncClientboundPacket::handle)
                 .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.barfx.BarFxClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.barfx.BarFxClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.barfx.BarFxClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.barfx.BarFxClientboundPacket::handle)
+                .add();
     }
 }

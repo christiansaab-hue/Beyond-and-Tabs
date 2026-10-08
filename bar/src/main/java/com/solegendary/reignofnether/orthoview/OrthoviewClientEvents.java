@@ -975,6 +975,12 @@ public class OrthoviewClientEvents {
         float top = zoomFinal / 2;
         float bot = -zoomFinal / 2;
 
+        // BarFx camera shake: nudge the view a little on big nearby blasts
+        float shakeScale = Math.max(.5f, zoomFinal / 30f);
+        float shX = com.solegendary.reignofnether.barfx.BarFxClient.shakeX() * shakeScale;
+        float shY = com.solegendary.reignofnether.barfx.BarFxClient.shakeY() * shakeScale;
+        left += shX; rgt += shX; top += shY; bot += shY;
+
         Matrix4f m1 = new Matrix4f(2.0f / (rgt - left), 0, 0,
                 -(rgt + left) / (rgt - left), 0,
                 2.0f / (top - bot), 0,
