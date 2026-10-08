@@ -113,6 +113,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(PlayerChunksClientEvents.class);
         vanillaEventBus.register(CameraFadeClientEvents.class);
         vanillaEventBus.register(ItemClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxClientEvents.class);
 
         // to allow singleplayer integrated server to work
         vanillaEventBus.register(GameruleServerEvents.class);
@@ -142,5 +143,6 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(CustomButtonServerEvents.class);
         vanillaEventBus.register(ItemServerEvents.class);
         vanillaEventBus.register(TaskSchedulerServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.barfx.BarFxServerEvents.class);
     }
 }

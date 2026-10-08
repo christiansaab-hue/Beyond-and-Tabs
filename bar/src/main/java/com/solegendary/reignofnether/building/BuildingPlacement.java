@@ -642,6 +642,7 @@ public class BuildingPlacement {
         Collections.shuffle(placedBlocks);
         for (int i = 0; i < intAmount && i < placedBlocks.size(); i++) {
             BlockPos bp = placedBlocks.get(i).getBlockPos();
+            com.solegendary.reignofnether.barfx.BarFx.buildingPart(getLevel(), bp, getLevel().getBlockState(bp));
             if (!getLevel().getBlockState(bp).getFluidState().isEmpty()) {
                 getLevel().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
             } else {
@@ -684,6 +685,14 @@ public class BuildingPlacement {
     public void destroy(ServerLevel serverLevel) {
         this.forceChunk(false);
 
+        try {
+            com.solegendary.reignofnether.barfx.BarFx.collapse(serverLevel,
+                    new Vec3(centrePos.getX() + .5, minCorner.getY(), centrePos.getZ() + .5),
+                    Math.max(maxCorner.getX() - minCorner.getX(), maxCorner.getZ() - minCorner.getZ()) / 2f + .5f,
+                    maxCorner.getY() - minCorner.getY() + 1);
+        } catch (Exception ignored) { }
+        com.solegendary.reignofnether.barfx.BarFx.muteExplosions(true);
+        try {
         this.blocks.forEach((BuildingBlock block) -> {
             if ((!block.getBlockState().getFluidState().isEmpty() ||
                  (block.getBlockState().hasProperty(BlockStateProperties.WATERLOGGED) &&
@@ -702,6 +711,9 @@ public class BuildingPlacement {
             if (!block.getBlockState().isAir())
                 serverLevel.destroyBlock(block.getBlockPos(), false);
         });
+        } finally {
+            com.solegendary.reignofnether.barfx.BarFx.muteExplosions(false);
+        }
 
         this.scaffoldBlocks.forEach((BuildingBlock block) -> {
             if (serverLevel.getBlockState(block.getBlockPos()).getBlock() == Blocks.SCAFFOLDING) {

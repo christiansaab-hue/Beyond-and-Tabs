@@ -115,6 +115,18 @@ public class MeleeAttackBuildingGoal extends MoveToTargetBlockGoal {
         AttackerUnit unit = (AttackerUnit) mob;
         ticksToNextBlockBreak = (int) unit.getAttackCooldown();
         double dmg = unit.getUnitAttackDamage() * buildingTarget.getMeleeDamageMult() * unit.getBuildingDamageMultiplier();
+        try {
+            net.minecraft.world.phys.Vec3 from = this.mob.getBoundingBox().getCenter();
+            net.minecraft.world.phys.Vec3 toCentre = net.minecraft.world.phys.Vec3.atCenterOf(buildingTarget.centrePos).subtract(from);
+            net.minecraft.world.phys.Vec3 flat = new net.minecraft.world.phys.Vec3(toCentre.x, 0, toCentre.z);
+            if (flat.lengthSqr() > 1e-4) {
+                net.minecraft.world.phys.Vec3 hitPos = from.add(flat.normalize().scale(this.mob.getBbWidth() * .5 + .7));
+                boolean heavy = this.mob.getBbWidth() * this.mob.getBbHeight() > 2.5f;
+                com.solegendary.reignofnether.barfx.BarFx.impact(this.mob.level(), hitPos, flat,
+                        heavy ? com.solegendary.reignofnether.barfx.BarFx.K_HEAVY_MELEE : com.solegendary.reignofnether.barfx.BarFx.K_MELEE,
+                        com.solegendary.reignofnether.barfx.BarFx.AT_BUILDING, 1);
+            }
+        } catch (Exception ignored) { }
         buildingTarget.destroyRandomBlocks(dmg);
         buildingTarget.lastAttacker = this.mob;
 
