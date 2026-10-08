@@ -47,6 +47,9 @@ public final class MatchRenderer {
     static final int SHADOW = 0x000000;
     static final MultiBufferSource.BufferSource SOLID_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 20));
     static final MultiBufferSource.BufferSource TRANS_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 18));
+    /** Blocky skinned units (vanilla entity render type, world-lit). */
+    static final MultiBufferSource.BufferSource ENTITY_SRC = MultiBufferSource.immediate(new BufferBuilder(1 << 19));
+    static Matrix4f POSE; static org.joml.Matrix3f NORMAL;
     static final float INK_BUILDING = .035f;
 
     record Ruin(short def, int level, int team, float x, float z, long at, int id) { }
@@ -90,6 +93,7 @@ public final class MatchRenderer {
         MultiBufferSource.BufferSource buf = mc.renderBuffers().bufferSource();
         VertexConsumer vc = SOLID_SRC.getBuffer(BTRender.SOLID);
         Mesh m = M.to(vc, pose); m.vt = TRANS_SRC.getBuffer(BTRender.TRANSLUCENT);
+        POSE = pose; NORMAL = ps.last().normal();
         float camX = (float) cam.x, camY = (float) cam.y, camZ = (float) cam.z;
 
         if (models) for (Snapshot.B b : s.buildings) {   // animated parts + soft shadows of all buildings
@@ -114,6 +118,7 @@ public final class MatchRenderer {
         if (RtsCamera.active && RtsScreen.placing != null && RtsScreen.ghost != null) placementPreview(m, s, t, ghosts);
         for (Runnable g : ghosts) g.run();
         SOLID_SRC.endBatch();
+        ENTITY_SRC.endBatch();
         TRANS_SRC.endBatch();
 
         // 3) thin overlay lines
@@ -385,7 +390,12 @@ public final class MatchRenderer {
             m.frame(xz[0] + (fly ? 0 : sox), gy, xz[1] + (fly ? 0 : soz), 0, 1);
             m.disc(0, .06f, 0, fly ? sr * .8f : sr, 10, SHADOW);
             m.reset(); m.ground(gy, .5f * k, .18f); m.ow = c.near ? .022f * k : mid ? .035f : 0;
-            if (pts.length / 3 == Rig.HUMANOID_PARTICLES) UnitModels.humanoid(m, c);
+            if (pts.length / 3 == Rig.HUMANOID_PARTICLES) {   // Minecraft-style blocky soldier with its own pixel skin
+                Minecraft mcI = Minecraft.getInstance();
+                int light = mcI.level == null ? 0xF000F0 : net.minecraft.client.renderer.LevelRenderer.getLightColor(mcI.level, net.minecraft.core.BlockPos.containing(xz[0], gy + 1.2, xz[1]));
+                float[] arms = BlockyUnits.humanoid(ENTITY_SRC.getBuffer(BlockyUnits.TYPE), POSE, NORMAL, c, Math.max(0, u.def), light, !u.alive);
+                float[] keep = c.p; int sides = c.sides; c.p = arms; c.sides = 4; Weapons.draw(m, c); c.p = keep; c.sides = sides;   // square-section weapons to match
+            }
             else UnitModels.hull(m, c, gy, u.yaw, u.walkPhase, u.walkAmount);
             if (u.knocked && u.alive && c.near) {   // dizzy stars
                 float hx = pts.length / 3 == Rig.HUMANOID_PARTICLES ? pts[Rig.HEAD * 3] : xz[0], hz = pts.length / 3 == Rig.HUMANOID_PARTICLES ? pts[Rig.HEAD * 3 + 2] : xz[1];
