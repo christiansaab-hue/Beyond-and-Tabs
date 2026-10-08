@@ -1,6 +1,6 @@
 {
  "sheet": "units",
- "notes": "Our RTS layer for each real TABS unit. tabs_key identifies the TABS unit (its name key); the unit's body, health, mass, speed, size and weapon are read from the player's own TABS install at runtime and never stored here. weapon_class and the bodies sheet give neutral fallback values used only by the engine benches.",
+ "notes": "Our RTS layer for each real TABS unit. tabs_key identifies the TABS unit (its name key); the unit's body, health, mass, speed, size and weapon are read from the player's own TABS install at runtime and never stored here. weapon_class and the bodies sheet give neutral fallback values used only by the engine benches. tune: balance multiplier on health and damage (fallback stats), set by tools/BalanceTune equal-cost duels so every combat unit averages even against its tier.",
  "columns": [
   "id",
   "name",
@@ -20,6 +20,7 @@
   "scale",
   "icon",
   "ability",
+  "tune",
   "unverified"
  ],
  "rows": [
@@ -34,15 +35,16 @@
    "body": "humanoid",
    "scale": 1.0,
    "unverified": [],
-   "metal": 200,
-   "energy": 1600,
-   "build_work": 100.0,
-   "supply": 2,
+   "metal": 750,
+   "energy": 6000,
+   "build_work": 375.0,
+   "supply": 4,
    "physics_profile": "humanoid",
    "icon": "commander_t0",
-   "base_cost": 400,
+   "base_cost": 1500,
    "ability": "rally",
-   "name": "Warchief"
+   "name": "Warchief",
+   "tune": 1.0
   },
   {
    "id": "aw_builder_t1",
@@ -63,7 +65,8 @@
    "icon": "builder_t1",
    "base_cost": 60,
    "ability": "none",
-   "name": "Clan Laborer"
+   "name": "Clan Laborer",
+   "tune": 1.0
   },
   {
    "id": "aw_builder_t2",
@@ -84,7 +87,8 @@
    "icon": "builder_t2",
    "base_cost": 300,
    "ability": "none",
-   "name": "Hauler"
+   "name": "Hauler",
+   "tune": 1.0
   },
   {
    "id": "aw_clubber",
@@ -99,13 +103,14 @@
    "unverified": [],
    "metal": 30,
    "energy": 240,
-   "build_work": 17.5,
+   "build_work": 15.0,
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 56,
    "ability": "none",
-   "name": "Bonecrusher"
+   "name": "Bonecrusher",
+   "tune": 1.426
   },
   {
    "id": "aw_protector",
@@ -126,7 +131,8 @@
    "icon": "inf_t1",
    "base_cost": 80,
    "ability": "shield_block",
-   "name": "Hide Shield"
+   "name": "Hide Shield",
+   "tune": 1.244
   },
   {
    "id": "aw_spear_thrower",
@@ -147,7 +153,8 @@
    "icon": "ranged_t1",
    "base_cost": 120,
    "ability": "none",
-   "name": "Javelineer"
+   "name": "Javelineer",
+   "tune": 0.964
   },
   {
    "id": "aw_headbutter",
@@ -168,7 +175,8 @@
    "icon": "inf_t1",
    "base_cost": 90,
    "ability": "headbutt",
-   "name": "Skullbasher"
+   "name": "Skullbasher",
+   "tune": 1.07
   },
   {
    "id": "aw_hoplite",
@@ -189,7 +197,8 @@
    "icon": "inf_t1",
    "base_cost": 180,
    "ability": "shield_block",
-   "name": "Bronze Hoplite"
+   "name": "Bronze Hoplite",
+   "tune": 1.342
   },
   {
    "id": "aw_stoner",
@@ -210,7 +219,8 @@
    "icon": "ranged_t2",
    "base_cost": 160,
    "ability": "none",
-   "name": "Boulder Hurler"
+   "name": "Boulder Hurler",
+   "tune": 0.601
   },
   {
    "id": "aw_bone_mage",
@@ -225,13 +235,14 @@
    "unverified": [],
    "metal": 340,
    "energy": 2720,
-   "build_work": 75.0,
+   "build_work": 170.0,
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "support_t2",
    "base_cost": 675,
    "ability": "none",
-   "name": "Bone Shaman"
+   "name": "Bone Shaman",
+   "tune": 0.878
   },
   {
    "id": "aw_brawler",
@@ -252,7 +263,8 @@
    "icon": "inf_t2",
    "base_cost": 140,
    "ability": "dodge",
-   "name": "Pit Brawler"
+   "name": "Pit Brawler",
+   "tune": 1.281
   },
   {
    "id": "aw_ice_archer",
@@ -273,7 +285,8 @@
    "icon": "ranged_t2",
    "base_cost": 160,
    "ability": "frost",
-   "name": "Frostbow"
+   "name": "Frostbow",
+   "tune": 0.407
   },
   {
    "id": "aw_berserker",
@@ -294,7 +307,8 @@
    "icon": "inf_t2",
    "base_cost": 250,
    "ability": "whirlwind",
-   "name": "Berserker"
+   "name": "Berserker",
+   "tune": 1.326
   },
   {
    "id": "aw_shield_bearer",
@@ -309,13 +323,14 @@
    "unverified": [],
    "metal": 40,
    "energy": 320,
-   "build_work": 30.0,
+   "build_work": 20.0,
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t2",
    "base_cost": 84,
    "ability": "shield_bash",
-   "name": "Legion Shield"
+   "name": "Legion Shield",
+   "tune": 0.795
   },
   {
    "id": "aw_sarissa",
@@ -336,7 +351,8 @@
    "icon": "inf_t2",
    "base_cost": 200,
    "ability": "brace",
-   "name": "Phalangite"
+   "name": "Phalangite",
+   "tune": 1.415
   },
   {
    "id": "aw_snake_archer",
@@ -357,7 +373,8 @@
    "icon": "ranged_t2",
    "base_cost": 180,
    "ability": "poison",
-   "name": "Viper Archer"
+   "name": "Viper Archer",
+   "tune": 0.574
   },
   {
    "id": "aw_valkyrie",
@@ -378,7 +395,8 @@
    "icon": "hero_t3",
    "base_cost": 500,
    "ability": "leap",
-   "name": "Valkyrie"
+   "name": "Valkyrie",
+   "tune": 1.683
   },
   {
    "id": "aw_jarl",
@@ -393,13 +411,14 @@
    "unverified": [],
    "metal": 300,
    "energy": 2400,
-   "build_work": 212.5,
+   "build_work": 150.0,
    "supply": 2,
    "physics_profile": "humanoid",
    "icon": "hero_t3",
    "base_cost": 595,
    "ability": "war_cry",
-   "name": "Jarl"
+   "name": "Jarl",
+   "tune": 2.189
   },
   {
    "id": "aw_minotaur",
@@ -414,13 +433,14 @@
    "unverified": [],
    "metal": 350,
    "energy": 2800,
-   "build_work": 250.0,
+   "build_work": 175.0,
    "supply": 4,
    "physics_profile": "large",
    "icon": "hero_t3",
    "base_cost": 700,
    "ability": "charge",
-   "name": "Minotaur"
+   "name": "Minotaur",
+   "tune": 1.778
   },
   {
    "id": "aw_mammoth",
@@ -441,7 +461,8 @@
    "icon": "cavalry_t3",
    "base_cost": 2200,
    "ability": "trample",
-   "name": "War Mammoth"
+   "name": "War Mammoth",
+   "tune": 2.069
   },
   {
    "id": "aw_ballista",
@@ -456,13 +477,14 @@
    "unverified": [],
    "metal": 200,
    "energy": 1600,
-   "build_work": 225.0,
+   "build_work": 100.0,
    "supply": 2,
    "physics_profile": "siege",
    "icon": "siege_t3",
    "base_cost": 405,
    "ability": "pierce",
-   "name": "Ballista"
+   "name": "Ballista",
+   "tune": 1.887
   },
   {
    "id": "aw_longship",
@@ -483,7 +505,8 @@
    "icon": "siege_t3",
    "base_cost": 1000,
    "ability": "none",
-   "name": "Raider Longship"
+   "name": "Raider Longship",
+   "tune": 1.887
   },
   {
    "id": "aw_zeus",
@@ -504,7 +527,8 @@
    "icon": "hero_t3",
    "base_cost": 2000,
    "ability": "chain_lightning",
-   "name": "Thunder Titan"
+   "name": "Thunder Titan",
+   "tune": 1.656
   },
   {
    "id": "kd_commander",
@@ -525,7 +549,8 @@
    "icon": "commander_t0",
    "base_cost": 1500,
    "ability": "rally",
-   "name": "High King"
+   "name": "High King",
+   "tune": 1.0
   },
   {
    "id": "kd_builder_t1",
@@ -546,7 +571,8 @@
    "icon": "builder_t1",
    "base_cost": 60,
    "ability": "none",
-   "name": "Mason"
+   "name": "Mason",
+   "tune": 1.0
   },
   {
    "id": "kd_builder_t2",
@@ -567,7 +593,8 @@
    "icon": "builder_t2",
    "base_cost": 300,
    "ability": "none",
-   "name": "Hay Wagon"
+   "name": "Hay Wagon",
+   "tune": 1.0
   },
   {
    "id": "kd_bard",
@@ -588,7 +615,8 @@
    "icon": "support_t1",
    "base_cost": 60,
    "ability": "inspire",
-   "name": "War Bard"
+   "name": "War Bard",
+   "tune": 0.845
   },
   {
    "id": "kd_squire",
@@ -609,7 +637,8 @@
    "icon": "inf_t1",
    "base_cost": 100,
    "ability": "shield_block",
-   "name": "Squire"
+   "name": "Squire",
+   "tune": 0.891
   },
   {
    "id": "kd_archer",
@@ -624,13 +653,14 @@
    "unverified": [],
    "metal": 125,
    "energy": 1000,
-   "build_work": 35.0,
+   "build_work": 62.5,
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "ranged_t1",
    "base_cost": 252,
    "ability": "volley",
-   "name": "Longbowman"
+   "name": "Longbowman",
+   "tune": 0.697
   },
   {
    "id": "kd_fencer",
@@ -651,7 +681,8 @@
    "icon": "inf_t1",
    "base_cost": 150,
    "ability": "riposte",
-   "name": "Duelist"
+   "name": "Duelist",
+   "tune": 0.938
   },
   {
    "id": "kd_painter",
@@ -666,13 +697,14 @@
    "unverified": [],
    "metal": 15,
    "energy": 120,
-   "build_work": 12.5,
+   "build_work": 7.5,
    "supply": 1,
    "physics_profile": "humanoid",
    "icon": "inf_t1",
    "base_cost": 30,
    "ability": "none",
-   "name": "Mad Painter"
+   "name": "Mad Painter",
+   "tune": 0.742
   },
   {
    "id": "kd_healer",
@@ -693,7 +725,8 @@
    "icon": "support_t2",
    "base_cost": 180,
    "ability": "heal_pulse",
-   "name": "Cleric"
+   "name": "Cleric",
+   "tune": 0.906
   },
   {
    "id": "kd_samurai",
@@ -714,7 +747,8 @@
    "icon": "inf_t2",
    "base_cost": 500,
    "ability": "cleave",
-   "name": "Samurai"
+   "name": "Samurai",
+   "tune": 1.276
   },
   {
    "id": "kd_monk",
@@ -735,7 +769,8 @@
    "icon": "support_t2",
    "base_cost": 250,
    "ability": "push_wave",
-   "name": "Iron Monk"
+   "name": "Iron Monk",
+   "tune": 0.906
   },
   {
    "id": "kd_ninja",
@@ -756,7 +791,8 @@
    "icon": "inf_t2",
    "base_cost": 500,
    "ability": "shadowstep",
-   "name": "Shadow Ninja"
+   "name": "Shadow Ninja",
+   "tune": 0.834
   },
   {
    "id": "kd_halberd",
@@ -777,7 +813,8 @@
    "icon": "inf_t2",
    "base_cost": 400,
    "ability": "brace",
-   "name": "Halberdier"
+   "name": "Halberdier",
+   "tune": 1.722
   },
   {
    "id": "kd_musketeer",
@@ -798,7 +835,8 @@
    "icon": "ranged_t2",
    "base_cost": 300,
    "ability": "none",
-   "name": "Musketeer"
+   "name": "Musketeer",
+   "tune": 0.894
   },
   {
    "id": "kd_balloon_archer",
@@ -813,13 +851,14 @@
    "unverified": [],
    "metal": 80,
    "energy": 640,
-   "build_work": 62.5,
+   "build_work": 40.0,
    "supply": 1,
    "physics_profile": "flyer",
    "icon": "ranged_t2",
    "base_cost": 162,
    "ability": "none",
-   "name": "Balloon Archer"
+   "name": "Balloon Archer",
+   "tune": 0.799
   },
   {
    "id": "kd_knight",
@@ -840,7 +879,8 @@
    "icon": "hero_t3",
    "base_cost": 650,
    "ability": "cleave",
-   "name": "Crown Knight"
+   "name": "Crown Knight",
+   "tune": 0.676
   },
   {
    "id": "kd_jouster",
@@ -855,13 +895,14 @@
    "unverified": [],
    "metal": 225,
    "energy": 1800,
-   "build_work": 187.5,
+   "build_work": 112.5,
    "supply": 2,
    "physics_profile": "mounted",
    "icon": "cavalry_t3",
    "base_cost": 450,
    "ability": "charge",
-   "name": "Lancer"
+   "name": "Lancer",
+   "tune": 0.313
   },
   {
    "id": "kd_firework_archer",
@@ -876,13 +917,14 @@
    "unverified": [],
    "metal": 1350,
    "energy": 10800,
-   "build_work": 375.0,
+   "build_work": 675.0,
    "supply": 4,
    "physics_profile": "humanoid",
    "icon": "ranged_t3",
    "base_cost": 2700,
    "ability": "volley",
-   "name": "Firelance Archer"
+   "name": "Firelance Archer",
+   "tune": 0.971
   },
   {
    "id": "kd_monkey_king",
@@ -897,13 +939,14 @@
    "unverified": [],
    "metal": 700,
    "energy": 5600,
-   "build_work": 500.0,
+   "build_work": 350.0,
    "supply": 4,
    "physics_profile": "humanoid",
    "icon": "hero_t3",
    "base_cost": 1400,
    "ability": "leap",
-   "name": "Monkey King"
+   "name": "Monkey King",
+   "tune": 0.74
   },
   {
    "id": "kd_catapult",
@@ -918,13 +961,14 @@
    "unverified": [],
    "metal": 375,
    "energy": 3000,
-   "build_work": 250.0,
+   "build_work": 187.5,
    "supply": 4,
    "physics_profile": "siege",
    "icon": "siege_t3",
    "base_cost": 750,
    "ability": "none",
-   "name": "Catapult"
+   "name": "Catapult",
+   "tune": 0.589
   },
   {
    "id": "kd_hwacha",
@@ -939,13 +983,14 @@
    "unverified": [],
    "metal": 560,
    "energy": 4480,
-   "build_work": 375.0,
+   "build_work": 280.0,
    "supply": 4,
    "physics_profile": "siege",
    "icon": "siege_t3",
    "base_cost": 1125,
    "ability": "none",
-   "name": "Hwacha"
+   "name": "Hwacha",
+   "tune": 0.589
   },
   {
    "id": "kd_davinci_tank",
@@ -966,7 +1011,8 @@
    "icon": "siege_t3",
    "base_cost": 4000,
    "ability": "none",
-   "name": "Clockwork Tank"
+   "name": "Clockwork Tank",
+   "tune": 0.589
   },
   {
    "id": "kd_dragon",
@@ -981,13 +1027,388 @@
    "unverified": [],
    "metal": 780,
    "energy": 6240,
-   "build_work": 750.0,
+   "build_work": 390.0,
    "supply": 4,
    "physics_profile": "flyer_large",
    "icon": "hero_t3",
    "base_cost": 1560,
    "ability": "burn",
-   "name": "Imperial Dragon"
+   "name": "Imperial Dragon",
+   "tune": 0.313
+  },
+  {
+   "id": "sf_commander",
+   "name": "Star Marshal",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_MARSHAL",
+   "tier": 0,
+   "role": "commander",
+   "factory": "none",
+   "base_cost": 1500,
+   "metal": 750,
+   "energy": 6000,
+   "build_work": 375.0,
+   "supply": 4,
+   "weapon_class": "melee_heavy",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.1,
+   "icon": "commander_t0",
+   "ability": "rally",
+   "unverified": [],
+   "tune": 1.0
+  },
+  {
+   "id": "sf_builder_t1",
+   "name": "Engineer",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_ENGINEER",
+   "tier": 1,
+   "role": "builder",
+   "factory": "sf_barracks",
+   "base_cost": 60,
+   "metal": 30,
+   "energy": 240,
+   "build_work": 15.0,
+   "supply": 1,
+   "weapon_class": "melee_light",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.0,
+   "icon": "builder_t1",
+   "ability": "none",
+   "unverified": [],
+   "tune": 1.0
+  },
+  {
+   "id": "sf_builder_t2",
+   "name": "Constructor Rover",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_ROVER",
+   "tier": 2,
+   "role": "builder",
+   "factory": "sf_mech_bay",
+   "base_cost": 300,
+   "metal": 150,
+   "energy": 1200,
+   "build_work": 75.0,
+   "supply": 2,
+   "weapon_class": "melee_light",
+   "body": "vehicle",
+   "physics_profile": "vehicle",
+   "scale": 1.0,
+   "icon": "builder_t2",
+   "ability": "none",
+   "unverified": [],
+   "tune": 1.0
+  },
+  {
+   "id": "sf_trooper",
+   "name": "Rifle Trooper",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_TROOPER",
+   "tier": 1,
+   "role": "ranged",
+   "factory": "sf_barracks",
+   "base_cost": 120,
+   "metal": 60,
+   "energy": 480,
+   "build_work": 30.0,
+   "supply": 1,
+   "weapon_class": "laser_rifle",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.0,
+   "icon": "ranged_t1",
+   "ability": "none",
+   "unverified": [],
+   "tune": 1.27
+  },
+  {
+   "id": "sf_guard",
+   "name": "Riot Guard",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_GUARD",
+   "tier": 1,
+   "role": "inf",
+   "factory": "sf_barracks",
+   "base_cost": 100,
+   "metal": 50,
+   "energy": 400,
+   "build_work": 25.0,
+   "supply": 1,
+   "weapon_class": "melee_shield",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.0,
+   "icon": "inf_t1",
+   "ability": "shield_block",
+   "unverified": [],
+   "tune": 1.019
+  },
+  {
+   "id": "sf_blade",
+   "name": "Arc Blade",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_BLADE",
+   "tier": 1,
+   "role": "inf",
+   "factory": "sf_barracks",
+   "base_cost": 150,
+   "metal": 75,
+   "energy": 600,
+   "build_work": 37.5,
+   "supply": 1,
+   "weapon_class": "energy_blade",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.0,
+   "icon": "inf_t1",
+   "ability": "dodge",
+   "unverified": [],
+   "tune": 0.927
+  },
+  {
+   "id": "sf_medic",
+   "name": "Field Medic",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_MEDIC",
+   "tier": 2,
+   "role": "support",
+   "factory": "sf_mech_bay",
+   "base_cost": 180,
+   "metal": 90,
+   "energy": 720,
+   "build_work": 45.0,
+   "supply": 1,
+   "weapon_class": "heal",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.0,
+   "icon": "support_t2",
+   "ability": "heal_pulse",
+   "unverified": [],
+   "tune": 1.258
+  },
+  {
+   "id": "sf_pulse",
+   "name": "Pulse Warden",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_PULSE",
+   "tier": 2,
+   "role": "support",
+   "factory": "sf_mech_bay",
+   "base_cost": 250,
+   "metal": 125,
+   "energy": 1000,
+   "build_work": 62.5,
+   "supply": 1,
+   "weapon_class": "melee_push",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.0,
+   "icon": "support_t2",
+   "ability": "push_wave",
+   "unverified": [],
+   "tune": 1.258
+  },
+  {
+   "id": "sf_sniper",
+   "name": "Rail Sniper",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_SNIPER",
+   "tier": 2,
+   "role": "ranged",
+   "factory": "sf_mech_bay",
+   "base_cost": 400,
+   "metal": 200,
+   "energy": 1600,
+   "build_work": 100.0,
+   "supply": 2,
+   "weapon_class": "rail",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.0,
+   "icon": "ranged_t2",
+   "ability": "pierce",
+   "unverified": [],
+   "tune": 0.745
+  },
+  {
+   "id": "sf_rocketeer",
+   "name": "Rocket Trooper",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_ROCKET",
+   "tier": 2,
+   "role": "ranged",
+   "factory": "sf_mech_bay",
+   "base_cost": 600,
+   "metal": 300,
+   "energy": 2400,
+   "build_work": 150.0,
+   "supply": 2,
+   "weapon_class": "missile_pod",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.0,
+   "icon": "ranged_t2",
+   "ability": "volley",
+   "unverified": [],
+   "tune": 0.667
+  },
+  {
+   "id": "sf_gunship",
+   "name": "Gunship Drone",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_GUNSHIP",
+   "tier": 2,
+   "role": "ranged",
+   "factory": "sf_mech_bay",
+   "base_cost": 220,
+   "metal": 110,
+   "energy": 880,
+   "build_work": 55.0,
+   "supply": 1,
+   "weapon_class": "laser_rifle",
+   "body": "flyer",
+   "physics_profile": "flyer",
+   "scale": 1.0,
+   "icon": "ranged_t2",
+   "ability": "none",
+   "unverified": [],
+   "tune": 3.123
+  },
+  {
+   "id": "sf_strider",
+   "name": "Strider Mech",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_STRIDER",
+   "tier": 3,
+   "role": "hero",
+   "factory": "sf_titan_foundry",
+   "base_cost": 900,
+   "metal": 450,
+   "energy": 3600,
+   "build_work": 225.0,
+   "supply": 2,
+   "weapon_class": "plasma",
+   "body": "large",
+   "physics_profile": "large",
+   "scale": 1.6,
+   "icon": "hero_t3",
+   "ability": "shield_bash",
+   "unverified": [],
+   "tune": 1.181
+  },
+  {
+   "id": "sf_hover_lancer",
+   "name": "Hover Lancer",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_HOVERLANCE",
+   "tier": 3,
+   "role": "cavalry",
+   "factory": "sf_titan_foundry",
+   "base_cost": 450,
+   "metal": 225,
+   "energy": 1800,
+   "build_work": 112.5,
+   "supply": 2,
+   "weapon_class": "lance_charge",
+   "body": "mounted",
+   "physics_profile": "mounted",
+   "scale": 1.0,
+   "icon": "cavalry_t3",
+   "ability": "charge",
+   "unverified": [],
+   "tune": 0.477
+  },
+  {
+   "id": "sf_arc_projector",
+   "name": "Arc Projector",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_ARC",
+   "tier": 3,
+   "role": "ranged",
+   "factory": "sf_titan_foundry",
+   "base_cost": 1100,
+   "metal": 550,
+   "energy": 4400,
+   "build_work": 275.0,
+   "supply": 4,
+   "weapon_class": "magic_lightning",
+   "body": "humanoid",
+   "physics_profile": "humanoid",
+   "scale": 1.1,
+   "icon": "ranged_t3",
+   "ability": "chain_lightning",
+   "unverified": [],
+   "tune": 0.812
+  },
+  {
+   "id": "sf_titan",
+   "name": "Titan Warframe",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_TITAN",
+   "tier": 3,
+   "role": "hero",
+   "factory": "sf_titan_foundry",
+   "base_cost": 2200,
+   "metal": 1100,
+   "energy": 8800,
+   "build_work": 550.0,
+   "supply": 4,
+   "weapon_class": "energy_blade",
+   "body": "large",
+   "physics_profile": "large",
+   "scale": 2.2,
+   "icon": "hero_t3",
+   "ability": "cleave",
+   "unverified": [],
+   "tune": 1.585
+  },
+  {
+   "id": "sf_plasma_tank",
+   "name": "Plasma Tank",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_TANK",
+   "tier": 3,
+   "role": "siege",
+   "factory": "sf_artillery_foundry",
+   "base_cost": 1600,
+   "metal": 800,
+   "energy": 6400,
+   "build_work": 400.0,
+   "supply": 4,
+   "weapon_class": "plasma_cannon",
+   "body": "vehicle_large",
+   "physics_profile": "vehicle_large",
+   "scale": 1.6,
+   "icon": "siege_t3",
+   "ability": "none",
+   "unverified": [],
+   "tune": 0.899
+  },
+  {
+   "id": "sf_ion_artillery",
+   "name": "Ion Artillery",
+   "race": "starforge",
+   "tabs_key": "SF_STARFORGE_ARTILLERY",
+   "tier": 3,
+   "role": "siege",
+   "factory": "sf_artillery_foundry",
+   "base_cost": 900,
+   "metal": 450,
+   "energy": 3600,
+   "build_work": 225.0,
+   "supply": 2,
+   "weapon_class": "ion_mortar",
+   "body": "siege",
+   "physics_profile": "siege",
+   "scale": 1.0,
+   "icon": "siege_t3",
+   "ability": "none",
+   "unverified": [],
+   "tune": 0.899
   }
  ]
 }

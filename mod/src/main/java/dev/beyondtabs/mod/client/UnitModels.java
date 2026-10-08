@@ -99,6 +99,7 @@ final class UnitModels {
             }
         }
         headgear(m, c, ex, ey, ez, hr, commander);
+        if ("STARFORGE".equals(c.faction)) armour(m, c, k);
         Weapons.draw(m, c);
     }
 
@@ -123,6 +124,7 @@ final class UnitModels {
     static void headgear(Mesh m, Ctx c, float x, float y, float z, float r, boolean commander) {
         String f = c.faction, key = c.key;
         int sd = Math.max(6, c.sides);
+        if ("STARFORGE".equals(f)) { sciHelmet(m, c, x, y, z, r, commander); return; }
         if (commander) {   // crown: gold band with points
             m.prismW(x, y + r * .55f, z, x, y + r * .85f, z, r * .62f, r * .66f, 8, Look.GOLD);
             if (c.near) for (int i = 0; i < 5; i++) {
@@ -181,6 +183,107 @@ final class UnitModels {
         }
     }
 
+    /** Starforge helmet: a rounded shell, a glowing visor band, a crest for officers, an antenna for walkers. */
+    static void sciHelmet(Mesh m, Ctx c, float x, float y, float z, float r, boolean commander) {
+        boolean mech = "large".equals(c.d.body());
+        int shell = mech ? 0xC9CED6 : 0xE8EBEF, visor = commander ? 0xFFC86A : 0x6FE3FF;
+        m.ballW(x, y + r * .05f, z, r * 1.08f, r * 1.04f, r * 1.08f, c.headSl, c.headSt, shell, c.fz, c.fx);
+        float vx = x + c.fx * r * .78f, vz = z + c.fz * r * .78f;
+        boolean g = m.glow; m.glow = true;
+        m.prismW(vx - c.rx * r * .62f, y + r * .12f, vz - c.rz * r * .62f, vx + c.rx * r * .62f, y + r * .12f, vz + c.rz * r * .62f, r * .2f, r * .2f, 4, visor, c.fx, 0, c.fz, .45f);
+        m.glow = g;
+        if (commander) m.prismW(x - c.fx * r * .8f, y + r * 1.05f, z - c.fz * r * .8f, x + c.fx * r * .5f, y + r * 1.1f, z + c.fz * r * .5f, r * .2f, r * .12f, 4, Look.GOLD, 0, 1, 0, .25f);
+        if (c.near) m.prismW(x - c.rx * r * .8f, y + r * .4f, z - c.rz * r * .8f, x - c.rx * r * .9f, y + r * (mech ? 1.9f : 1.4f), z - c.rz * r * .9f, r * .05f, r * .03f, 4, Look.IRON_DARK);
+        if (c.near) { m.glow = true; m.ballW(x - c.rx * r * .9f, y + r * (mech ? 1.95f : 1.45f), z - c.rz * r * .9f, r * .07f, r * .07f, r * .07f, 5, 3, 0xFF5050, 1, 0); m.glow = g; }
+    }
+
+    /** Starforge plating: chest plate with a team stripe, shoulder pads and knee guards (heavier on walkers). */
+    static void armour(Mesh m, Ctx c, float k) {
+        boolean mech = "large".equals(c.d.body());
+        int plate = mech ? 0xC9CED6 : 0xEDEFF2;
+        float tx = c.x(Rig.TORSO), ty = c.y(Rig.TORSO), tz = c.z(Rig.TORSO);
+        float px = tx + c.fx * .3f * k, pz = tz + c.fz * .3f * k;
+        m.prismW(px - c.fx * .06f * k, ty + .12f * k, pz - c.fz * .06f * k, px + c.fx * .05f * k, ty + .12f * k, pz + c.fz * .05f * k, .3f * k, .26f * k, 6, plate, c.rx, 0, c.rz, 1.1f);
+        m.prismW(px + c.fx * .04f * k, ty + .1f * k, pz + c.fz * .04f * k, px + c.fx * .07f * k, ty + .1f * k, pz + c.fz * .07f * k, .07f * k, .07f * k, 4, c.shirt, c.rx, 0, c.rz, 3f);
+        for (int s2 : new int[]{Rig.SHOULDER_L, Rig.SHOULDER_R})
+            m.ballW(c.x(s2), c.y(s2) + .03f * k, c.z(s2), (mech ? .17f : .14f) * k, .09f * k, (mech ? .17f : .14f) * k, 6, 3, plate, c.fz, c.fx);
+        for (int kn : new int[]{Rig.KNEE_L, Rig.KNEE_R})
+            m.ballW(c.x(kn) + c.fx * .06f * k, c.y(kn), c.z(kn) + c.fz * .06f * k, .1f * k, .1f * k, .08f * k, 6, 3, plate, c.fz, c.fx);
+        if (mech) {   // backpack reactor glowing between the shoulders
+            float bx = tx - c.fx * .35f * k, bz = tz - c.fz * .35f * k;
+            m.prismW(bx, ty - .1f * k, bz, bx, ty + .35f * k, bz, .2f * k, .2f * k, 4, 0x5A606B);
+            boolean g = m.glow; m.glow = true; m.ballW(bx - c.fx * .2f * k, ty + .12f * k, bz - c.fz * .2f * k, .08f * k, .12f * k, .08f * k, 6, 3, 0x6FE3FF, c.fz, c.fx); m.glow = g;
+        }
+    }
+
+    // ---------------------------------------------------------------- Starforge machines
+    static void hoverbike(Mesh m, Ctx c, float x, float g, float z, float k) {
+        float hy = g + .55f * k + (float) Math.sin(c.t * 3 + x) * .05f * k;
+        m.ballW(x, hy, z, .32f * k, .2f * k, .95f * k, c.headSl, c.headSt, 0xE8EBEF, c.fz, c.fx);
+        m.ballW(wx(c, x, .1f * k, 0), hy + .12f * k, wz(c, z, .1f * k, 0), .26f * k, .1f * k, .6f * k, c.headSl, c.headSt, c.shirt, c.fz, c.fx);
+        boolean gl = m.glow; m.glow = true;
+        for (int s = -1; s <= 1; s += 2) m.ballW(wx(c, x, -.7f * k, s * .25f * k), hy - .05f * k, wz(c, z, -.7f * k, s * .25f * k), .08f * k, .08f * k, .08f * k, 5, 3, 0x6FE3FF, 1, 0);
+        m.glow = gl;
+        float ry = hy + .2f * k;
+        m.prismW(x, ry, z, x, ry + .5f * k, z, .24f * k, .18f * k, c.sides, c.shirt, c.rx, 0, c.rz, .85f);
+        sciHelmet(m, c, x, ry + .72f * k, z, .22f * k, false);
+        float lx = wx(c, x, -.1f * k, .25f * k), lz = wz(c, z, -.1f * k, .25f * k);
+        m.prismW(lx, ry + .3f * k, lz, wx(c, x, 2.2f * k, .3f * k), ry + .45f * k, wz(c, z, 2.2f * k, .3f * k), .06f * k, .015f * k, c.sides, 0xC9CED6);
+        m.glow = true; m.prismW(wx(c, x, 2.0f * k, .3f * k), ry + .44f * k, wz(c, z, 2.0f * k, .3f * k), wx(c, x, 2.25f * k, .3f * k), ry + .45f * k, wz(c, z, 2.25f * k, .3f * k), .04f * k, 0, 4, 0x6FE3FF); m.glow = gl;
+    }
+
+    static void gunship(Mesh m, Ctx c, float x, float y, float z, float k) {
+        float hy = y + 1.2f * k + (float) Math.sin(c.t * 2 + x) * .08f * k;
+        m.ballW(x, hy, z, .45f * k, .25f * k, .8f * k, c.headSl, c.headSt, 0xE8EBEF, c.fz, c.fx);
+        m.ballW(wx(c, x, .45f * k, 0), hy + .05f * k, wz(c, z, .45f * k, 0), .2f * k, .14f * k, .25f * k, 6, 4, 0x2A3B52, c.fz, c.fx);
+        for (int s = -1; s <= 1; s += 2) for (int f = -1; f <= 1; f += 2) {   // four ducted rotors on arms
+            float ax = wx(c, x, f * .45f * k, s * .75f * k), az = wz(c, z, f * .45f * k, s * .75f * k);
+            m.prismW(x, hy, z, ax, hy + .05f * k, az, .05f * k, .05f * k, 4, Look.IRON_DARK);
+            m.prismW(ax, hy, az, ax, hy + .1f * k, az, .32f * k, .32f * k, 8, c.shirt);
+            float spin = c.t * 25;
+            m.prismW(ax + (float) Math.cos(spin) * .28f * k, hy + .12f * k, az + (float) Math.sin(spin) * .28f * k, ax - (float) Math.cos(spin) * .28f * k, hy + .12f * k, az - (float) Math.sin(spin) * .28f * k, .03f * k, .03f * k, 4, Look.IRON_DARK);
+        }
+        for (int s = -1; s <= 1; s += 2) m.prismW(wx(c, x, .2f * k, s * .3f * k), hy - .2f * k, wz(c, z, .2f * k, s * .3f * k), wx(c, x, .8f * k, s * .3f * k), hy - .2f * k, wz(c, z, .8f * k, s * .3f * k), .05f * k, .04f * k, 5, Look.IRON_DARK);
+        boolean gl = m.glow; m.glow = true; m.ballW(x, hy - .22f * k, z, .1f * k, .06f * k, .1f * k, 6, 3, 0xFF5050, 1, 0); m.glow = gl;
+    }
+
+    static void rover(Mesh m, Ctx c, float x, float g, float z, float k) {
+        float L = .6f * k, W = .42f * k;
+        box(m, c, x, g + .45f * k, z, L, .2f * k, W, 0xE8EBEF);
+        box(m, c, wx(c, x, .2f * k, 0), g + .75f * k, wz(c, z, .2f * k, 0), L * .45f, .15f * k, W * .8f, 0x2A3B52);
+        for (int a = -1; a <= 1; a += 2) for (int s = -1; s <= 1; s += 2) wheel(m, c, wx(c, x, a * L * .65f, s * (W + .05f * k)), g + .22f * k, wz(c, z, a * L * .65f, s * (W + .05f * k)), .22f * k);
+        // the construction arm with a glowing nano-emitter
+        float bx = wx(c, x, -.3f * k, 0), bz = wz(c, z, -.3f * k, 0), ex = wx(c, x, .3f * k, .2f * k), ez = wz(c, z, .3f * k, .2f * k);
+        m.prismW(bx, g + .65f * k, bz, bx, g + 1.3f * k, bz, .06f * k, .05f * k, 4, Look.IRON_DARK);
+        m.prismW(bx, g + 1.3f * k, bz, ex, g + 1.45f * k, ez, .05f * k, .04f * k, 4, 0xFFC83A);
+        boolean gl = m.glow; m.glow = true; m.ballW(ex, g + 1.45f * k, ez, .07f * k, .07f * k, .07f * k, 5, 3, 0x6FE3FF, 1, 0); m.glow = gl;
+        box(m, c, x, g + .6f * k, z, L * .3f, .03f * k, W * 1.02f, c.shirt);
+    }
+
+    static void plasmaTank(Mesh m, Ctx c, float x, float g, float z, float k) {
+        float L = 1.0f * k, W = .65f * k;
+        for (int s = -1; s <= 1; s += 2) box(m, c, wx(c, x, 0, s * W * .8f), g + .25f * k, wz(c, z, 0, s * W * .8f), L, .2f * k, .22f * k, 0x3A3F48);   // tracks
+        box(m, c, x, g + .55f * k, z, L * .85f, .2f * k, W * .75f, 0xE8EBEF);
+        m.ballW(x, g + .85f * k, z, .45f * k, .22f * k, .5f * k, c.headSl, c.headSt, 0xC9CED6, c.fz, c.fx);
+        m.prismW(wx(c, x, .2f * k, 0), g + .9f * k, wz(c, z, .2f * k, 0), wx(c, x, 1.5f * k, 0), g + .95f * k, wz(c, z, 1.5f * k, 0), .1f * k, .08f * k, 6, 0x5A606B);
+        boolean gl = m.glow; m.glow = true;
+        for (int i = 0; i < 3; i++) { float a = .55f + i * .3f; m.prismW(wx(c, x, a * k, 0), g + .92f * k, wz(c, z, a * k, 0), wx(c, x, (a + .08f) * k, 0), g + .92f * k, wz(c, z, (a + .08f) * k, 0), .12f * k, .12f * k, 6, 0x9CFF7A); }
+        m.glow = gl;
+        box(m, c, x, g + .66f * k, z, L * .86f, .03f * k, W * .76f, c.shirt);
+    }
+
+    static void ionArtillery(Mesh m, Ctx c, float x, float g, float z, float k) {
+        float L = .8f * k, W = .55f * k;
+        box(m, c, x, g + .4f * k, z, L, .14f * k, W, 0xE8EBEF);
+        for (int a = -1; a <= 1; a += 2) for (int s = -1; s <= 1; s += 2) wheel(m, c, wx(c, x, a * L * .65f, s * (W + .06f * k)), g + .28f * k, wz(c, z, a * L * .65f, s * (W + .06f * k)), .28f * k);
+        float py = g + .7f * k;
+        m.prismW(x, g + .5f * k, z, x, py, z, .2f * k, .16f * k, 6, 0x5A606B);
+        m.prismW(wx(c, x, -.3f * k, 0), py, wz(c, z, -.3f * k, 0), wx(c, x, 1.0f * k, 0), py + .9f * k, wz(c, z, 1.0f * k, 0), .14f * k, .1f * k, 6, 0xC9CED6);
+        boolean gl = m.glow; m.glow = true;
+        for (int i = 0; i < 4; i++) { float t = .1f + i * .22f; m.prismW(wx(c, x, (-.3f + t * 1.3f) * k, 0), py + t * .9f * k, wz(c, z, (-.3f + t * 1.3f) * k, 0), wx(c, x, (-.25f + t * 1.3f) * k, 0), py + (t + .04f) * .9f * k, wz(c, z, (-.25f + t * 1.3f) * k, 0), .17f * k, .17f * k, 6, 0x6FE3FF); }
+        m.glow = gl;
+    }
+
     // ---------------------------------------------------------------- other bodies
 
     /** Mounts, war machines, boats, balloons and dragons, built around the particle hull. */
@@ -199,12 +302,12 @@ final class UnitModels {
         String body = c.d.body(), key = c.key;
         switch (body) {
             case "quadruped_large" -> mammoth(m, c, cx, g, cz, k, walkPhase, walk);
-            case "mounted" -> horse(m, c, cx, g, cz, k, walkPhase, walk);
-            case "flyer" -> balloon(m, c, cx, cy, cz, k);
+            case "mounted" -> { if (key.contains("HOVER")) hoverbike(m, c, cx, g, cz, k); else horse(m, c, cx, g, cz, k, walkPhase, walk); }
+            case "flyer" -> { if (key.contains("GUNSHIP")) gunship(m, c, cx, cy, cz, k); else balloon(m, c, cx, cy, cz, k); }
             case "flyer_large" -> dragon(m, c, cx, cy, cz, k);
-            case "vehicle_large" -> { if (key.contains("BOAT")) longship(m, c, cx, g, cz, k); else tank(m, c, cx, g, cz, k); }
-            case "siege" -> siege(m, c, cx, g, cz, k);
-            default -> cart(m, c, cx, g, cz, k);
+            case "vehicle_large" -> { if (key.contains("BOAT")) longship(m, c, cx, g, cz, k); else if (key.contains("STARFORGE")) plasmaTank(m, c, cx, g, cz, k); else tank(m, c, cx, g, cz, k); }
+            case "siege" -> { if (key.contains("STARFORGE")) ionArtillery(m, c, cx, g, cz, k); else siege(m, c, cx, g, cz, k); }
+            default -> { if (key.contains("ROVER")) rover(m, c, cx, g, cz, k); else cart(m, c, cx, g, cz, k); }
         }
     }
 

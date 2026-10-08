@@ -45,7 +45,7 @@ public final class QuickPlay {
         if (mc.getLevelSource().levelExists(WORLD)) { mc.createWorldOpenFlows().loadLevel(mc.screen, WORLD); return; }
         GameRules rules = new GameRules();
         rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
-        rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(false, null);
+        rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(true, null);   // weather comes and goes; mobs stay off
         rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
         LevelSettings settings = new LevelSettings(WORLD, GameType.CREATIVE, false, Difficulty.PEACEFUL, true, rules, WorldDataConfiguration.DEFAULT);
         mc.createWorldOpenFlows().createFreshLevel(WORLD, settings, new WorldOptions(WorldOptions.randomSeed(), true, false), WorldPresets::createNormalWorldDimensions);

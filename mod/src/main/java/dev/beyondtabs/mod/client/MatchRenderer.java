@@ -109,6 +109,7 @@ public final class MatchRenderer {
             spots(m, s);
             units(m, s, a, t, fr, camX, camY, camZ);
             projectiles(m, s, a);
+            assistCrews(m, s, t);
         }
         if (RtsCamera.active && RtsScreen.placing != null && RtsScreen.ghost != null) placementPreview(m, s, t, ghosts);
         for (Runnable g : ghosts) g.run();
@@ -249,6 +250,7 @@ public final class MatchRenderer {
         }
     }
 
+    /** Each projectile drawn by its look (Snapshot.VISUALS): arrows, shot and boulders, rockets, lasers, plasma, rails. */
     static void projectiles(Mesh m, Snapshot s, float a) {
         m.reset();
         for (float[] pr : s.projectiles) {
@@ -256,10 +258,100 @@ public final class MatchRenderer {
             float vl = (float) Math.sqrt(pr[3] * pr[3] + pr[4] * pr[4] + pr[5] * pr[5]);
             if (vl < 1e-3f) continue;
             float dx = pr[3] / vl, dy = pr[4] / vl, dz = pr[5] / vl;
-            m.prismW(x - dx * .7f, y - dy * .7f, z - dz * .7f, x, y, z, .025f, .025f, 4, Look.WOOD_LIGHT);
-            m.prismW(x, y, z, x + dx * .14f, y + dy * .14f, z + dz * .14f, .045f, 0, 4, Look.IRON_DARK);
-            m.prismW(x - dx * .7f, y - dy * .7f, z - dz * .7f, x - dx * .5f, y - dy * .5f, z - dz * .5f, .07f, .03f, 4, Look.CLOTH, 0, 1, 0, .15f);
+            String v = Snapshot.VISUALS.get(Math.max(0, Math.min(Snapshot.VISUALS.size() - 1, (int) pr[6])));
+            switch (v) {
+                case "laser" -> { m.glow = true; m.prismW(x - dx * 1.4f, y - dy * 1.4f, z - dz * 1.4f, x, y, z, .05f, .05f, 4, 0x7FE8FF); m.prismW(x - dx * .9f, y - dy * .9f, z - dz * .9f, x, y, z, .025f, .025f, 4, 0xFFFFFF); m.glow = false; }
+                case "rail" -> { m.glow = true; m.prismW(x - dx * 4f, y - dy * 4f, z - dz * 4f, x, y, z, .07f, .02f, 4, 0xE8F6FF); m.glow = false; }
+                case "plasma" -> { m.glow = true; m.ballW(x, y, z, .28f, .28f, .28f, 8, 5, 0x9CFF7A, 1, 0); m.ballW(x, y, z, .16f, .16f, .16f, 6, 4, 0xFFFFFF, 1, 0); m.glow = false; }
+                case "missile" -> {
+                    m.prismW(x - dx * .5f, y - dy * .5f, z - dz * .5f, x, y, z, .06f, .06f, 6, 0xE8E8E8);
+                    m.prismW(x, y, z, x + dx * .15f, y + dy * .15f, z + dz * .15f, .06f, 0, 6, Look.TILE_RED);
+                    m.glow = true; m.prismW(x - dx * .5f, y - dy * .5f, z - dz * .5f, x - dx * .9f, y - dy * .9f, z - dz * .9f, .07f, 0, 5, Look.FIRE); m.glow = false;
+                }
+                case "boulder" -> m.ballW(x, y, z, .35f, .3f, .33f, 6, 4, Look.STONE_DARK, 1, 0);
+                case "cannonball" -> m.ballW(x, y, z, .18f, .18f, .18f, 8, 5, Look.IRON_DARK, 1, 0);
+                case "bullet" -> { m.glow = true; m.prismW(x - dx * .6f, y - dy * .6f, z - dz * .6f, x, y, z, .015f, .03f, 4, 0xFFE2A0); m.glow = false; }
+                case "firework" -> {
+                    m.prismW(x - dx * .45f, y - dy * .45f, z - dz * .45f, x, y, z, .05f, .05f, 5, Look.TILE_RED);
+                    m.glow = true; m.prismW(x - dx * .45f, y - dy * .45f, z - dz * .45f, x - dx * .8f, y - dy * .8f, z - dz * .8f, .06f, 0, 5, Look.FIRE); m.glow = false;
+                }
+                case "flame" -> { m.glow = true; m.ballW(x, y, z, .22f, .22f, .22f, 6, 4, Look.FIRE, 1, 0); m.glow = false; }
+                case "bone_orb" -> { m.glow = true; m.ballW(x, y, z, .2f, .2f, .2f, 6, 4, Look.BONE, 1, 0); m.glow = false; }
+                case "lightning" -> { m.glow = true; m.prismW(x - dx * 2f, y - dy * 2f, z - dz * 2f, x, y, z, .06f, .06f, 4, Look.GLOW); m.glow = false; }
+                case "spear", "bolt" -> {
+                    float L = v.equals("bolt") ? 1.1f : .9f;
+                    m.prismW(x - dx * L, y - dy * L, z - dz * L, x, y, z, .035f, .035f, 4, Look.WOOD_LIGHT);
+                    m.prismW(x, y, z, x + dx * .2f, y + dy * .2f, z + dz * .2f, .06f, 0, 4, Look.IRON_DARK);
+                }
+                default -> {   // arrows (ice / snake arrows tinted)
+                    int fletch = v.equals("ice_arrow") ? 0xA9DDF0 : v.equals("snake_arrow") ? 0x6FA35A : Look.CLOTH;
+                    m.prismW(x - dx * .7f, y - dy * .7f, z - dz * .7f, x, y, z, .025f, .025f, 4, Look.WOOD_LIGHT);
+                    m.prismW(x, y, z, x + dx * .14f, y + dy * .14f, z + dz * .14f, .045f, 0, 4, Look.IRON_DARK);
+                    m.prismW(x - dx * .7f, y - dy * .7f, z - dz * .7f, x - dx * .5f, y - dy * .5f, z - dz * .5f, .07f, .03f, 4, fletch, 0, 1, 0, .15f);
+                }
+            }
         }
+    }
+
+    /**
+     * Assist buildings send a visible crew to whatever they are helping: masons with hammers (Crown), thralls hauling
+     * timber (Bronzeborn), drones with welding beams (Starforge). Purely cosmetic: three workers per building walking
+     * (or flying) out, working at the target, and coming back.
+     */
+    static void assistCrews(Mesh m, Snapshot s, float t) {
+        for (Snapshot.B b : s.buildings) {
+            if (b.assist < 0 || b.progress < 1) continue;
+            Snapshot.B tg = null; for (Snapshot.B o : s.buildings) if (o.id == b.assist) { tg = o; break; }
+            if (tg == null) continue;
+            BuildingDef d = BuildingDef.ALL.get(Math.max(0, b.def)), td = BuildingDef.ALL.get(Math.max(0, tg.def));
+            int team = Look.team(b.team, s.myTeam);
+            float dx = tg.x - b.x, dz = tg.z - b.z, dl = Math.max(.01f, (float) Math.hypot(dx, dz)); dx /= dl; dz /= dl;
+            int[] fb = BuildingModels.size(d), ft = BuildingModels.size(td);
+            float sx = b.x + dx * fb[0] * .55f, sz = b.z + dz * fb[1] * .55f;           // leave from the camp's edge
+            float ex = tg.x - dx * ft[0] * .55f, ez = tg.z - dz * ft[1] * .55f;          // work at the target's edge
+            boolean drones = d.race().equals("starforge");
+            for (int i = 0; i < 3; i++) {
+                float ph = (t / 7f + i / 3f) % 1f, side = (i - 1) * .9f;
+                float k, work;   // k: 0 at camp .. 1 at target; work: hammering phase
+                if (ph < .4f) { k = ph / .4f; work = 0; } else if (ph < .7f) { k = 1; work = (ph - .4f) / .3f; } else { k = 1 - (ph - .7f) / .3f; work = 0; }
+                float x = sx + (ex - sx) * k - dz * side, z = sz + (ez - sz) * k + dx * side;
+                float g = RtsCamera.ground(x, z);
+                float fx = ph < .7f ? dx : -dx, fz = ph < .7f ? dz : -dz;
+                m.reset(); m.ground(g, .4f, .2f); m.ow = .02f;
+                if (drones) drone(m, x, g + 2.2f + (float) Math.sin(t * 3 + i) * .15f + (float) Math.sin(k * Math.PI) * 1.2f, z, t + i, work > 0, ex, RtsCamera.ground(ex, ez) + 1.2f, ez, team);
+                else worker(m, x, g, z, fx, fz, t * 6 + i * 2, work, k > 0 && k < 1, d.race().equals("kingdoms"), team);
+            }
+        }
+    }
+
+    /** A little worker: legs swinging while walking, arm hammering while working, a hammer or a log on the shoulder. */
+    static void worker(Mesh m, float x, float g, float z, float fx, float fz, float t, float work, boolean walking, boolean mason, int team) {
+        float rx = fz, rz = -fx, sw = walking ? (float) Math.sin(t * 1.6f) * .18f : 0;
+        for (int sd = -1; sd <= 1; sd += 2) m.prismW(x + rx * .08f * sd, g + .45f, z + rz * .08f * sd, x + rx * .08f * sd + fx * sw * sd, g, z + rz * .08f * sd + fz * sw * sd, .06f, .05f, 5, Look.LEATHER);
+        m.prismW(x, g + .45f, z, x, g + .85f, z, .15f, .13f, 6, team);
+        m.ballW(x, g + 1.0f, z, .13f, .13f, .13f, 6, 4, Look.SKIN, fz, fx);
+        m.prismW(x, g + 1.06f, z, x, g + 1.12f, z, .17f, .15f, 6, mason ? Look.CLOTH : Look.LEATHER);
+        float up = work > 0 ? (float) Math.abs(Math.sin(work * Math.PI * 6)) : 0;
+        float hx = x + fx * .2f + rx * .12f, hz = z + fz * .2f + rz * .12f, hy = g + .7f + up * .35f;
+        m.prismW(x + rx * .12f, g + .82f, z + rz * .12f, hx, hy, hz, .04f, .04f, 4, Look.SKIN);
+        if (mason) { m.prismW(hx, hy, hz, hx + fx * .2f, hy + .12f, hz + fz * .2f, .025f, .025f, 4, Look.WOOD); m.prismW(hx + fx * .2f - rx * .06f, hy + .12f, hz + fz * .2f - rz * .06f, hx + fx * .2f + rx * .06f, hy + .12f, hz + fz * .2f + rz * .06f, .04f, .04f, 4, Look.IRON_DARK); }
+        else if (walking) m.prismW(x - rx * .25f - fx * .3f, g + .95f, z - rz * .25f - fz * .3f, x - rx * .25f + fx * .4f, g + .95f, z - rz * .25f + fz * .4f, .07f, .07f, 6, Look.WOOD);
+        else m.prismW(hx, hy, hz, hx + fx * .25f, hy + .1f, hz + fz * .25f, .03f, .02f, 4, Look.WOOD_DARK);
+    }
+
+    /** A construction drone: white shell, four rotors, a red eye; a cyan welding beam to the target while working. */
+    static void drone(Mesh m, float x, float y, float z, float t, boolean welding, float tx, float ty, float tz, int team) {
+        m.ballW(x, y, z, .22f, .12f, .22f, 8, 4, 0xE8EBEF, 1, 0);
+        m.prismW(x, y - .02f, z, x, y + .03f, z, .16f, .16f, 8, team);
+        for (int i = 0; i < 4; i++) {
+            double ang = i * Math.PI / 2 + Math.PI / 4; float ax = x + (float) Math.cos(ang) * .3f, az = z + (float) Math.sin(ang) * .3f;
+            m.prismW(x, y + .04f, z, ax, y + .06f, az, .02f, .02f, 4, Look.IRON_DARK);
+            float sp = t * 30 + i; m.prismW(ax + (float) Math.cos(sp) * .12f, y + .08f, az + (float) Math.sin(sp) * .12f, ax - (float) Math.cos(sp) * .12f, y + .08f, az - (float) Math.sin(sp) * .12f, .015f, .015f, 4, Look.IRON_DARK);
+        }
+        boolean g = m.glow; m.glow = true;
+        m.ballW(x, y - .1f, z, .05f, .05f, .05f, 5, 3, 0xFF5050, 1, 0);
+        if (welding && (int) (t * 8) % 3 != 0) m.prismW(x, y - .1f, z, tx, ty, tz, .03f, .015f, 4, 0x6FE3FF);
+        m.glow = g;
     }
 
     // ------------------------------------------------------------------ units
@@ -280,6 +372,10 @@ public final class MatchRenderer {
             int team = Look.team(u.team, s.myTeam);
             int skin = Look.mix(Look.SKIN, Look.SKIN_DARK, (u.id * 37 % 10) / 14f);
             c.shirt = team; c.trousers = Look.mix(Look.darker(team, .35f), Look.LEATHER, .45f); c.skin = skin;
+            if ("STARFORGE".equals(c.faction)) {   // dark undersuit; walkers and titans are plated machines
+                c.trousers = 0x3A3F48;
+                if ("large".equals(d.body())) { c.skin = 0xD8DCE2; c.trousers = 0x5A606B; }
+            }
             if (!u.alive) { c.shirt = Look.darker(Look.grey(c.shirt, .6f), .15f); c.trousers = Look.darker(Look.grey(c.trousers, .6f), .15f); c.skin = Look.darker(Look.grey(skin, .5f), .1f); }
             // contact shadow
             m.reset(); m.alpha = u.alive ? .3f : .18f;

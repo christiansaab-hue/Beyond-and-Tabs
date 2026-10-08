@@ -69,6 +69,17 @@
     "tabs_factions"
    ],
    "tagline": "Glowing, fast and strange."
+  },
+  {
+   "id": "starforge",
+   "name": "Starforge Dominion",
+   "tabs_factions": "NONE",
+   "color": "#E8ECF2",
+   "icon_style": "starburst",
+   "first_playable": true,
+   "status": "playable",
+   "tagline": "Mechs, plasma and orbital steel.",
+   "unverified": []
   }
  ]
 }

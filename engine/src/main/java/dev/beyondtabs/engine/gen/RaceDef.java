@@ -11,7 +11,8 @@ public record RaceDef(String id, String name, String tabsFactions, String color,
     public static final RaceDef GUNPOWDER = new RaceDef("gunpowder", "Blackpowder Syndicate", "PIRATE,WESTERN", "#7A5A3A", "powder", false, "later", "Pirates, outlaws and powder kegs.");
     public static final RaceDef FANTASY = new RaceDef("fantasy", "Mythborne Covenant", "FANTASYGOOD,FANTASYEVIL,HALLOWEEN", "#8A3AC8", "rune", false, "later", "Paladins, necromancers and things that go bump in the night.");
     public static final RaceDef NEON = new RaceDef("neon", "Neon", "NEON", "#22E6FF", "circuit", false, "later", "Glowing, fast and strange.");
-    public static final List<RaceDef> ALL = List.of(ANCIENT_WORLD, KINGDOMS, GUNPOWDER, FANTASY, NEON);
+    public static final RaceDef STARFORGE = new RaceDef("starforge", "Starforge Dominion", "NONE", "#E8ECF2", "starburst", true, "playable", "Mechs, plasma and orbital steel.");
+    public static final List<RaceDef> ALL = List.of(ANCIENT_WORLD, KINGDOMS, GUNPOWDER, FANTASY, NEON, STARFORGE);
     private static final Map<String, RaceDef> BY_ID = new LinkedHashMap<>();
     static { for (RaceDef x : ALL) BY_ID.put(x.id(), x); }
     public static RaceDef byId(String id) { RaceDef x = BY_ID.get(id); if (x == null) throw new IllegalArgumentException("unknown races id " + id); return x; }

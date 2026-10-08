@@ -30,6 +30,9 @@ public final class World {
     /** Supplies the rig for a unit (Minecraft side: the one read from the player's TABS install). */
     /** Supplies a unit's numbers (Minecraft side: read from the player's TABS install). */
     public Function<UnitDef, UnitStats> stats = UnitStats::fallback;
+    /** Optional balance telemetry per unit type: [built, metal-value of damage dealt to units, deaths]. Null = off. */
+    public java.util.Map<String, double[]> telemetry;
+    void tele(String id, int k, double v) { if (telemetry != null) telemetry.computeIfAbsent(id, x -> new double[3])[k] += v; }
     public Function<UnitDef, Rig> rigs = d -> ("humanoid".equals(d.body()) || "large".equals(d.body())) ? Rig.humanoidDefault() : blobFor(d);
     int nextId = 1; public long tick; public float time;
     /** Team id of the winner once every other team is defeated, else -1. */
@@ -70,6 +73,7 @@ public final class World {
 
     public Unit spawn(int team, UnitDef def, float x, float z, float yaw) {
         Unit u = new Unit(nextId++, team, def, stats.apply(def), rigs.apply(def), x, z, yaw);
+        tele(def.id(), 0, 1);
         u.ragdoll.pose(x, terrain.groundY(x, z), z, yaw, 0, 0, -1); u.ragdoll.snapToPose();
         units.add(u); teams.get(team).supplyUsed += def.supply();
         return u;
@@ -141,15 +145,22 @@ public final class World {
     }
 
     // ------------------------------------------------------------------------------------------------------------------
+    int[] order = new int[256]; final Random orderRng = new Random(0x5EED);
+
     public void tick() {
         long t0 = System.nanoTime();
         tick++; time += DT;
         hash.clear();
         for (Unit u : units) if (u.alive) hash.add(u);
-        for (Ai ai : ais) ai.tick();
+        // fairness: who acts first each tick is shuffled (deterministically), so no team gets a first-mover edge
+        if (!ais.isEmpty()) { int k = orderRng.nextInt(ais.size()); for (int i = 0; i < ais.size(); i++) ais.get((i + k) % ais.size()).tick(); }
         economy();
         for (Unit u : units) { u.attackersPrev = u.attackers; u.attackers = 0; }
-        for (int i = 0, n = units.size(); i < n; i++) { Unit u = units.get(i); if (u.alive) think(u); }
+        int n = units.size();
+        if (order.length < n) order = new int[Math.max(n, order.length * 2)];
+        for (int i = 0; i < n; i++) order[i] = i;
+        for (int i = n - 1; i > 0; i--) { int j = orderRng.nextInt(i + 1), x = order[i]; order[i] = order[j]; order[j] = x; }
+        for (int i = 0; i < n; i++) { Unit u = units.get(order[i]); if (u.alive) think(u); }
         separation();
         towers();
         projectiles();
@@ -216,6 +227,31 @@ public final class World {
                     if (b.progress >= 1) { b.progress = 1; b.upgrading = false; b.level++; b.hp = b.maxHp(); recomputeStorage(t); }
                 }));
             }
+        }
+        // assist buildings (BAR construction turrets): lend build power to the nearest friendly construction site, else a
+        // producing factory, else repair a damaged building, all within ASSIST_RANGE of the footprint edge
+        for (Building a : buildings) {
+            if (!a.alive || !a.done() || !"assist_power".equals(a.def.effect())) { a.assistTargetId = -1; continue; }
+            Building tgt = assistTarget(a);
+            a.assistTargetId = tgt == null ? -1 : tgt.id;
+            if (tgt == null) continue;
+            double bp = a.value();
+            if (tgt.progress < 1 && !tgt.upgrading) {
+                BuildingDef d = tgt.def;
+                jobs.get(a.team).add(new Job(a, d.metal() * bp / d.buildWork(), d.energy() * bp / d.buildWork(), bp, r -> {
+                    if (!tgt.alive || tgt.progress >= 1) return;
+                    float step = (float) (bp * r * DT / d.buildWork());
+                    tgt.progress += step; tgt.hp = Math.min(tgt.maxHp(), tgt.hp + step * tgt.maxHp() * .9f);
+                    if (tgt.progress >= 1) { tgt.progress = 1; recomputeStorage(teams.get(tgt.team)); }
+                }));
+            } else if (tgt.producing != null) {
+                UnitDef d = tgt.producing;
+                jobs.get(a.team).add(new Job(a, d.metal() * bp / d.buildWork(), d.energy() * bp / d.buildWork(), bp, r -> {
+                    if (tgt.producing != d || !tgt.alive) return;
+                    tgt.produceWork += bp * r * DT;
+                    if (tgt.produceWork >= d.buildWork()) finishUnit(tgt, d);
+                }));
+            } else tgt.hp = Math.min(tgt.maxHp(), tgt.hp + (float) (bp * ASSIST_REPAIR * DT));   // repairs are free, as in BAR
         }
         // construction by builders/commanders with a BUILD order in range
         for (Unit u : units) {
@@ -571,11 +607,52 @@ public final class World {
         else if (!"support".equals(w.kind())) launchAt(u, b.x, b.z, terrain.groundY(b.x, b.z) + 1.5f, 0, 0);
     }
 
+    static final float ASSIST_RANGE = 14, ASSIST_REPAIR = 2;
+
+    /** What an assist building helps: keeps its current target while valid, else construction > production > repair. */
+    Building assistTarget(Building a) {
+        Building cur = null;
+        for (Building b : buildings) if (b.id == a.assistTargetId) cur = b;
+        if (cur != null && assistValid(a, cur)) return cur;
+        Building best = null; float bs = Float.MAX_VALUE;
+        for (Building b : buildings) {
+            if (b == a || !assistValid(a, b)) continue;
+            float d = b.distTo(a.x, a.z);
+            float s = (b.progress < 1 && !b.upgrading) ? d : b.producing != null ? 100 + d : 200 + d;
+            if (s < bs) { bs = s; best = b; }
+        }
+        return best;
+    }
+
+    boolean assistValid(Building a, Building b) {
+        if (!b.alive || b.team != a.team || b.distTo(a.x, a.z) > ASSIST_RANGE + a.hw) return false;
+        return (b.progress < 1 && !b.upgrading) || (b.done() && b.producing != null) || (b.done() && b.hp < b.maxHp() - 1);
+    }
+
+    /** Advanced power plants detonate when destroyed (BAR's AFUS): damage falls off with distance and hits everyone. */
+    void detonate(Building b) {
+        float r = b.def.blastRadius(), dmg = b.def.blastDamage();
+        if (r <= 0 || dmg <= 0) return;
+        b.detonated = true;
+        for (Unit o : units) {
+            if (!o.alive) continue;
+            float d = dist(b.x, b.z, o.x, o.z);
+            if (d > r + o.radius) continue;
+            float f = 1f - .7f * Math.min(1, d / r);
+            damage(o, dmg * f, 25 * f, b.x, b.z, Rig.HIP, null);
+        }
+        for (Building o : new ArrayList<>(buildings)) {
+            if (o == b || !o.alive) continue;
+            float d = o.distTo(b.x, b.z);
+            if (d <= r) damageBuilding(o, dmg * .6f * (1f - .7f * Math.min(1, d / r)));
+        }
+    }
+
     public void damageBuilding(Building b, float dmg) {
         if (!b.alive) return;
         b.hp -= dmg;
         if (dmg > 0 && b.team < teams.size()) teams.get(b.team).alert(time, b.x, b.z, true);
-        if (b.hp <= 0) { b.alive = false; b.hp = 0; recomputeStorage(teams.get(b.team)); }
+        if (b.hp <= 0) { b.alive = false; b.hp = 0; recomputeStorage(teams.get(b.team)); detonate(b); }
     }
 
     Building nearestEnemyBuilding(int team, float cx, float cz, float r) {
@@ -731,6 +808,7 @@ public final class World {
             dmg = r[0]; knockback = r[1];
         }
         float before = t.hp;
+        if (telemetry != null && src != null && !ally(src.team, t.team) && dmg > 0) tele(src.def.id(), 1, Math.min(dmg, Math.max(0, t.hp)) / t.maxHp * t.def.metal());
         t.hp -= dmg;
         if (dmg > 0 && src != null && t.team < teams.size()) teams.get(t.team).alert(time, t.x, t.z, false);
         if (dmg > 0) {
@@ -762,6 +840,7 @@ public final class World {
         t.alive = false; t.hp = 0; t.ragdoll.limp = true; t.ragdoll.down = true; t.ragdoll.sleeping = false; t.knocked = true;
         t.ragdoll.impulseAll(kx * 30, 40, kz * 30, DT, 1);
         teams.get(t.team).supplyUsed -= t.def.supply();
+        tele(t.def.id(), 2, 1);
     }
 
     void separation() {

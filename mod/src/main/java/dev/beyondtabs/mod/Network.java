@@ -19,7 +19,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class Network {
-    static final String VERSION = "5";
+    static final String VERSION = "6";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(BeyondTabs.MODID, "main"), () -> VERSION, VERSION::equals, VERSION::equals);
     static final float DETAIL_RANGE = 72f;   // blocks: full ragdoll particles sent within this distance of the player's camera
@@ -89,9 +89,10 @@ public final class Network {
             if (b.producing != null) { sb.producing = (short) UnitDef.ALL.indexOf(b.producing); sb.produceFrac = (float) (b.produceWork / b.producing.buildWork()); }
             if (b.researching != null) { sb.researching = (short) TechDef.ALL.indexOf(b.researching); sb.researchFrac = 1f - b.researchLeft / b.researching.seconds(); }
             if (b.team == team) { sb.queue = new short[b.queue.size()]; int i = 0; for (UnitDef d : b.queue) sb.queue[i++] = (short) UnitDef.ALL.indexOf(d); }
+            sb.assist = b.assistTargetId;
             s.buildings.add(sb);
         }
-        for (Projectile pr : w.projectiles) s.projectiles.add(new float[]{pr.x, pr.y, pr.z, pr.vx, pr.vy, pr.vz});
+        for (Projectile pr : w.projectiles) s.projectiles.add(new float[]{pr.x, pr.y, pr.z, pr.vx, pr.vy, pr.vz, Snapshot.visual(pr.visual)});
         if (withSpots) {
             s.hasSpots = true; s.metalSpots = new float[w.metalSpots.size() * 2];
             for (int i = 0; i < w.metalSpots.size(); i++) { s.metalSpots[i * 2] = w.metalSpots.get(i)[0]; s.metalSpots[i * 2 + 1] = w.metalSpots.get(i)[1]; }

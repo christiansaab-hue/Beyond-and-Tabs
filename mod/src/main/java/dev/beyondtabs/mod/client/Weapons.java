@@ -28,10 +28,20 @@ final class Weapons {
                 else sword(m, c, hx, hy, hz, up, .7f * k, k, Look.IRON);
             }
             case "melee_shield" -> {
-                sword(m, c, hx, hy, hz, up, .65f * k, k, Look.IRON);
-                shield(m, c, lx, ly, lz, k, key.contains("ROMAN"), key.contains("HOPLITE") ? 0xC9973F : -1);
+                if (key.contains("STARFORGE")) { baton(m, c, hx, hy, hz, up, k); shield(m, c, lx, ly, lz, k * 1.15f, true, 0x6FE3FF); }
+                else { sword(m, c, hx, hy, hz, up, .65f * k, k, Look.IRON); shield(m, c, lx, ly, lz, k, key.contains("ROMAN"), key.contains("HOPLITE") ? 0xC9973F : -1); }
+            }
+            case "energy_blade" -> energySword(m, c, hx, hy, hz, up, (key.contains("TITAN") ? 1.4f : .85f) * k, k);
+            case "laser_rifle" -> gun(m, c, hx, hy, hz, k, .75f, .05f, 0xE8EBEF, 0x6FE3FF, false);
+            case "rail" -> { gun(m, c, hx, hy, hz, k, 1.35f, .045f, 0x3A3F48, 0xE8F6FF, true); }
+            case "plasma" -> gun(m, c, hx, hy, hz, k, .85f, .09f, 0xC9CED6, 0x9CFF7A, false);
+            case "missile_pod" -> {   // shoulder launcher
+                float sx = c.x(Rig.SHOULDER_R), sy = c.y(Rig.SHOULDER_R) + .12f * k, sz = c.z(Rig.SHOULDER_R);
+                m.prismW(sx - c.fx * .35f * k, sy, sz - c.fz * .35f * k, sx + c.fx * .45f * k, sy + .05f * k, sz + c.fz * .45f * k, .13f * k, .13f * k, 6, 0x5A606B);
+                m.prismW(sx + c.fx * .45f * k, sy + .05f * k, sz + c.fz * .45f * k, sx + c.fx * .47f * k, sy + .05f * k, sz + c.fz * .47f * k, .1f * k, .1f * k, 6, Look.TILE_RED);
             }
             case "melee_heavy" -> {
+                if (key.contains("STARFORGE")) { energySword(m, c, hx, hy, hz, up, 1.05f * k, k * 1.1f); break; }
                 if (key.contains("CHIEFTAIN")) club(m, c, hx, hy, hz, up, 1.15f * k, .2f * k, Look.BONE);
                 else if (key.contains("SAMURAI")) sword(m, c, hx, hy, hz, up, 1.1f * k, k * .8f, 0xDDE2E8);
                 else if (key.contains("JARL")) axe(m, c, hx, hy, hz, up, 1.2f * k, k * 1.3f);
@@ -97,6 +107,34 @@ final class Weapons {
             }
             default -> { }
         }
+    }
+
+    /** A glowing energy blade on a dark hilt. */
+    static void energySword(Mesh m, UnitModels.Ctx c, float x, float y, float z, float[] d, float L, float k) {
+        stick(m, x, y, z, d, -.15f * k, .08f * k, .035f * k, 0x3A3F48, c.sides);
+        m.prismW(x + d[0] * .08f * k - c.rx * .1f * k, y + d[1] * .08f * k, z + d[2] * .08f * k - c.rz * .1f * k, x + d[0] * .08f * k + c.rx * .1f * k, y + d[1] * .08f * k, z + d[2] * .08f * k + c.rz * .1f * k, .03f * k, .03f * k, 4, 0x5A606B);
+        boolean g = m.glow; m.glow = true;
+        stick(m, x, y, z, d, .1f * k, L, .045f * k, 0x6FE3FF, c.sides);
+        stick(m, x, y, z, d, .1f * k, L * .95f, .02f * k, 0xFFFFFF, c.sides);
+        m.glow = g;
+    }
+
+    /** A stun baton with a glowing tip. */
+    static void baton(Mesh m, UnitModels.Ctx c, float x, float y, float z, float[] d, float k) {
+        stick(m, x, y, z, d, -.1f * k, .55f * k, .04f * k, 0x3A3F48, c.sides);
+        boolean g = m.glow; m.glow = true; stick(m, x, y, z, d, .55f * k, .65f * k, .05f * k, 0x6FE3FF, c.sides); m.glow = g;
+    }
+
+    /** A rifle held forward: stock, body, barrel, a glowing power cell (and a scope for marksmen). */
+    static void gun(Mesh m, UnitModels.Ctx c, float x, float y, float z, float k, float L, float r, int body, int glow, boolean scope) {
+        float[] d = norm(c.fx, .05f, c.fz);
+        stick(m, x, y, z, d, -.35f * k, .1f * k, r * 1.6f * k, body, 4);
+        stick(m, x, y + .02f * k, z, d, .1f * k, L * k, r * k, 0x5A606B, c.sides);
+        boolean g = m.glow; m.glow = true;
+        stick(m, x, y + .07f * k, z, d, -.05f * k, .2f * k, r * 1.1f * k, glow, 4);
+        stick(m, x, y + .02f * k, z, d, L * k, L * k + .04f * k, r * 1.2f * k, glow, c.sides);
+        m.glow = g;
+        if (scope) stick(m, x, y + .12f * k, z, d, .05f * k, .35f * k, .035f * k, 0x2A2E36, c.sides);
     }
 
     static float len(float x, float y, float z) { return Math.max(1e-5f, (float) Math.sqrt(x * x + y * y + z * z)); }

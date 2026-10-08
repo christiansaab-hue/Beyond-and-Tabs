@@ -39,7 +39,13 @@ public final class Snapshot {
         public int id; public byte team; public short def; public byte level; public boolean upgrading, repeat;
         public float x, z, progress, hp, rallyX, rallyZ, produceFrac, researchFrac;
         public short producing = -1, researching = -1; public short[] queue = new short[0];
+        /** Assist buildings: id of the building their crew is helping (-1 none). */
+        public int assist = -1;
     }
+
+    /** Projectile looks, sent as an index (projectile float[6]). */
+    public static final List<String> VISUALS = List.of("arrow", "bullet", "bolt", "spear", "boulder", "cannonball", "firework", "lightning", "flame", "bone_orb", "laser", "plasma", "rail", "missile", "ice_arrow", "snake_arrow");
+    public static float visual(String v) { int i = VISUALS.indexOf(v); return i < 0 ? 0 : i; }
 
     public void encode(FriendlyByteBuf b) {
         b.writeVarLong(tick); b.writeVarInt(myTeam + 1); b.writeVarInt(winner + 1); b.writeUtf(myRace); b.writeBoolean(blockStyle); b.writeFloat(alertAge); b.writeFloat(alertX); b.writeFloat(alertZ); b.writeBoolean(alertBuilding); b.writeBoolean(paused); b.writeFloat(speed);
@@ -69,6 +75,7 @@ public final class Snapshot {
             for (float f : new float[]{x.x, x.z, x.progress, x.hp, x.rallyX, x.rallyZ, x.produceFrac, x.researchFrac}) b.writeFloat(f);
             b.writeShort(x.producing); b.writeShort(x.researching);
             b.writeVarInt(x.queue.length); for (short q : x.queue) b.writeShort(q);
+            b.writeVarInt(x.assist + 1);
         }
         b.writeVarInt(projectiles.size());
         for (float[] p : projectiles) for (float f : p) b.writeFloat(f);
@@ -104,10 +111,11 @@ public final class Snapshot {
             x.x = b.readFloat(); x.z = b.readFloat(); x.progress = b.readFloat(); x.hp = b.readFloat(); x.rallyX = b.readFloat(); x.rallyZ = b.readFloat();
             x.produceFrac = b.readFloat(); x.researchFrac = b.readFloat(); x.producing = b.readShort(); x.researching = b.readShort();
             int qn = b.readVarInt(); x.queue = new short[qn]; for (int i = 0; i < qn; i++) x.queue[i] = b.readShort();
+            x.assist = b.readVarInt() - 1;
             s.buildings.add(x);
         }
         int pn = b.readVarInt();
-        for (int k = 0; k < pn; k++) { float[] p = new float[6]; for (int i = 0; i < 6; i++) p[i] = b.readFloat(); s.projectiles.add(p); }
+        for (int k = 0; k < pn; k++) { float[] p = new float[7]; for (int i = 0; i < 7; i++) p[i] = b.readFloat(); s.projectiles.add(p); }
         s.hasSpots = b.readBoolean();
         if (s.hasSpots) { int sn = b.readVarInt(); s.metalSpots = new float[sn]; for (int i = 0; i < sn; i++) s.metalSpots[i] = b.readFloat(); }
         return s;

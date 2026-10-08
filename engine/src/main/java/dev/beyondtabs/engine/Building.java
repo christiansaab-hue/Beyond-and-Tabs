@@ -15,6 +15,8 @@ public final class Building {
     public final ArrayDeque<UnitDef> queue = new ArrayDeque<>(); public boolean repeat; public float rallyX, rallyZ;
     public UnitDef producing; public float produceWork;
     public TechDef researching; public float researchLeft;
+    /** Assist buildings: id of the building being helped (-1 none). Power plants: blew up when destroyed. */
+    public int assistTargetId = -1; public boolean detonated;
 
     Building(int id, int team, BuildingDef def, float x, float z, boolean prebuilt) {
         this.id = id; this.team = team; this.def = def; this.x = x; this.z = z; this.hp = def.hp();

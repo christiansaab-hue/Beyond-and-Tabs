@@ -51,7 +51,7 @@ public final class Skirmish {
             bx = base[0]; bz = base[1];
             // metal: a ring around the base (two distances), then an expansion pair towards the middle
             for (int k = 0; k < 8; k++) {
-                double a = k * Math.PI / 4 + .3; float r = 13 + (k % 2) * 6;
+                double a = k * Math.PI / 4 + .3 - ang; float r = 13 + (k % 2) * 6;   // rotated with the base: every start is a mirror image
                 addSpot(w, bx + (float) Math.cos(a) * r, bz + (float) Math.sin(a) * r);
             }
             float mx = bx + (cx - bx) * .55f, mz = bz + (cz - bz) * .55f, px = -(cz - bz) / radius * 5, pz = (cx - bx) / radius * 5;

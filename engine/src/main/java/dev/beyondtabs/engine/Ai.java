@@ -37,7 +37,34 @@ public final class Ai {
     }
 
     Team me() { return w.teams.get(team); }
-    String pre() { return me().race.equals("kingdoms") ? "kd" : "aw"; }
+    /** This race's building for a role (economy roles by effect, factories by tier): works for any faction. */
+    final Map<String, BuildingDef> defs = new HashMap<>();
+    BuildingDef def(String role) {
+        return defs.computeIfAbsent(role, r -> {
+            for (BuildingDef d : BuildingDef.ALL) {
+                if (!d.race().equals(me().race)) continue;
+                boolean ok = switch (r) {
+                    case "extractor" -> d.effect().equals("metal_per_s");
+                    case "energy" -> d.effect().equals("energy_per_s") && d.tier() == 1;
+                    case "advEnergy" -> d.effect().equals("energy_per_s") && d.tier() >= 3;
+                    case "storage" -> d.effect().equals("storage");
+                    case "tech" -> d.kind().equals("tech");
+                    case "tower" -> d.effect().equals("ranged_dps");
+                    case "converter" -> d.effect().equals("energy_to_metal_per_s");
+                    case "barracks" -> d.kind().equals("factory") && d.tier() == 1;
+                    case "assist" -> d.effect().equals("assist_power");
+                    default -> false;
+                };
+                if (ok) return d;
+            }
+            return null;
+        });
+    }
+    /** This race's tier-n research (e.g. kd_tech_t2). */
+    String techId(int tier) {
+        for (TechDef td : TechDef.ALL) if (td.race().equals(me().race) && td.id().endsWith("_tech_t" + tier)) return td.id();
+        return "none";
+    }
     Unit commander() { for (Unit u : w.units) if (u.alive && u.team == team && "commander".equals(u.def.role())) return u; return null; }
 
     public void tick() {
@@ -51,9 +78,9 @@ public final class Ai {
     }
 
     // ------------------------------------------------------------------ helpers
-    List<Building> mine(String suffix) {
-        List<Building> l = new ArrayList<>();
-        for (Building b : w.buildings) if (b.alive && b.team == team && b.def.id().endsWith(suffix)) l.add(b);
+    List<Building> mine(String role) {
+        List<Building> l = new ArrayList<>(); BuildingDef d = def(role);
+        if (d != null) for (Building b : w.buildings) if (b.alive && b.team == team && b.def == d) l.add(b);
         return l;
     }
     List<Building> underConstruction() {
@@ -71,13 +98,16 @@ public final class Ai {
         for (Unit u : w.units) if (u.alive && u.team == team && !"builder".equals(u.def.role()) && !"commander".equals(u.def.role())) l.add(u);
         return l;
     }
+    static boolean isRanged(UnitDef d) { return "ranged".equals(d.role()) || "siege".equals(d.role()); }
     static float value(Unit u) { return u.def.metal() * (u.hp / u.maxHp); }
 
     /** Finds a free spot for a building near the base, spiralling outwards. */
     Building site(BuildingDef def, float nearX, float nearZ) {
+        // the spiral is turned to face the rival, so every start position builds the same base layout (fair mirrors)
+        if (Float.isNaN(facing)) { scout(); facing = Float.isNaN(enemyX) ? 0 : (float) Math.atan2(enemyZ - baseZ, enemyX - baseX); }
         for (int r = 6; r <= 40; r += 3)
             for (int k = 0; k < 12; k++) {
-                double a = k * Math.PI / 6 + r * .37;
+                double a = facing + k * Math.PI / 6 + r * .37;
                 float x = nearX + (float) Math.cos(a) * r, z = nearZ + (float) Math.sin(a) * r;
                 if (w.canPlace(team, def, x, z)) return w.startConstruction(team, def, x, z);
             }
@@ -110,28 +140,40 @@ public final class Ai {
         }
         int maxSites = Math.max(1, builders().size());
         if (sites.size() >= maxSites) return;
-        String p = pre();
         double mInc = t.metalIncome, eInc = t.energyIncome;
         // 1) extractors on free metal spots within reach (reach grows over time)
         float reach = expandRange0 + clock * .08f;
         float[] spot = null; float best = reach * reach;
         for (float[] s : w.metalSpots) {
             float d = (s[0] - baseX) * (s[0] - baseX) + (s[1] - baseZ) * (s[1] - baseZ);
-            if (d < best && w.canPlace(team, BuildingDef.byId(p + "_metal_extractor"), s[0], s[1])) { best = d; spot = s; }
+            if (d < best && w.canPlace(team, def("extractor"), s[0], s[1])) { best = d; spot = s; }
         }
         // 2) energy keeps pace with metal (units cost ~8x more energy than metal)
         boolean energyShort = eInc < mInc * 9 || t.energy < t.energyStorage * .15;
         Building placed = null;
-        if (energyShort && t.metal > 30) placed = site(BuildingDef.byId(p + "_energy_gen"), baseX, baseZ);
-        else if (spot != null && t.metal > 40) placed = w.startConstruction(team, BuildingDef.byId(p + "_metal_extractor"), spot[0], spot[1]);
-        else if (mine("_barracks").isEmpty() && t.metal > 120) placed = site(BuildingDef.byId(p + "_barracks"), baseX, baseZ);
-        else if (t.metal >= t.metalStorage * .95 && mine("_storage").size() < 2) placed = site(BuildingDef.byId(p + "_storage"), baseX, baseZ);
-        else if (mine("_tech_center").isEmpty() && mInc >= 7) placed = site(BuildingDef.byId(p + "_tech_center"), baseX, baseZ);
-        else if (mine("_barracks").size() < 2 && mInc >= 14) placed = site(BuildingDef.byId(p + "_barracks"), baseX, baseZ);
-        else if (diff != Difficulty.EASY && mine("_watchtower").size() < (diff == Difficulty.HARD ? 4 : 2) && clock > 120 && t.metal > 150)
-            placed = site(BuildingDef.byId(p + "_watchtower"), baseX + (rng.nextFloat() - .5f) * 20, baseZ + (rng.nextFloat() - .5f) * 20);
-        else if (t.has(p + "_tech_t2") && mine("_converter").size() < 2 && t.energy > t.energyStorage * .9)
-            placed = site(BuildingDef.byId(p + "_converter"), baseX, baseZ);
+        boolean t3 = t.has(techId(3));
+        if (energyShort && t3 && def("advEnergy") != null && mine("advEnergy").size() < 2 && t.metal > def("advEnergy").metal() * .4) {
+            // big plants go to the far side of the base from the enemy: they explode when destroyed
+            float ax = baseX, az = baseZ;
+            if (!Float.isNaN(enemyX)) { float dx = baseX - enemyX, dz = baseZ - enemyZ, l = Math.max(1, (float) Math.hypot(dx, dz)); ax += dx / l * 14; az += dz / l * 14; }
+            placed = site(def("advEnergy"), ax, az);
+        }
+        else if (energyShort && t.metal > 30) placed = site(def("energy"), baseX, baseZ);
+        else if (spot != null && t.metal > 40) placed = w.startConstruction(team, def("extractor"), spot[0], spot[1]);
+        else if (mine("barracks").isEmpty() && t.metal > 120) placed = site(def("barracks"), baseX, baseZ);
+        else if (t.metal >= t.metalStorage * .95 && mine("storage").size() < 2) placed = site(def("storage"), baseX, baseZ);
+        else if (mine("tech").isEmpty() && mInc >= 7) placed = site(def("tech"), baseX, baseZ);
+        else if (mine("barracks").size() < 2 && mInc >= 14) placed = site(def("barracks"), baseX, baseZ);
+        else if (diff != Difficulty.EASY && mine("tower").size() < (diff == Difficulty.HARD ? 4 : 2) && clock > 120 && t.metal > 150)
+            placed = site(def("tower"), baseX + (rng.nextFloat() - .5f) * 20, baseZ + (rng.nextFloat() - .5f) * 20);
+        else if (def("assist") != null && t.has(def("assist").requiresTech()) && diff != Difficulty.EASY
+                && mine("assist").size() < (diff == Difficulty.HARD ? 3 : 2) && t.metal > 250 && t.efficiency > .95) {
+            // assist camps go next to the busiest factory
+            Building f = null; for (Building x : w.buildings) if (x.alive && x.team == team && x.done() && x.def.kind().equals("factory") && (f == null || x.def.tier() > f.def.tier())) f = x;
+            if (f != null) placed = site(def("assist"), f.x, f.z);
+        }
+        else if (t.has(techId(2)) && def("converter") != null && mine("converter").size() < 2 && t.energy > t.energyStorage * .9)
+            placed = site(def("converter"), baseX, baseZ);
         if (placed != null) assign(placed);
         // 3) floating metal: upgrade extractors and generators
         if (t.metal > t.metalStorage * .8 && t.efficiency > .99) {
@@ -142,14 +184,14 @@ public final class Ai {
 
     // ------------------------------------------------------------------ tech
     void tech() {
-        Team t = me(); String p = pre();
+        Team t = me();
         double mInc = t.metalIncome;
-        for (Building c : mine("_tech_center")) {
+        for (Building c : mine("tech")) {
             if (!c.done()) continue;
             boolean wantT2 = mInc >= (diff == Difficulty.HARD ? 10 : 14) && clock > 150;
-            boolean wantT3 = mInc >= (diff == Difficulty.HARD ? 22 : 30) && t.has(p + "_tech_t2");
+            boolean wantT3 = mInc >= (diff == Difficulty.HARD ? 22 : 30) && t.has(techId(2));
             if (c.level == 1 && wantT2) w.upgrade(c);
-            else if (c.level == 2 && wantT3 && t.has(p + "_tech_t2")) w.upgrade(c);
+            else if (c.level == 2 && wantT3 && t.has(techId(2))) w.upgrade(c);
             for (TechDef td : TechDef.ALL) {
                 if (!td.race().equals(t.race) || t.researched.contains(td.id())) continue;
                 if (td.tier() == 2 && !wantT2 && td.id().endsWith("_t2")) continue;
@@ -182,13 +224,20 @@ public final class Ai {
             UnitDef pick = null;
             if (builderCount < wantBuilders) for (UnitDef d : options) if ("builder".equals(d.role())) { pick = d; builderCount++; break; }
             if (pick == null) {
-                // counter: lots of enemy melee -> more ranged/siege; lots of enemy ranged -> fast melee and heroes
+                // composition by value, the same rule for every faction: aim for a ranged share (45%, shifted by what we
+                // have scouted: more ranged against melee-heavy enemies, more front line against ranged), then pick
+                // within that class, favouring higher tiers and affordable units
+                float rangedV = 0, frontV = 0;
+                for (Unit u : troops()) { if (isRanged(u.def)) rangedV += u.def.metal(); else frontV += u.def.metal(); }
+                for (Building q : w.buildings) if (q.alive && q.team == team) for (UnitDef qd : q.queue) { if (isRanged(qd)) rangedV += qd.metal(); else frontV += qd.metal(); }
+                float target = .45f + (enemyMelee > enemyRanged * 1.5f ? .1f : 0) - (enemyRanged > enemyMelee * 1.5f ? .1f : 0);
+                boolean wantRanged = rangedV < (rangedV + frontV) * target;
                 float best = -1;
                 for (UnitDef d : options) {
                     if ("builder".equals(d.role())) continue;
-                    float score = 1 + rng.nextFloat() * .6f + d.tier() * .5f;
-                    if (enemyMelee > enemyRanged && ("ranged".equals(d.role()) || "siege".equals(d.role()))) score += 1;
-                    if (enemyRanged > enemyMelee && ("inf".equals(d.role()) || "cavalry".equals(d.role()) || "hero".equals(d.role()))) score += 1;
+                    boolean r = isRanged(d);
+                    float score = 1 + rng.nextFloat() * .8f + d.tier() * .5f;
+                    if (r == wantRanged) score += 1.5f;
                     if ("support".equals(d.role())) score -= .5f;
                     if (d.metal() > t.metalIncome * 40 + t.metal) score -= 2;   // too expensive for now
                     if (score > best) { best = score; pick = d; }
@@ -199,7 +248,7 @@ public final class Ai {
     }
 
     // ------------------------------------------------------------------ scouting, army
-    float enemyX = Float.NaN, enemyZ;
+    float enemyX = Float.NaN, enemyZ, facing = Float.NaN;
     void scout() {
         seenEnemyRoles.clear();
         for (Unit e : w.units) {

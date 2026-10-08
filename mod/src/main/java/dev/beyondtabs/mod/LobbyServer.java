@@ -155,6 +155,7 @@ public final class LobbyServer {
         // a calm battlefield: midday, no monsters wandering in
         level.setDayTime(6000);
         level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, level.getServer());
+        level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(true, level.getServer());   // rain and storms roll through (existing worlds too)
         lb.started = true;
         int humans = 0; for (Lobby.Slot s : lb.slots) if (s.type == Lobby.HUMAN) humans++;
         for (ServerPlayer q : level.players()) q.sendSystemMessage(Component.literal(String.format("Battle begins: %d armies on %s (%s). %s",

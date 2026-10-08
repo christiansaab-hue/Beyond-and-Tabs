@@ -48,6 +48,10 @@ E = {r["id"]: r["value"] for r in S["economy"]["rows"]}
 for u in S["units"]["rows"]:
     m = int(round(u["base_cost"] * E["unit_cost_metal_factor"] / 5) * 5) or 5
     if u["metal"] != m: refs.append(f"units.{u['id']}.metal {u['metal']} != formula {m}")
+# fairness: build time is proportional to cost for every produced unit, so no faction turns economy into army faster
+for u in S["units"]["rows"]:
+    if u["role"] != "commander" and abs(u["build_work"] - u["metal"] * 0.5) > 0.05:
+        refs.append(f"units.{u['id']}.build_work {u['build_work']} != metal x 0.5 ({u['metal'] * 0.5})")
 allow_unver = "--allow-unverified" in sys.argv
 print(f"sheets: {len(S)}  rows: {sum(len(s['rows']) for s in S.values())}")
 for title, lst in (("UNFILLED", empty), ("UNRESOLVED", refs), ("UNVERIFIED", unver)):

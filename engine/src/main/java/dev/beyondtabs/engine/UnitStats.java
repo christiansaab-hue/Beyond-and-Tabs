@@ -18,9 +18,9 @@ public record UnitStats(float hp, float mass, float speedMult, float size, Weapo
         float m = (float) Math.max(.5, Math.min(8, Math.pow(d.metal() / referenceCost(d.physicsProfile()), .8)));
         WeaponDef w = WeaponDef.byId(d.weaponClass());
         // splash and volley weapons already hit many targets; their per-hit damage grows more slowly
-        float dm = w.aoe() > 0 || w.count() > 1 ? (float) Math.sqrt(m) : m;
+        float dm = (w.aoe() > 0 || w.count() > 1 ? (float) Math.sqrt(m) : m) * (float) d.tune();
         WeaponDef scaled = new WeaponDef(w.id(), w.kind(), w.range(), Math.round(w.damage() * dm), w.cooldown(), w.aoe(), w.knockback(), w.projectile(), w.gravity(), w.count(), w.speed());
-        return new UnitStats((float) b.hpBase() * m, (float) b.mass(), 1f, 1f, scaled);
+        return new UnitStats((float) b.hpBase() * m * (float) d.tune(), (float) b.mass(), 1f, 1f, scaled);   // tune: per-unit balance knob
     }
 
     /** Typical cost of a unit with this body: 50 metal for foot soldiers, else the cheapest unit using it. */

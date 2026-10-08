@@ -6,12 +6,15 @@ import java.util.List;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.DoorBlock;
-import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.LanternBlock;
+import net.minecraft.world.level.block.LayeredCauldronBlock;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.WallBannerBlock;
 import net.minecraft.world.level.block.WallTorchBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -20,25 +23,34 @@ import net.minecraft.world.level.block.state.properties.Half;
 import net.minecraft.world.level.block.state.properties.SlabType;
 
 /**
- * Race-specific architecture for every building, as block plans. Coordinates: x across (0..w-1), z deep (0..d-1),
- * y up from the ground; the front (door, rally side) faces +z. Every level adds visible detail.
- * Built the way good Minecraft builders do it: walls set in from the footprint so roofs overhang them, log or stone
- * framing and string courses for depth, windows with shutters and sills, real doors under little awnings, chimneys,
- * porches and towers that break the box shape, and a weathering pass for texture.
- * Bronzeborn Clans = Tribal / Viking / Greek. Sovereign Crown = Medieval / Dynasty / Renaissance.
+ * Race-specific architecture for every building, as block plans: the shared detail kit lives here, each faction's
+ * buildings in its own file ({@link ArchCrown}, {@link ArchBronze}, {@link ArchStar}).
+ * <p>
+ * Coordinates: x across (0..w-1), z deep (0..d-1), y up from the ground (y = -1 is the ground layer itself, used for
+ * paths and farmland); the front (door, rally side) faces +z. Every level adds visible detail.
+ * <p>
+ * Each building is modelled on a real historical (or, for Starforge, real engineering) type, and built the way good
+ * Minecraft builders work: walls set in from the footprint so roofs overhang, framing and string courses for depth,
+ * windows with shutters, sills and flower boxes, real doors, chimneys, porches and towers that break the box, mixed
+ * block palettes so no wall is one flat texture, and life around the building (paths, gardens, stores, lamps).
  */
 final class Architecture {
     record Part(int x, int y, int z, BlockState s) { }
 
     /** A plan being drawn. Later writes replace earlier ones at the same spot. */
     static final class Plan {
-        final int w, d; final java.util.LinkedHashMap<Long, Part> parts = new java.util.LinkedHashMap<>();
-        Plan(int w, int d) { this.w = w; this.d = d; }
-        static long key(int x, int y, int z) { return ((long) x & 0xfff) | (((long) y & 0xfff) << 12) | (((long) z & 0xfff) << 24); }
+        final int w, d; final int seed; final java.util.LinkedHashMap<Long, Part> parts = new java.util.LinkedHashMap<>();
+        Plan(int w, int d, int seed) { this.w = w; this.d = d; this.seed = seed; }
+        static long key(int x, int y, int z) { return ((long) x & 0xfff) | (((long) (y + 1) & 0xfff) << 12) | (((long) z & 0xfff) << 24); }
+        boolean in(int x, int z) { return x >= 0 && z >= 0 && x < w && z < d; }
         Plan set(int x, int y, int z, BlockState s) {
-            if (x < 0 || z < 0 || x >= w || z >= d || y < 0) return this;
+            if (!in(x, z) || y < -1) return this;
             parts.put(key(x, y, z), new Part(x, y, z, s)); return this;
         }
+        BlockState get(int x, int y, int z) { Part p = parts.get(key(x, y, z)); return p == null ? null : p.s(); }
+        boolean has(int x, int y, int z) { return parts.containsKey(key(x, y, z)); }
+        /** Sets only where nothing has been placed yet. */
+        Plan add(int x, int y, int z, BlockState s) { if (!has(x, y, z)) set(x, y, z, s); return this; }
         Plan clear(int x, int y, int z) { parts.remove(key(x, y, z)); return this; }
         Plan fill(int x0, int y0, int z0, int x1, int y1, int z1, BlockState s) {
             for (int y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) for (int x = Math.min(x0, x1); x <= Math.max(x0, x1); x++)
@@ -46,7 +58,8 @@ final class Architecture {
             return this;
         }
         Plan clearBox(int x0, int y0, int z0, int x1, int y1, int z1) {
-            for (int y = y0; y <= y1; y++) for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) clear(x, y, z);
+            for (int y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) for (int x = Math.min(x0, x1); x <= Math.max(x0, x1); x++)
+                for (int z = Math.min(z0, z1); z <= Math.max(z0, z1); z++) clear(x, y, z);
             return this;
         }
         /** Hollow walls of a box (no floor or ceiling). */
@@ -59,27 +72,11 @@ final class Architecture {
         Plan corners(int x0, int z0, int x1, int z1, int y0, int y1, BlockState s) {
             pillar(x0, z0, y0, y1, s); pillar(x1, z0, y0, y1, s); pillar(x0, z1, y0, y1, s); pillar(x1, z1, y0, y1, s); return this;
         }
-        /** Gable roof whose ridge runs along z (slopes face west/east). */
-        Plan gableZ(int x0, int x1, int z0, int z1, int y, Block stairs, BlockState ridge, BlockState gableFill) {
-            int layer = 0;
-            for (int lx = x0, rx = x1; lx <= rx; lx++, rx--, layer++) {
-                for (int z = z0; z <= z1; z++) {
-                    if (lx == rx) set(lx, y + layer, z, ridge);
-                    else { set(lx, y + layer, z, stair(stairs, Direction.EAST)); set(rx, y + layer, z, stair(stairs, Direction.WEST)); }
-                }
-                for (int x = lx + 1; x < rx; x++) { set(x, y + layer, z0, gableFill); set(x, y + layer, z1, gableFill); }
-            }
-            return this;
-        }
-        /** Gable roof whose ridge runs along x (slopes face north/south). */
-        Plan gableX(int x0, int x1, int z0, int z1, int y, Block stairs, BlockState ridge, BlockState gableFill) {
-            int layer = 0;
-            for (int lz = z0, rz = z1; lz <= rz; lz++, rz--, layer++) {
-                for (int x = x0; x <= x1; x++) {
-                    if (lz == rz) set(x, y + layer, lz, ridge);
-                    else { set(x, y + layer, lz, stair(stairs, Direction.SOUTH)); set(x, y + layer, rz, stair(stairs, Direction.NORTH)); }
-                }
-                for (int z = lz + 1; z < rz; z++) { set(x0, y + layer, z, gableFill); set(x1, y + layer, z, gableFill); }
+        /** Filled disc (or ring when hollow) of radius r centred on (cx+.5, cz+.5) — rounded towers, domes, wheels. */
+        Plan disc(double cx, double cz, double r, int y, BlockState s, boolean hollow) {
+            for (int x = (int) Math.floor(cx - r - 1); x <= cx + r + 1; x++) for (int z = (int) Math.floor(cz - r - 1); z <= cz + r + 1; z++) {
+                double dd = Math.hypot(x - cx, z - cz);
+                if (dd <= r + .35 && (!hollow || dd > r - .75)) set(x, y, z, s);
             }
             return this;
         }
@@ -100,6 +97,8 @@ final class Architecture {
                 if ((x == x0 || x == x1 || z == z0 || z == z1) && ((x + z) % 2 == 0)) set(x, y, z, s);
             return this;
         }
+        /** Stable per-position pseudo-random in [0, n). */
+        int rnd(int x, int y, int z, int n) { return Math.floorMod((x * 73856093) ^ (y * 19349663) ^ (z * 83492791) ^ (seed * 668265263), 1 << 20) % n; }
         List<Part> ordered() { List<Part> l = new ArrayList<>(parts.values()); l.sort((a, b) -> Integer.compare(a.y, b.y)); return l; }
     }
 
@@ -112,31 +111,53 @@ final class Architecture {
     static BlockState banner(Block wallBanner, Direction facing) { return wallBanner.defaultBlockState().setValue(WallBannerBlock.FACING, facing); }
     static BlockState torch(Direction facing) { return Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, facing); }
     static BlockState hanging(Block lantern) { return lantern.defaultBlockState().setValue(LanternBlock.HANGING, true); }
+    static BlockState leaves(Block b) { return b.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true); }
+    static BlockState ripe(Block crop) { return crop.defaultBlockState().setValue(CropBlock.AGE, 7); }
+    static BlockState waterCauldron() { return Blocks.WATER_CAULDRON.defaultBlockState().setValue(LayeredCauldronBlock.LEVEL, 3); }
+    static BlockState trapdoor(Block b, Direction facing, boolean open, boolean top) {
+        return b.defaultBlockState().setValue(TrapDoorBlock.FACING, facing).setValue(TrapDoorBlock.OPEN, open).setValue(TrapDoorBlock.HALF, top ? Half.TOP : Half.BOTTOM);
+    }
+    static BlockState grindstone() { return Blocks.GRINDSTONE.defaultBlockState().setValue(net.minecraft.world.level.block.GrindstoneBlock.FACE, net.minecraft.world.level.block.state.properties.AttachFace.FLOOR); }
     static final BlockState AIR = Blocks.AIR.defaultBlockState();
+    static final Direction N = Direction.NORTH, S = Direction.SOUTH, E = Direction.EAST, W = Direction.WEST;
 
     // ---------------------------------------------------------------- entry
     static List<Part> plan(Building b, int level) {
-        Plan p = new Plan(b.fw, b.fh);
+        Plan p = new Plan(b.fw, b.fh, b.id);
         String id = b.def.id(), race = b.def.race(), kind = id.substring(id.indexOf('_') + 1);
-        if (race.equals("ancient_world")) ancient(p, kind, level);
-        else if (race.equals("kingdoms")) kingdoms(p, kind, level);
-        else Structures.generic(p, b, level);
-        weather(p, b.id);
+        switch (race) {
+            case "ancient_world" -> ArchBronze.build(p, kind, level);
+            case "kingdoms" -> ArchCrown.build(p, kind, level);
+            case "starforge" -> ArchStar.build(p, kind, level);
+            default -> Structures.generic(p, b, level);
+        }
+        texturize(p);
         return p.ordered();
     }
 
-    /** Wear and texture: a sprinkle of cracked and mossy blocks so walls don't look freshly printed (stable per building). */
-    static void weather(Plan p, int seed) {
+    // =================================================================================================================
+    // TEXTURE: no wall is one flat block. Deterministic per building, weighted toward wear low down.
+    // =================================================================================================================
+    static void texturize(Plan p) {
         for (var e : p.parts.entrySet()) {
-            Part q = e.getValue(); Block blk = q.s().getBlock();
-            int h = Math.floorMod((q.x() * 73856093) ^ (q.y() * 19349663) ^ (q.z() * 83492791) ^ (seed * 31), 23);
+            Part q = e.getValue(); BlockState st = q.s(); Block blk = st.getBlock();
+            int h = p.rnd(q.x(), q.y(), q.z(), 100); boolean low = q.y() <= 1;
             Block to = null;
-            if (blk == Blocks.STONE_BRICKS) to = h == 0 || h == 7 ? Blocks.CRACKED_STONE_BRICKS : h == 3 ? Blocks.MOSSY_STONE_BRICKS : null;
-            else if (blk == Blocks.COBBLESTONE) to = h % 5 == 0 ? Blocks.MOSSY_COBBLESTONE : null;
-            else if (blk == Blocks.MUD_BRICKS) to = h == 4 ? Blocks.PACKED_MUD : null;
-            else if (blk == Blocks.SMOOTH_SANDSTONE) to = h == 2 ? Blocks.SANDSTONE : null;
-            else if (blk == Blocks.QUARTZ_BRICKS) to = h == 5 ? Blocks.CHISELED_QUARTZ_BLOCK : null;
-            if (to != null) e.setValue(new Part(q.x(), q.y(), q.z(), to.defaultBlockState()));
+            if (blk == Blocks.STONE_BRICKS) to = h < 8 ? Blocks.CRACKED_STONE_BRICKS : h < (low ? 22 : 13) ? Blocks.MOSSY_STONE_BRICKS : null;
+            else if (blk == Blocks.COBBLESTONE) to = h < (low ? 25 : 10) ? Blocks.MOSSY_COBBLESTONE : h < (low ? 35 : 22) ? Blocks.ANDESITE : h < 30 ? Blocks.STONE : null;
+            else if (blk == Blocks.STONE_BRICK_STAIRS) to = h < (low ? 20 : 8) ? Blocks.MOSSY_STONE_BRICK_STAIRS : null;
+            else if (blk == Blocks.COBBLESTONE_STAIRS) to = h < 18 ? Blocks.MOSSY_COBBLESTONE_STAIRS : null;
+            else if (blk == Blocks.STONE_BRICK_WALL) to = h < 15 ? Blocks.MOSSY_STONE_BRICK_WALL : null;
+            else if (blk == Blocks.COBBLESTONE_WALL) to = h < 20 ? Blocks.MOSSY_COBBLESTONE_WALL : null;
+            else if (blk == Blocks.DEEPSLATE_TILES) to = h < 12 ? Blocks.CRACKED_DEEPSLATE_TILES : null;
+            else if (blk == Blocks.DEEPSLATE_TILE_STAIRS) to = h < 9 ? Blocks.COBBLED_DEEPSLATE_STAIRS : null;
+            else if (blk == Blocks.MUD_BRICKS) to = h < 12 ? Blocks.PACKED_MUD : null;
+            else if (blk == Blocks.SMOOTH_SANDSTONE) to = h < 10 ? Blocks.SANDSTONE : null;
+            else if (blk == Blocks.QUARTZ_BRICKS) to = h < 8 ? Blocks.CHISELED_QUARTZ_BLOCK : null;
+            else if (blk == Blocks.CALCITE) to = h < 10 ? Blocks.DIORITE : null;
+            else if (blk == Blocks.POLISHED_BLACKSTONE_BRICKS) to = h < 15 ? Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS : null;
+            else if (blk == Blocks.DIRT_PATH && q.y() == -1) to = h < 15 ? Blocks.COARSE_DIRT : h < 22 ? Blocks.GRAVEL : null;
+            if (to != null) e.setValue(new Part(q.x(), q.y(), q.z(), to.withPropertiesOf(st)));
         }
     }
 
@@ -146,12 +167,10 @@ final class Architecture {
     static final int FRONT = 0, BACK = 1, RIGHT = 2, LEFT = 3;
 
     static Direction out(int face) {
-        return switch (face) { case FRONT -> Direction.SOUTH; case BACK -> Direction.NORTH; case RIGHT -> Direction.EAST; default -> Direction.WEST; };
+        return switch (face) { case FRONT -> S; case BACK -> N; case RIGHT -> E; default -> W; };
     }
 
-    static Direction opp(Direction d) {
-        return switch (d) { case NORTH -> Direction.SOUTH; case SOUTH -> Direction.NORTH; case EAST -> Direction.WEST; case WEST -> Direction.EAST; case UP -> Direction.DOWN; default -> Direction.UP; };
-    }
+    static Direction opp(Direction d) { return d.getOpposite(); }
 
     /** A block on a wall face: u along the wall, n blocks outward from the wall plane. */
     static void at(Plan p, int face, int plane, int u, int y, int n, BlockState s) {
@@ -163,10 +182,6 @@ final class Architecture {
         }
     }
 
-    static BlockState trapdoor(Block b, Direction facing, boolean open, boolean top) {
-        return b.defaultBlockState().setValue(TrapDoorBlock.FACING, facing).setValue(TrapDoorBlock.OPEN, open).setValue(TrapDoorBlock.HALF, top ? Half.TOP : Half.BOTTOM);
-    }
-
     /** A window h blocks tall with open shutters either side and a sill below. */
     static void window(Plan p, int face, int plane, int u, int y, int h, Block pane, Block shutter) {
         for (int k = 0; k < h; k++) at(p, face, plane, u, y + k, 0, s(pane));
@@ -176,7 +191,14 @@ final class Architecture {
         at(p, face, plane, u, y - 1, 1, trapdoor(shutter, o, false, true));
     }
 
-    /** A real door with an awning above and lanterns either side. */
+    /** Window with a flower box: a top-half trapdoor shelf carrying a potted flower, shutters either side. */
+    static void flowerWindow(Plan p, int face, int plane, int u, int y, Block pane, Block shutter, Block pot) {
+        window(p, face, plane, u, y, 1, pane, shutter);
+        at(p, face, plane, u, y - 1, 1, trapdoor(shutter, out(face), false, true));
+        at(p, face, plane, u, y, 1, s(pot));
+    }
+
+    /** A real door; optional awning (upside-down stairs) and lanterns either side. */
     static void door(Plan p, int face, int plane, int u, int y, Block door, Block awning, Block lantern) {
         Direction o = out(face);
         at(p, face, plane, u, y, 0, door.defaultBlockState().setValue(DoorBlock.FACING, o).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
@@ -185,14 +207,36 @@ final class Architecture {
         if (lantern != null && awning != null) { at(p, face, plane, u - 1, y + 1, 1, hanging(lantern)); at(p, face, plane, u + 1, y + 1, 1, hanging(lantern)); }
     }
 
-    /** Infill walls with log corner posts, posts every third block and a top plate. */
-    static void frameWalls(Plan p, int x0, int y0, int z0, int x1, int y1, int z1, BlockState infill, Block log) {
+    /** Double doors (two leaves). */
+    static void doubleDoor(Plan p, int face, int plane, int u, int y, Block door) {
+        Direction o = out(face);
+        for (int k = 0; k <= 1; k++) {
+            var hinge = k == 0 ? net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT : net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT;
+            BlockState lo = door.defaultBlockState().setValue(DoorBlock.FACING, o).setValue(DoorBlock.HINGE, hinge).setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER);
+            at(p, face, plane, u + k, y, 0, lo);
+            at(p, face, plane, u + k, y + 1, 0, lo.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+        }
+    }
+
+    /** Infill walls with log corner posts, posts every `step` blocks and a top plate. */
+    static void frameWalls(Plan p, int x0, int y0, int z0, int x1, int y1, int z1, BlockState infill, Block log, int step) {
         p.walls(x0, y0, z0, x1, y1, z1, infill);
-        for (int x = x0; x <= x1; x += Math.max(1, Math.min(3, x1 - x0))) { p.pillar(x, z0, y0, y1, log(log, Direction.Axis.Y)); p.pillar(x, z1, y0, y1, log(log, Direction.Axis.Y)); }
-        for (int z = z0; z <= z1; z += Math.max(1, Math.min(3, z1 - z0))) { p.pillar(x0, z, y0, y1, log(log, Direction.Axis.Y)); p.pillar(x1, z, y0, y1, log(log, Direction.Axis.Y)); }
+        for (int x = x0; x <= x1; x += Math.max(1, Math.min(step, x1 - x0))) { p.pillar(x, z0, y0, y1, log(log, Direction.Axis.Y)); p.pillar(x, z1, y0, y1, log(log, Direction.Axis.Y)); }
+        for (int z = z0; z <= z1; z += Math.max(1, Math.min(step, z1 - z0))) { p.pillar(x0, z, y0, y1, log(log, Direction.Axis.Y)); p.pillar(x1, z, y0, y1, log(log, Direction.Axis.Y)); }
         p.corners(x0, z0, x1, z1, y0, y1, log(log, Direction.Axis.Y));
         for (int x = x0 + 1; x < x1; x++) { p.set(x, y1, z0, log(log, Direction.Axis.X)); p.set(x, y1, z1, log(log, Direction.Axis.X)); }
         for (int z = z0 + 1; z < z1; z++) { p.set(x0, y1, z, log(log, Direction.Axis.Z)); p.set(x1, y1, z, log(log, Direction.Axis.Z)); }
+    }
+
+    /** Half-timbering: frame plus diagonal-ish braces (stairs) in the panels next to the corners. */
+    static void tudor(Plan p, int x0, int y0, int z0, int x1, int y1, int z1, BlockState infill, Block log, Block braceStairs) {
+        frameWalls(p, x0, y0, z0, x1, y1, z1, infill, log, 3);
+        if (y1 - y0 < 2) return;
+        // braces: an upside-down stair under the top plate beside each corner post reads as a knee brace
+        for (int[] c : new int[][]{{x0 + 1, z0, 0}, {x1 - 1, z0, 1}, {x0 + 1, z1, 0}, {x1 - 1, z1, 1}})
+            p.set(c[0], y1 - 1, c[1], stairTop(braceStairs, c[2] == 0 ? W : E));
+        for (int[] c : new int[][]{{x0, z0 + 1, 0}, {x0, z1 - 1, 1}, {x1, z0 + 1, 0}, {x1, z1 - 1, 1}})
+            p.set(c[0], y1 - 1, c[1], stairTop(braceStairs, c[2] == 0 ? N : S));
     }
 
     /** Stone walls: a base course, corner quoins and (if tall enough) a string course. */
@@ -203,377 +247,150 @@ final class Architecture {
         p.corners(x0, z0, x1, z1, y0, y1, trim);
     }
 
-    /** Upside-down stairs all round the outside of a wall box: an overhanging ledge that casts a shadow line. */
+    /** Upside-down stairs all round the outside of a wall box: an overhanging ledge (needs walls inset by 1). */
     static void cornice(Plan p, int x0, int z0, int x1, int z1, int y, Block stairs) {
-        for (int x = x0; x <= x1; x++) { p.set(x, y, z0 - 1, stairTop(stairs, Direction.SOUTH)); p.set(x, y, z1 + 1, stairTop(stairs, Direction.NORTH)); }
-        for (int z = z0; z <= z1; z++) { p.set(x0 - 1, y, z, stairTop(stairs, Direction.EAST)); p.set(x1 + 1, y, z, stairTop(stairs, Direction.WEST)); }
+        for (int x = x0; x <= x1; x++) { p.set(x, y, z0 - 1, stairTop(stairs, S)); p.set(x, y, z1 + 1, stairTop(stairs, N)); }
+        for (int z = z0; z <= z1; z++) { p.set(x0 - 1, y, z, stairTop(stairs, E)); p.set(x1 + 1, y, z, stairTop(stairs, W)); }
+    }
+
+    /** Plinth: right-way-up stairs hugging the base of the walls on the outside (needs walls inset by 1). */
+    static void plinth(Plan p, int x0, int z0, int x1, int z1, int y, Block stairs) {
+        for (int x = x0; x <= x1; x++) { p.add(x, y, z0 - 1, stair(stairs, S)); p.add(x, y, z1 + 1, stair(stairs, N)); }
+        for (int z = z0; z <= z1; z++) { p.add(x0 - 1, y, z, stair(stairs, E)); p.add(x1 + 1, y, z, stair(stairs, W)); }
     }
 
     /**
      * Gable roof over [rx0..rx1] x [rz0..rz1] (overhang included), ridge along x; gable ends filled on the wall planes
-     * wx0 / wx1 between the walls' z range.
+     * wx0 / wx1. The ridge gets a slab cap and the eaves an upside-down-stair fascia so the roof has thickness.
      */
-    static void roofX(Plan p, int rx0, int rx1, int rz0, int rz1, int y, Block stairs, BlockState ridge, int wx0, int wx1, BlockState fill) {
-        for (int l = 0; rz0 + l <= rz1 - l; l++) {
+    static int roofX(Plan p, int rx0, int rx1, int rz0, int rz1, int y, Block stairs, BlockState ridge, int wx0, int wx1, BlockState fill) {
+        int l = 0;
+        for (; rz0 + l <= rz1 - l; l++) {
             int lz = rz0 + l, hz = rz1 - l;
             for (int x = rx0; x <= rx1; x++) {
                 if (lz == hz) p.set(x, y + l, lz, ridge);
-                else { p.set(x, y + l, lz, stair(stairs, Direction.SOUTH)); p.set(x, y + l, hz, stair(stairs, Direction.NORTH)); }
+                else { p.set(x, y + l, lz, stair(stairs, S)); p.set(x, y + l, hz, stair(stairs, N)); }
             }
             for (int z = lz + 1; z < hz; z++) { p.set(wx0, y + l, z, fill); p.set(wx1, y + l, z, fill); }
+            if (lz + 1 == hz) { for (int x = rx0; x <= rx1; x++) { p.set(x, y + l + 1, lz, ridge); p.set(x, y + l + 1, hz, ridge); } l++; break; }
         }
+        return y + l;   // first y above the ridge
     }
 
     /** Gable roof with the ridge along z (front gable facing +z). */
-    static void roofZ(Plan p, int rx0, int rx1, int rz0, int rz1, int y, Block stairs, BlockState ridge, int wz0, int wz1, BlockState fill) {
-        for (int l = 0; rx0 + l <= rx1 - l; l++) {
+    static int roofZ(Plan p, int rx0, int rx1, int rz0, int rz1, int y, Block stairs, BlockState ridge, int wz0, int wz1, BlockState fill) {
+        int l = 0;
+        for (; rx0 + l <= rx1 - l; l++) {
             int lx = rx0 + l, hx = rx1 - l;
             for (int z = rz0; z <= rz1; z++) {
                 if (lx == hx) p.set(lx, y + l, z, ridge);
-                else { p.set(lx, y + l, z, stair(stairs, Direction.EAST)); p.set(hx, y + l, z, stair(stairs, Direction.WEST)); }
+                else { p.set(lx, y + l, z, stair(stairs, E)); p.set(hx, y + l, z, stair(stairs, W)); }
             }
             for (int x = lx + 1; x < hx; x++) { p.set(x, y + l, wz0, fill); p.set(x, y + l, wz1, fill); }
+            if (lx + 1 == hx) { for (int z = rz0; z <= rz1; z++) { p.set(lx, y + l + 1, z, ridge); p.set(hx, y + l + 1, z, ridge); } l++; break; }
         }
+        return y + l;
     }
 
-    static void chimney(Plan p, int x, int z, int y0, int y1, BlockState body) {
+    /** Gable-end trim: upside-down stairs under the verge of an x-ridge roof's gables (bargeboards). */
+    static void bargeX(Plan p, int x, int rz0, int rz1, int y, Block stairs, boolean east) {
+        for (int l = 0; rz0 + l < rz1 - l; l++) { p.add(x, y + l - 1, rz0 + l, stairTop(stairs, N)); p.add(x, y + l - 1, rz1 - l, stairTop(stairs, S)); }
+    }
+
+    static void chimney(Plan p, int x, int z, int y0, int y1, BlockState body, BlockState cap) {
         p.pillar(x, z, y0, y1, body);
-        p.set(x, y1 + 1, z, s(Blocks.CAMPFIRE));
+        if (cap != null) p.set(x, y1 + 1, z, cap);
+        p.set(x, y1 + (cap != null ? 2 : 1), z, s(Blocks.CAMPFIRE));
     }
 
-    /** Banner on a wall, hanging on the outside. */
+    /** Banner on a wall, hanging on the outside (recoloured to the team colour when placed). */
     static void wallBanner(Plan p, int face, int plane, int u, int y) { at(p, face, plane, u, y, 1, banner(Blocks.WHITE_WALL_BANNER, out(face))); }
 
-    // =================================================================================================================
-    // BRONZEBORN CLANS — Tribal, Viking, Greek
-    // =================================================================================================================
-    static void ancient(Plan p, String kind, int lv) {
-        int w = p.w, d = p.d, cx = w / 2, cz = d / 2;
-        BlockState spruceY = log(Blocks.SPRUCE_LOG, Direction.Axis.Y), planks = s(Blocks.SPRUCE_PLANKS), cobble = s(Blocks.COBBLESTONE);
-        switch (kind) {
-            case "metal_extractor" -> {   // stone-lined shaft with a timber headframe and a hanging ore bucket
-                p.walls(0, 0, 0, w - 1, 0, d - 1, s(Blocks.MOSSY_COBBLESTONE)).set(cx, 0, cz, s(lv >= 3 ? Blocks.RAW_IRON_BLOCK : Blocks.IRON_ORE));
-                p.set(0, 1, 0, s(Blocks.COBBLESTONE_WALL)).set(w - 1, 1, 0, s(Blocks.COBBLESTONE_WALL)).set(0, 1, d - 1, s(Blocks.COBBLESTONE_WALL)).set(w - 1, 1, d - 1, s(Blocks.COBBLESTONE_WALL));
-                p.pillar(0, cz, 1, 3, spruceY).pillar(w - 1, cz, 1, 3, spruceY);
-                p.fill(0, 4, cz, w - 1, 4, cz, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.X));
-                p.set(cx, 3, cz, s(Blocks.CHAIN)).set(cx, 2, cz, s(Blocks.CHAIN)).set(cx, 1, cz, s(Blocks.CAULDRON));
-                p.set(0, 5, cz, s(Blocks.SKELETON_SKULL));
-                if (lv >= 2) { p.set(0, 1, cz - 1, s(Blocks.BARREL)); p.set(w - 1, 1, cz + 1, s(Blocks.BARREL)); }
-                if (lv >= 3) { p.set(w - 1, 5, cz, s(Blocks.LANTERN)); }
-            }
-            case "energy_gen" -> {        // round-cornered mud-brick forge hut, thatch hip roof, chimney and a fire pit out front
-                p.fill(0, 0, 0, w - 1, 0, d - 1, s(Blocks.PACKED_MUD));
-                p.walls(0, 1, 0, w - 1, 2, d - 2, s(Blocks.MUD_BRICKS));
-                p.corners(0, 0, w - 1, d - 2, 1, 2, spruceY);
-                p.clear(cx, 1, d - 2).clear(cx, 2, d - 2).clear(cx - 1, 1, d - 2);
-                p.fill(1, 1, 1, w - 2, 1, d - 3, s(Blocks.MAGMA_BLOCK));
-                p.pyramid(0, w - 1, 0, d - 2, 3, Blocks.SPRUCE_STAIRS, s(Blocks.HAY_BLOCK));
-                chimney(p, w - 1, 0, 3, 4 + lv, s(Blocks.BRICKS));
-                p.set(cx, 0, d - 1, s(Blocks.CAMPFIRE)).set(cx - 1, 0, d - 1, s(Blocks.COBBLESTONE_WALL));
-                for (int k = 1; k <= lv; k++) { p.set(0, 2 + k, d - 1, s(Blocks.BONE_BLOCK)); }
-                p.set(0, 3 + lv, d - 1, s(Blocks.SKELETON_SKULL));
-            }
-            case "storage" -> {           // timber store with a steep thatch-and-spruce gable, hay and barrels
-                p.fill(1, 0, 1, w - 2, 0, d - 2, cobble);
-                frameWalls(p, 1, 1, 1, w - 2, 3, d - 2, planks, Blocks.SPRUCE_LOG);
-                door(p, FRONT, d - 2, cx, 1, Blocks.SPRUCE_DOOR, Blocks.SPRUCE_STAIRS, Blocks.LANTERN);
-                window(p, RIGHT, w - 2, cz, 2, 1, Blocks.GLASS_PANE, Blocks.SPRUCE_TRAPDOOR);
-                window(p, LEFT, 1, cz, 2, 1, Blocks.GLASS_PANE, Blocks.SPRUCE_TRAPDOOR);
-                roofX(p, 0, w - 1, 0, d - 1, 4, Blocks.SPRUCE_STAIRS, s(Blocks.HAY_BLOCK), 1, w - 2, planks);
-                p.set(0, 0, d - 1, s(Blocks.HAY_BLOCK)).set(w - 1, 0, d - 1, s(Blocks.BARREL)).set(w - 1, 0, 0, s(Blocks.BARREL));
-                if (lv >= 2) { p.set(0, 0, 0, s(Blocks.HAY_BLOCK)).set(0, 1, 0, s(Blocks.HAY_BLOCK)).set(w - 1, 1, 0, s(Blocks.BARREL)); }
-            }
-            case "converter" -> {         // mud-brick beehive kiln with a tall chimney
-                // rounded dome: cut corners on the lower courses, stairs stepping in on each side, a slab cap
-                p.fill(0, 0, 0, w - 1, 0, d - 1, s(Blocks.PACKED_MUD));
-                p.walls(0, 1, 0, w - 1, 2, d - 2, s(Blocks.MUD_BRICKS));
-                for (int y = 1; y <= 2; y++) { p.clear(0, y, 0).clear(w - 1, y, 0).clear(0, y, d - 2).clear(w - 1, y, d - 2); }
-                for (int x = 1; x < w - 1; x++) { p.set(x, 3, 0, stair(Blocks.MUD_BRICK_STAIRS, Direction.SOUTH)); p.set(x, 3, d - 2, stair(Blocks.MUD_BRICK_STAIRS, Direction.NORTH)); }
-                for (int z = 1; z < d - 2; z++) { p.set(0, 3, z, stair(Blocks.MUD_BRICK_STAIRS, Direction.EAST)); p.set(w - 1, 3, z, stair(Blocks.MUD_BRICK_STAIRS, Direction.WEST)); }
-                p.fill(1, 3, 1, w - 2, 3, d - 3, s(Blocks.MUD_BRICKS)).fill(1, 4, 1, w - 2, 4, d - 3, slab(Blocks.MUD_BRICK_SLAB, false));
-                // glowing firing mouth on the front, a fuel stack and a work bench in the open yard
-                p.set(cx, 1, d - 2, s(Blocks.MAGMA_BLOCK)).set(cx - 1, 1, d - 2, s(Blocks.BLAST_FURNACE)).set(cx, 2, d - 2, stairTop(Blocks.MUD_BRICK_STAIRS, Direction.SOUTH));
-                p.fill(0, 1, d - 1, 0, 1, d - 1, log(Blocks.OAK_LOG, Direction.Axis.Z)).set(w - 1, 1, d - 1, s(Blocks.CAULDRON));
-                chimney(p, w - 2, 1, 5, 5 + lv, s(Blocks.BRICKS));
-                if (lv >= 2) { p.set(0, 2, d - 1, log(Blocks.OAK_LOG, Direction.Axis.Z)); p.set(w - 1, 1, 0, s(Blocks.ANVIL)); }
-            }
-            case "tech_center" -> greekTemple(p, lv, false);
-            case "watchtower" -> {        // timber lookout on stilts: braced posts, railing, thatch roof, lantern
-                int h = 3 + lv;
-                p.corners(0, 0, w - 1, d - 1, 0, h, spruceY);
-                p.set(cx, h / 2, 0, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.X)).set(cx, h / 2, d - 1, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.X));
-                p.set(0, h / 2, cz, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Z)).set(w - 1, h / 2, cz, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Z));
-                p.fill(0, h, 0, w - 1, h, d - 1, planks).corners(0, 0, w - 1, d - 1, h, h, spruceY);
-                p.walls(0, h + 1, 0, w - 1, h + 1, d - 1, s(Blocks.SPRUCE_FENCE));
-                p.corners(0, 0, w - 1, d - 1, h + 1, h + 2, spruceY);
-                p.pyramid(0, w - 1, 0, d - 1, h + 3, Blocks.SPRUCE_STAIRS, s(Blocks.HAY_BLOCK));
-                p.set(cx, h + 2, cz, hanging(Blocks.LANTERN));
-                if (lv >= 3) p.set(cx, h + 5, cz, s(Blocks.SKELETON_SKULL));
-            }
-            case "wall" -> {
-                if (lv >= 2) p.set(0, 0, 0, cobble);
-                int y0 = lv >= 2 ? 1 : 0;
-                p.pillar(0, 0, y0, y0 + 2, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Y)).set(0, y0 + 3, 0, s(Blocks.SPRUCE_FENCE));
-            }
-            case "barracks" -> longhouse(p, lv, false);
-            case "war_lodge" -> longhouse(p, lv, true);
-            case "hall_of_legends" -> greekTemple(p, lv, true);
-            case "siege_yard" -> {        // palisaded timber yard: workshop shed, crane, a half-built bolt thrower, timber stacks
-                p.fill(0, 0, 0, w - 1, 0, d - 1, s(Blocks.COARSE_DIRT));
-                for (int x = 0; x < w; x++) for (int z = 0; z < d; z++) {
-                    boolean edge = x == 0 || z == 0 || x == w - 1 || z == d - 1;
-                    if (!edge || (z == d - 1 && Math.abs(x - cx) <= 1)) continue;
-                    p.pillar(x, z, 1, 2 + ((x + z) % 2), log(Blocks.SPRUCE_LOG, Direction.Axis.Y));
-                }
-                p.set(cx - 2, 3, d - 1, s(Blocks.SKELETON_SKULL)).set(cx + 2, 3, d - 1, s(Blocks.SKELETON_SKULL));
-                // workshop shed (back left) with a lean-to roof
-                frameWalls(p, 1, 1, 1, 5, 3, 4, planks, Blocks.SPRUCE_LOG);
-                p.clearBox(2, 1, 4, 4, 2, 4);
-                for (int x = 0; x <= 6; x++) { p.set(x, 4, 0, stair(Blocks.SPRUCE_STAIRS, Direction.SOUTH)); p.set(x, 4, 1, stair(Blocks.SPRUCE_STAIRS, Direction.SOUTH)); p.set(x, 4, 5, stair(Blocks.SPRUCE_STAIRS, Direction.NORTH)); }
-                p.fill(0, 5, 2, 6, 5, 4, slab(Blocks.SPRUCE_SLAB, false));
-                p.set(2, 1, 2, s(Blocks.SMITHING_TABLE)).set(3, 1, 2, s(Blocks.ANVIL)).set(4, 1, 2, s(Blocks.BARREL));
-                // crane
-                p.pillar(w - 3, 2, 1, 7, spruceY).fill(w - 7, 8, 2, w - 2, 8, 2, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.X));
-                p.pillar(w - 7, 2, 5, 7, s(Blocks.CHAIN)).set(w - 7, 4, 2, s(Blocks.COBBLESTONE));
-                // bolt thrower frame
-                p.fill(cx - 1, 1, cz + 1, cx + 1, 1, cz + 3, planks).set(cx, 2, cz + 2, s(Blocks.SPRUCE_FENCE)).set(cx, 3, cz + 2, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Z));
-                p.set(cx - 2, 2, cz + 2, s(Blocks.SPRUCE_FENCE)).set(cx + 2, 2, cz + 2, s(Blocks.SPRUCE_FENCE));
-                // timber stacks
-                p.fill(1, 1, d - 4, 3, 1, d - 2, log(Blocks.SPRUCE_LOG, Direction.Axis.X)).fill(1, 2, d - 3, 3, 2, d - 2, log(Blocks.OAK_LOG, Direction.Axis.X));
-                if (lv >= 2) { p.fill(w - 4, 1, d - 4, w - 2, 1, d - 2, s(Blocks.HAY_BLOCK)); p.set(w - 3, 2, d - 3, s(Blocks.TARGET)); }
-            }
-            default -> p.fill(0, 0, 0, w - 1, 0, d - 1, cobble);
+    // ---------------------------------------------------------------- life around buildings
+    static final Block[] FLOWERS = {Blocks.POPPY, Blocks.DANDELION, Blocks.CORNFLOWER, Blocks.OXEYE_DAISY, Blocks.AZURE_BLUET, Blocks.ALLIUM, Blocks.RED_TULIP, Blocks.LILY_OF_THE_VALLEY};
+    static final Block[] POTS = {Blocks.POTTED_RED_TULIP, Blocks.POTTED_POPPY, Blocks.POTTED_DANDELION, Blocks.POTTED_CORNFLOWER, Blocks.POTTED_AZURE_BLUET, Blocks.POTTED_ALLIUM};
+
+    static Block pot(Plan p, int x, int z) { return POTS[p.rnd(x, 7, z, POTS.length)]; }
+
+    /** A flower on grass (only where nothing else stands). */
+    static void flower(Plan p, int x, int z) { if (!p.has(x, 0, z) && !p.has(x, -1, z)) p.set(x, 0, z, s(FLOWERS[p.rnd(x, 0, z, FLOWERS.length)])); }
+
+    /** Scatter flowers and grass tufts over free ground cells with the given chance (percent). */
+    static void garden(Plan p, int x0, int z0, int x1, int z1, int chance) {
+        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) {
+            if (p.has(x, 0, z) || p.has(x, -1, z)) continue;
+            int r = p.rnd(x, 3, z, 100);
+            if (r < chance) p.set(x, 0, z, s(FLOWERS[p.rnd(x, 0, z, FLOWERS.length)]));
+            else if (r < chance * 2) p.set(x, 0, z, s(Blocks.GRASS));
         }
     }
 
-    /** Viking longhouse: stone footing, log-framed plank walls, steep dark roof overhanging all round, carved prows, shields. */
-    static void longhouse(Plan p, int lv, boolean big) {
-        int w = p.w, d = p.d, cx = w / 2;
-        int h = big ? 4 : 3;
-        int x0 = 1, x1 = w - 2, z0 = 1, z1 = d - (big ? 4 : 2);
-        BlockState planks = s(Blocks.SPRUCE_PLANKS);
-        p.fill(x0, 0, z0, x1, 0, z1, s(Blocks.COBBLESTONE));
-        frameWalls(p, x0, 1, z0, x1, h, z1, planks, Blocks.SPRUCE_LOG);
-        p.walls(x0, 1, z0, x1, 1, z1, s(Blocks.COBBLESTONE)); p.corners(x0, z0, x1, z1, 1, 1, log(Blocks.SPRUCE_LOG, Direction.Axis.Y));
-        door(p, FRONT, z1, cx, 1, Blocks.SPRUCE_DOOR, Blocks.DARK_OAK_STAIRS, Blocks.LANTERN);
-        if (big) { window(p, FRONT, z1, cx - 2, 2, 1, Blocks.GLASS_PANE, Blocks.SPRUCE_TRAPDOOR); window(p, FRONT, z1, cx + 2, 2, 1, Blocks.GLASS_PANE, Blocks.SPRUCE_TRAPDOOR); }
-        for (int z = z0 + 1; z < z1; z += 2) { window(p, LEFT, x0, z, 2, 1, Blocks.GLASS_PANE, null); window(p, RIGHT, x1, z, 2, 1, Blocks.GLASS_PANE, null); }
-        // steep roof with the ridge along z, overhanging the walls on every side
-        roofZ(p, x0 - 1, x1 + 1, z0 - 1, z1 + 1, h + 1, Blocks.DARK_OAK_STAIRS, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Z), z0, z1, planks);
-        int ridge = h + 1 + (x1 - x0 + 2) / 2;
-        // carved prow posts crossing at both gable peaks
-        for (int z : new int[]{z0 - 1, z1 + 1}) { p.set(cx, ridge + 1, z, s(Blocks.BONE_BLOCK)); p.set(cx, ridge + 2, z, s(Blocks.SKELETON_SKULL)); }
-        // round shields hung along the walls (team banners), plus a hearth glow inside
-        for (int z = z0 + 1; z < z1; z += 2) { wallBanner(p, LEFT, x0, z, h); wallBanner(p, RIGHT, x1, z, h); }
-        p.set(cx, 1, (z0 + z1) / 2, s(Blocks.CAMPFIRE));
-        if (big) {   // yard in front: fence, fire pit, practice target
-            for (int x = 0; x < w; x++) if (Math.abs(x - cx) > 1) p.set(x, 0, d - 1, s(Blocks.SPRUCE_FENCE));
-            for (int z = z1 + 1; z < d; z++) { p.set(0, 0, z, s(Blocks.SPRUCE_FENCE)); p.set(w - 1, 0, z, s(Blocks.SPRUCE_FENCE)); }
-            p.set(1, 0, d - 2, s(Blocks.CAMPFIRE)).set(w - 2, 0, d - 2, s(Blocks.TARGET)).set(w - 2, 1, d - 2, s(Blocks.CARVED_PUMPKIN));
-        }
-        if (lv >= 2) { p.set(0, 0, 0, s(Blocks.HAY_BLOCK)).set(0, 1, 0, s(Blocks.CARVED_PUMPKIN)); p.set(w - 1, 0, 0, s(Blocks.BARREL)); }
-        if (lv >= 3) { chimney(p, x1 - 1, z0, h + 1, ridge, s(Blocks.COBBLESTONE)); p.set(x0, h + 1, z1 + 1, s(Blocks.LANTERN)); }
+    /** A leafy bush (one or two blocks), azalea flowers mixed in. */
+    static void bush(Plan p, int x, int z, int h) {
+        for (int y = 0; y < h; y++) p.add(x, y, z, leaves(p.rnd(x, y, z, 3) == 0 ? Blocks.FLOWERING_AZALEA_LEAVES : y == 0 ? Blocks.OAK_LEAVES : Blocks.AZALEA_LEAVES));
     }
 
-    /** Greek temple: stepped quartz stylobate, column rows, sandstone cella, entablature with cornice, pediment roof. */
-    static void greekTemple(Plan p, int lv, boolean great) {
-        int w = p.w, d = p.d, cx = w / 2;
-        int colH = great ? 4 + lv : 3 + lv;
-        p.fill(0, 0, 0, w - 1, 0, d - 1, s(Blocks.SMOOTH_QUARTZ));
-        for (int x = 0; x < w; x++) p.set(x, 0, d - 1, stair(Blocks.SMOOTH_QUARTZ_STAIRS, Direction.NORTH));   // front steps
-        p.fill(1, 1, 1, w - 2, 1, d - 2, s(Blocks.QUARTZ_BRICKS));
-        for (int x = 1; x <= w - 2; x += 2) { p.pillar(x, 1, 2, colH, s(Blocks.QUARTZ_PILLAR)); p.pillar(x, d - 2, 2, colH, s(Blocks.QUARTZ_PILLAR)); }
-        for (int z = 3; z <= d - 4; z += 2) { p.pillar(1, z, 2, colH, s(Blocks.QUARTZ_PILLAR)); p.pillar(w - 2, z, 2, colH, s(Blocks.QUARTZ_PILLAR)); }
-        stoneWalls(p, 3, 2, 3, w - 4, colH, d - 4, s(Blocks.SMOOTH_SANDSTONE), s(Blocks.CUT_SANDSTONE));
-        door(p, FRONT, d - 4, cx, 2, Blocks.SPRUCE_DOOR, null, null);
-        p.fill(1, colH + 1, 1, w - 2, colH + 1, d - 2, s(Blocks.CUT_SANDSTONE));                                           // architrave
-        for (int x = 1; x <= w - 2; x++) { p.set(x, colH + 1, 0, stairTop(Blocks.SMOOTH_SANDSTONE_STAIRS, Direction.SOUTH)); p.set(x, colH + 1, d - 1, stairTop(Blocks.SMOOTH_SANDSTONE_STAIRS, Direction.NORTH)); }
-        roofZ(p, 0, w - 1, 0, d - 1, colH + 2, Blocks.SMOOTH_SANDSTONE_STAIRS, s(Blocks.CHISELED_SANDSTONE), 1, d - 2, s(Blocks.SMOOTH_SANDSTONE));
-        p.set(cx, colH + 2, d - 2, s(Blocks.GOLD_BLOCK));                                                                  // pediment boss
-        p.set(cx, 2, d / 2, s(Blocks.GOLD_BLOCK)).set(cx, 3, d / 2, s(Blocks.LIGHTNING_ROD));                             // altar inside
-        if (lv >= 2) for (int x : new int[]{0, w - 1}) { p.set(x, 1, d - 1, s(Blocks.COBBLESTONE_WALL)); p.set(x, 2, d - 1, s(Blocks.CAMPFIRE)); }   // braziers
-        if (great) {   // a gold hero on a plinth before the steps, and corner towers at the top level
-            p.set(cx, 1, d - 1, s(Blocks.CHISELED_QUARTZ_BLOCK)).set(cx, 2, d - 1, s(Blocks.GOLD_BLOCK)).set(cx, 3, d - 1, s(Blocks.GOLD_BLOCK)).set(cx, 4, d - 1, s(Blocks.LIGHTNING_ROD));
-            if (lv >= 2) for (int x : new int[]{1, w - 2}) { p.pillar(x, 1, colH + 2, colH + 4, s(Blocks.QUARTZ_PILLAR)); p.set(x, colH + 5, 1, s(Blocks.SOUL_LANTERN)); }
+    /** Ground path (dirt path, texturized with coarse dirt and gravel). */
+    static void path(Plan p, int x0, int z0, int x1, int z1) { p.fill(x0, -1, z0, x1, -1, z1, s(Blocks.DIRT_PATH)); }
+
+    /** Lamp post: fence pole with a lantern on top. */
+    static void lampPost(Plan p, int x, int z, int h, Block fence, Block lantern) { p.pillar(x, z, 0, h - 1, s(fence)); p.set(x, h, z, s(lantern)); }
+
+    /**
+     * Dome (or cone) over centre (cx+.5, cz+.5): one ring per radius; cells left uncovered by the next ring become
+     * stairs rising toward the centre, so the outline curves instead of stepping. Returns the first y above the top.
+     */
+    static int dome(Plan p, double cx, double cz, double[] radii, int y0, Block stairs, BlockState body) {
+        for (int i = 0; i < radii.length; i++) {
+            double r = radii[i], next = i + 1 < radii.length ? radii[i + 1] : -1;
+            int y = y0 + i;
+            for (int x = (int) Math.floor(cx - r - 1); x <= cx + r + 1; x++) for (int z = (int) Math.floor(cz - r - 1); z <= cz + r + 1; z++) {
+                double dx = x - cx, dz = z - cz, dd = Math.hypot(dx, dz);
+                if (dd > r + .35) continue;
+                if (next >= 0 && dd <= next + .35) { p.set(x, y, z, body); continue; }
+                Direction toward = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? W : E) : (dz > 0 ? N : S);
+                p.set(x, y, z, stairs == null ? body : stair(stairs, toward));
+            }
         }
+        return y0 + radii.length;
     }
 
-    // =================================================================================================================
-    // SOVEREIGN CROWN — Medieval, Dynasty, Renaissance
-    // =================================================================================================================
-    static void kingdoms(Plan p, String kind, int lv) {
-        int w = p.w, d = p.d, cx = w / 2, cz = d / 2;
-        BlockState bricks = s(Blocks.STONE_BRICKS), trim = s(Blocks.POLISHED_ANDESITE), plaster = s(Blocks.WHITE_TERRACOTTA);
-        switch (kind) {
-            case "metal_extractor" -> {   // stone mine head with a tiled roof, ore cart and lantern
-                p.fill(0, 0, 0, w - 1, 0, d - 1, bricks).set(cx, 0, cz, s(lv >= 3 ? Blocks.IRON_BLOCK : Blocks.IRON_ORE));
-                p.corners(0, 0, w - 1, d - 1, 1, 2, log(Blocks.DARK_OAK_LOG, Direction.Axis.Y));
-                p.walls(0, 1, 0, w - 1, 1, 0, s(Blocks.STONE_BRICK_WALL));
-                p.set(cx, 1, cz, s(Blocks.STONECUTTER)).set(cx, 2, cz, s(Blocks.CHAIN));
-                p.pyramid(0, w - 1, 0, d - 1, 3, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES));
-                p.set(cx, 2, d - 1, hanging(Blocks.LANTERN));
-                if (lv >= 2) { p.set(0, 1, cz, s(Blocks.ANVIL)); p.set(w - 1, 1, cz, s(Blocks.BARREL)); }
-            }
-            case "energy_gen" -> {        // windmill: stone tower, tiled cap, cross of sails on the front
-                int h = 3 + lv;
-                p.fill(0, 0, 0, w - 1, 0, d - 2, s(Blocks.COBBLESTONE));
-                stoneWalls(p, 0, 1, 0, w - 1, h, d - 2, bricks, trim);
-                door(p, FRONT, d - 2, 1, 1, Blocks.SPRUCE_DOOR, null, null);
-                window(p, LEFT, 0, 1, 3, 1, Blocks.GLASS_PANE, Blocks.SPRUCE_TRAPDOOR);
-                p.pyramid(0, w - 1, 0, d - 2, h + 1, Blocks.SPRUCE_STAIRS, s(Blocks.SPRUCE_PLANKS));
-                int hub = h, hx = w - 2; p.set(hx, hub, d - 1, log(Blocks.STRIPPED_SPRUCE_LOG, Direction.Axis.Z));
-                for (int k = 1; k <= 2; k++) {   // four arms of the sail cross, in the plane in front of the tower
-                    p.set(hx, hub + k, d - 1, s(Blocks.SPRUCE_FENCE)); p.set(hx, hub - k, d - 1, s(Blocks.SPRUCE_FENCE));
-                    p.set(Math.min(w - 1, hx + k), hub, d - 1, s(Blocks.SPRUCE_FENCE)); p.set(hx - k, hub, d - 1, s(Blocks.SPRUCE_FENCE));
-                }
-                p.set(hx - 1, hub + 2, d - 1, s(Blocks.WHITE_WOOL)).set(hx + 1, hub - 2, d - 1, s(Blocks.WHITE_WOOL)).set(hx - 2, hub - 1, d - 1, s(Blocks.WHITE_WOOL));
-            }
-            case "storage" -> {           // granary: timber-framed plaster under a steep slate roof, sacks and barrels
-                p.fill(1, 0, 1, w - 2, 0, d - 2, bricks);
-                frameWalls(p, 1, 1, 1, w - 2, 3, d - 2, plaster, Blocks.DARK_OAK_LOG);
-                door(p, FRONT, d - 2, cx, 1, Blocks.DARK_OAK_DOOR, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.LANTERN);
-                window(p, RIGHT, w - 2, cz, 2, 1, Blocks.GLASS_PANE, Blocks.DARK_OAK_TRAPDOOR);
-                window(p, LEFT, 1, cz, 2, 1, Blocks.GLASS_PANE, Blocks.DARK_OAK_TRAPDOOR);
-                roofX(p, 0, w - 1, 0, d - 1, 4, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES), 1, w - 2, plaster);
-                p.set(0, 0, d - 1, s(Blocks.BARREL)).set(w - 1, 0, d - 1, s(Blocks.HAY_BLOCK));
-                if (lv >= 2) { p.set(w - 1, 0, 0, s(Blocks.BARREL)).set(w - 1, 1, 0, s(Blocks.BARREL)).set(0, 0, 0, s(Blocks.HAY_BLOCK)); }
-            }
-            case "converter" -> {         // smithy: stone base, timber upper storey, tall brick chimney, forge in the open front
-                p.fill(0, 0, 0, w - 1, 0, d - 1, trim);
-                p.walls(0, 1, 0, w - 1, 1, d - 2, bricks);
-                frameWalls(p, 0, 2, 0, w - 1, 3, d - 2, plaster, Blocks.DARK_OAK_LOG);
-                p.clearBox(1, 1, d - 2, w - 2, 2, d - 2);
-                p.set(1, 1, 1, s(Blocks.BLAST_FURNACE)).set(2, 1, 1, s(Blocks.ANVIL)).set(w - 2, 1, d - 2, s(Blocks.SMITHING_TABLE));
-                p.pyramid(0, w - 1, 0, d - 1, 4, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES));
-                chimney(p, 0, 0, 4, 5 + lv, s(Blocks.BRICKS));
-                p.set(w - 1, 2, d - 1, hanging(Blocks.LANTERN));
-            }
-            case "tech_center" -> {       // stone chapel library: buttressed nave, tall windows, steep roof, bell tower with spire
-                p.fill(1, 0, 1, w - 2, 0, d - 1, trim);
-                stoneWalls(p, 1, 1, 2, w - 2, 4, d - 2, bricks, trim);
-                for (int z = 3; z < d - 2; z += 2) { p.set(0, 1, z, stair(Blocks.STONE_BRICK_STAIRS, Direction.EAST)); p.set(w - 1, 1, z, stair(Blocks.STONE_BRICK_STAIRS, Direction.WEST)); }   // buttresses
-                for (int z = 3; z < d - 2; z += 2) { window(p, LEFT, 1, z, 2, 2, Blocks.BLUE_STAINED_GLASS_PANE, null); window(p, RIGHT, w - 2, z, 2, 2, Blocks.BLUE_STAINED_GLASS_PANE, null); }
-                door(p, FRONT, d - 2, cx, 1, Blocks.DARK_OAK_DOOR, Blocks.STONE_BRICK_STAIRS, Blocks.LANTERN);
-                window(p, FRONT, d - 2, cx, 4, 1, Blocks.LIGHT_BLUE_STAINED_GLASS_PANE, null);
-                roofZ(p, 0, w - 1, 1, d - 1, 5, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES), 2, d - 2, bricks);
-                int top = 5 + (w - 1) / 2;
-                p.fill(cx - 1, 1, 0, cx + 1, top + 1, 1, bricks);   // bell tower at the back
-                p.clear(cx, top, 1).set(cx, top, 1, s(Blocks.BELL));
-                p.pyramid(cx - 1, cx + 1, 0, 1, top + 2, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES));
-                p.pillar(cx, 0, top + 3, top + 3 + lv, s(Blocks.STONE_BRICK_WALL)).set(cx, top + 4 + lv, 0, s(Blocks.LIGHTNING_ROD));
-                p.fill(2, 1, 3, w - 3, 1, 3, s(Blocks.BOOKSHELF)).set(cx, 1, cz, s(Blocks.ENCHANTING_TABLE));
-                if (lv >= 2) p.set(cx - 1, 1, cz + 1, s(Blocks.LECTERN));
-                if (lv >= 3) p.set(cx + 1, 1, cz + 1, s(Blocks.BREWING_STAND));
-            }
-            case "watchtower" -> {        // round-ish stone tower: arrow slits, machicolated crenellations, slate cap
-                int h = 4 + lv;
-                stoneWalls(p, 0, 0, 0, w - 1, h, d - 1, bricks, trim);
-                p.set(cx, 2, d - 1, s(Blocks.IRON_BARS)).set(cx, h - 1, 0, s(Blocks.IRON_BARS)).set(0, h - 1, cz, s(Blocks.IRON_BARS)).set(w - 1, 3, cz, s(Blocks.IRON_BARS));
-                p.fill(0, h + 1, 0, w - 1, h + 1, d - 1, trim);                               // parapet band
-                // merlons on the side centres, corner posts carry the cap
-                for (int[] m : new int[][]{{cx, 0}, {cx, d - 1}, {0, cz}, {w - 1, cz}}) p.set(m[0], h + 2, m[1], s(Blocks.STONE_BRICK_WALL));
-                if (lv < 2) p.corners(0, 0, w - 1, d - 1, h + 2, h + 2, bricks);
-                if (lv >= 2) { p.corners(0, 0, w - 1, d - 1, h + 2, h + 3, log(Blocks.DARK_OAK_LOG, Direction.Axis.Y)); p.pyramid(0, w - 1, 0, d - 1, h + 4, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES)); p.set(cx, h + 3, cz, hanging(Blocks.LANTERN)); }
-                else p.set(cx, h + 2, cz, s(Blocks.LANTERN));
-            }
-            case "wall" -> {
-                for (int y = 0; y <= lv; y++) p.set(0, y, 0, y == 0 ? trim : bricks);
-                p.set(0, lv + 1, 0, s(Blocks.STONE_BRICK_WALL));
-            }
-            case "barracks" -> tudorHall(p, lv);
-            case "keep_workshop" -> keep(p, lv);
-            case "royal_court" -> pagoda(p, lv);
-            case "siege_works" -> {       // walled yard: gatehouse, timber workshop, crane, trebuchet frame
-                p.fill(0, 0, 0, w - 1, 0, d - 1, trim);
-                stoneWalls(p, 0, 1, 0, w - 1, 3, d - 1, bricks, trim);
-                p.crenel(0, 0, w - 1, d - 1, 4, bricks);
-                p.clearBox(cx - 1, 1, d - 1, cx + 1, 3, d - 1).fill(cx - 1, 3, d - 1, cx + 1, 3, d - 1, s(Blocks.IRON_BARS));
-                p.corners(cx - 2, d - 1, cx + 2, d - 1, 1, 5, bricks);
-                frameWalls(p, 1, 1, 1, 5, 3, 4, plaster, Blocks.DARK_OAK_LOG);
-                door(p, FRONT, 4, 3, 1, Blocks.DARK_OAK_DOOR, null, null);
-                roofX(p, 1, 5, 1, 5, 4, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES), 1, 5, plaster);
-                p.pillar(w - 3, 2, 1, 7, log(Blocks.DARK_OAK_LOG, Direction.Axis.Y)).fill(w - 7, 8, 2, w - 2, 8, 2, log(Blocks.DARK_OAK_LOG, Direction.Axis.X));
-                p.pillar(w - 7, 2, 6, 7, s(Blocks.CHAIN)).set(w - 7, 5, 2, s(Blocks.COBBLESTONE));
-                p.pillar(w - 3, cz + 1, 1, 5, log(Blocks.DARK_OAK_LOG, Direction.Axis.Y)).pillar(w - 5, cz + 1, 1, 5, log(Blocks.DARK_OAK_LOG, Direction.Axis.Y))
-                 .fill(w - 5, 6, cz + 1, w - 3, 6, cz + 1, log(Blocks.STRIPPED_DARK_OAK_LOG, Direction.Axis.X)).set(w - 4, 5, cz + 1, s(Blocks.CHAIN));
-                p.set(2, 1, d - 3, s(Blocks.ANVIL)).set(3, 1, d - 3, s(Blocks.SMITHING_TABLE)).set(4, 1, d - 3, s(Blocks.CAULDRON));
-                if (lv >= 2) p.corners(cx - 2, d - 1, cx + 2, d - 1, 6, 6, s(Blocks.LANTERN));
-            }
-            default -> p.fill(0, 0, 0, w - 1, 0, d - 1, bricks);
+    /**
+     * East-Asian hip roof with a curved profile: a flat slab eave ring, then 45-degree stairs up to a ridge line, and
+     * upturned corners. Covers [x0..x1] x [z0..z1] from y; returns the first y above the ridge.
+     */
+    static int curvedHip(Plan p, int x0, int x1, int z0, int z1, int y, Block stairs, Block slabB, BlockState ridge, BlockState cornerUp) {
+        for (int x = x0; x <= x1; x++) { p.set(x, y, z0, slab(slabB, false)); p.set(x, y, z1, slab(slabB, false)); }
+        for (int z = z0; z <= z1; z++) { p.set(x0, y, z, slab(slabB, false)); p.set(x1, y, z, slab(slabB, false)); }
+        if (cornerUp != null) for (int[] c : new int[][]{{x0, z0}, {x1, z0}, {x0, z1}, {x1, z1}}) p.set(c[0], y, c[1], cornerUp);
+        int ax0 = x0 + 1, ax1 = x1 - 1, az0 = z0 + 1, az1 = z1 - 1, yy = y;
+        while (az1 - az0 >= 1 && ax1 - ax0 >= 1) {
+            for (int x = ax0; x <= ax1; x++) { p.set(x, yy, az0, stair(stairs, S)); p.set(x, yy, az1, stair(stairs, N)); }
+            if (ax1 - ax0 > az1 - az0) for (int z = az0 + 1; z < az1; z++) { p.set(ax0, yy, z, stair(stairs, E)); p.set(ax1, yy, z, stair(stairs, W)); }
+            ax0 += ax1 - ax0 > az1 - az0 ? 1 : 0; ax1 -= ax1 - ax0 > az1 - az0 ? 1 : 0;
+            az0++; az1--; yy++;
+        }
+        for (int x = ax0; x <= ax1; x++) for (int z = az0; z <= az1; z++) p.set(x, yy, z, ridge);
+        return yy + 1;
+    }
+
+    /** Stack of crates/barrels/hay: a little store pile. */
+    static void goods(Plan p, int x, int z, int kind) {
+        switch (Math.floorMod(kind, 4)) {
+            case 0 -> { p.add(x, 0, z, s(Blocks.BARREL)); p.add(x, 1, z, s(Blocks.BARREL)); }
+            case 1 -> { p.add(x, 0, z, log(Blocks.HAY_BLOCK, Direction.Axis.Y)); }
+            case 2 -> { p.add(x, 0, z, s(Blocks.BARREL)); p.add(x, 1, z, s(Blocks.COMPOSTER)); }
+            default -> { p.add(x, 0, z, log(Blocks.SPRUCE_LOG, Direction.Axis.X)); }
         }
     }
 
-    /** Tudor hall: stone plinth, timber-framed plaster, jettied upper floor, steep slate roof, chimney, banners. */
-    static void tudorHall(Plan p, int lv) {
-        int w = p.w, d = p.d, cx = w / 2, cz = d / 2;
-        BlockState plaster = s(Blocks.WHITE_TERRACOTTA);
-        p.fill(1, 0, 1, w - 2, 0, d - 2, s(Blocks.STONE_BRICKS));
-        p.walls(1, 1, 1, w - 2, 1, d - 2, s(Blocks.COBBLESTONE));
-        frameWalls(p, 1, 2, 1, w - 2, 3, d - 2, plaster, Blocks.DARK_OAK_LOG);
-        door(p, FRONT, d - 2, cx, 1, Blocks.DARK_OAK_DOOR, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.LANTERN);
-        window(p, FRONT, d - 2, cx - 2, 2, 1, Blocks.GLASS_PANE, Blocks.DARK_OAK_TRAPDOOR); window(p, FRONT, d - 2, cx + 2, 2, 1, Blocks.GLASS_PANE, Blocks.DARK_OAK_TRAPDOOR);
-        window(p, LEFT, 1, cz, 2, 1, Blocks.GLASS_PANE, Blocks.DARK_OAK_TRAPDOOR); window(p, RIGHT, w - 2, cz, 2, 1, Blocks.GLASS_PANE, Blocks.DARK_OAK_TRAPDOOR);
-        int roofY = 4;
-        if (lv >= 2) {   // jettied upper floor overhanging the ground floor on every side
-            cornice(p, 1, 1, w - 2, d - 2, 3, Blocks.DARK_OAK_STAIRS);
-            frameWalls(p, 0, 4, 0, w - 1, 5, d - 1, plaster, Blocks.DARK_OAK_LOG);
-            for (int x = 2; x < w - 2; x += 2) window(p, FRONT, d - 1, x, 5, 1, Blocks.GLASS_PANE, null);
-            roofY = 6;
-        }
-        roofX(p, 0, w - 1, 0, d - 1, roofY, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES), lv >= 2 ? 0 : 1, lv >= 2 ? w - 1 : w - 2, plaster);
-        chimney(p, w - 2, 1, 2, roofY + (d - 1) / 2 + 1, s(Blocks.BRICKS));
-        wallBanner(p, FRONT, d - 2, cx - 1, 3); wallBanner(p, FRONT, d - 2, cx + 1, 3);
-        p.set(0, 0, d - 1, s(Blocks.HAY_BLOCK)).set(0, 1, d - 1, s(Blocks.CARVED_PUMPKIN));   // training dummy
-        if (lv >= 3) { p.set(cx, roofY + (d - 1) / 2 + 1, 0, s(Blocks.GOLD_BLOCK)); p.set(w - 1, 0, d - 1, s(Blocks.BARREL)); }
+    /** A row of ripe crops on farmland. */
+    static void crops(Plan p, int x0, int z0, int x1, int z1, Block crop) {
+        for (int x = x0; x <= x1; x++) for (int z = z0; z <= z1; z++) { p.set(x, -1, z, s(Blocks.FARMLAND)); p.set(x, 0, z, ripe(crop)); }
     }
 
-    /** Stone keep: thick walls with string course, corner towers, machicolations, portcullis gate, banners. */
-    static void keep(Plan p, int lv) {
-        int w = p.w, d = p.d, cx = w / 2, h = 4 + lv;
-        BlockState bricks = s(Blocks.STONE_BRICKS), trim = s(Blocks.POLISHED_ANDESITE);
-        p.fill(0, 0, 0, w - 1, 0, d - 1, trim);
-        stoneWalls(p, 1, 1, 1, w - 2, h, d - 2, bricks, trim);
-        cornice(p, 1, 1, w - 2, d - 2, h, Blocks.STONE_BRICK_STAIRS);
-        p.crenel(0, 0, w - 1, d - 1, h + 1, bricks);
-        for (int[] c : new int[][]{{0, 0}, {w - 2, 0}, {0, d - 2}, {w - 2, d - 2}}) {   // 2x2 corner towers, taller than the walls
-            p.fill(c[0], 1, c[1], c[0] + 1, h + 2, c[1] + 1, bricks);
-            p.set(c[0], h + 3, c[1], bricks).set(c[0] + 1, h + 3, c[1] + 1, bricks);
-            if (lv >= 2) p.set(c[0], h + 4, c[1], s(Blocks.LANTERN));
-        }
-        p.clearBox(cx - 1, 1, d - 2, cx + 1, 3, d - 2).fill(cx - 1, 3, d - 2, cx + 1, 3, d - 2, s(Blocks.IRON_BARS));
-        for (int y = 3; y < h - 1; y += 2) for (int x : new int[]{cx - 3, cx + 3}) p.set(x, y, d - 2, s(Blocks.IRON_BARS));   // arrow slits
-        wallBanner(p, FRONT, d - 2, cx - 2, h - 1); wallBanner(p, FRONT, d - 2, cx + 2, h - 1);
-        p.fill(2, h, 2, w - 3, h, d - 3, s(Blocks.SPRUCE_PLANKS));
-        if (lv >= 2) { p.fill(cx - 1, h + 1, cx - 1, cx + 1, h + 3, cx + 1, bricks); p.crenel(cx - 1, cx - 1, cx + 1, cx + 1, h + 4, bricks); }   // central donjon
-        if (lv >= 3) p.set(cx, h + 4, cx, s(Blocks.LANTERN));
-    }
-
-    /** Two-tier Dynasty pagoda palace: stone terrace, red columns, dark timber walls, flared tile roofs, gold finial. */
-    static void pagoda(Plan p, int lv) {
-        int w = p.w, d = p.d, cx = w / 2, cz = d / 2;
-        p.fill(0, 0, 0, w - 1, 0, d - 1, s(Blocks.POLISHED_ANDESITE));
-        for (int x = cx - 2; x <= cx + 2; x++) p.set(x, 0, d - 1, stair(Blocks.POLISHED_ANDESITE_STAIRS, Direction.NORTH));
-        p.fill(1, 1, 1, w - 2, 1, d - 2, s(Blocks.SMOOTH_STONE));
-        for (int x = 1; x < w - 1; x++) { p.set(x, 1, d - 2, stair(Blocks.STONE_BRICK_STAIRS, Direction.NORTH)); }
-        p.walls(2, 2, 2, w - 3, 4, d - 3, s(Blocks.DARK_OAK_PLANKS));
-        for (int x = 2; x <= w - 3; x += 2) { p.pillar(x, 2, 2, 4, s(Blocks.RED_TERRACOTTA)); p.pillar(x, d - 3, 2, 4, s(Blocks.RED_TERRACOTTA)); }
-        for (int z = 2; z <= d - 3; z += 2) { p.pillar(2, z, 2, 4, s(Blocks.RED_TERRACOTTA)); p.pillar(w - 3, z, 2, 4, s(Blocks.RED_TERRACOTTA)); }
-        door(p, FRONT, d - 3, cx, 2, Blocks.DARK_OAK_DOOR, null, null);
-        for (int x = 3; x < w - 3; x += 2) if (Math.abs(x - cx) > 1) window(p, FRONT, d - 3, x, 3, 1, Blocks.GLASS_PANE, null);
-        // lower roof: tiles out to the terrace edge, corners turned up
-        p.pyramid(0, w - 1, 0, d - 1, 5, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES));
-        for (int[] c : new int[][]{{0, 0}, {w - 1, 0}, {0, d - 1}, {w - 1, d - 1}}) p.set(c[0], 6, c[1], slab(Blocks.DEEPSLATE_TILE_SLAB, false));
-        // upper storey and roof
-        int uy = 7;
-        p.walls(3, uy, 3, w - 4, uy + 1 + (lv >= 2 ? 1 : 0), d - 4, s(Blocks.RED_TERRACOTTA));
-        window(p, FRONT, d - 4, cx, uy + 1, 1, Blocks.GLASS_PANE, null);
-        int ry = uy + 2 + (lv >= 2 ? 1 : 0);
-        p.pyramid(2, w - 3, 2, d - 3, ry, Blocks.DEEPSLATE_TILE_STAIRS, s(Blocks.DEEPSLATE_TILES));
-        for (int[] c : new int[][]{{2, 2}, {w - 3, 2}, {2, d - 3}, {w - 3, d - 3}}) p.set(c[0], ry + 1, c[1], slab(Blocks.DEEPSLATE_TILE_SLAB, false));
-        int peak = ry + Math.min(w - 4, d - 4) / 2;
-        p.set(cx, peak + 1, cz, s(Blocks.GOLD_BLOCK)).set(cx, peak + 2, cz, s(Blocks.LIGHTNING_ROD));
-        p.corners(1, 1, w - 2, d - 2, 4, 4, hanging(Blocks.LANTERN));
-        wallBanner(p, FRONT, d - 3, cx - 2, 4); wallBanner(p, FRONT, d - 3, cx + 2, 4);
-        if (lv >= 2) p.set(cx - 3, 2, d - 1, s(Blocks.BELL)).set(cx + 3, 2, d - 1, s(Blocks.BELL));
+    /** Woodpile: horizontal logs stacked two high along x. */
+    static void woodpile(Plan p, int x0, int x1, int z, Block log) {
+        for (int x = x0; x <= x1; x++) { p.set(x, 0, z, log(log, Direction.Axis.Z)); if ((x - x0) % 2 == 0) p.set(x, 1, z, log(log, Direction.Axis.Z)); }
     }
 }

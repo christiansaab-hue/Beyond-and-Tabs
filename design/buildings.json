@@ -1,6 +1,6 @@
 {
  "sheet": "buildings",
- "notes": "Buildings are drawn as Minecraft block structures with race-specific architecture (see mod Architecture.java): Ancient World = Tribal/Viking/Greek, Kingdoms = Medieval/Dynasty/Renaissance. Each level is an in-place upgrade costing 60% of base per level and adds visible detail. Footprints are gameplay values.",
+ "notes": "Buildings are drawn as Minecraft block structures with race-specific architecture (see mod Architecture.java): Ancient World = Tribal/Viking/Greek, Kingdoms = Medieval/Dynasty/Renaissance. Each level is an in-place upgrade costing 60% of base per level and adds visible detail. Footprints are gameplay values. Advanced energy plants (tier 3) give big output but detonate when destroyed (blast_radius/blast_damage). Support buildings with effect assist_power add build power to nearby construction, production and repair (BAR construction turret).",
  "columns": [
   "id",
   "race",
@@ -16,6 +16,8 @@
   "effect",
   "value_per_level",
   "requires_tech",
+  "blast_radius",
+  "blast_damage",
   "unverified"
  ],
  "rows": [
@@ -34,7 +36,9 @@
    "value_per_level": "2.0,3.5,5.5",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 800
+   "hp": 800,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_energy_gen",
@@ -51,7 +55,9 @@
    "value_per_level": "25,40,60",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 800
+   "hp": 800,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_storage",
@@ -68,7 +74,9 @@
    "value_per_level": "1000,3000",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 1500
+   "hp": 1500,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_converter",
@@ -85,7 +93,9 @@
    "value_per_level": "1.0,2.0",
    "requires_tech": "aw_tech_t2",
    "unverified": [],
-   "hp": 800
+   "hp": 800,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_tech_center",
@@ -102,7 +112,9 @@
    "value_per_level": "1,2,3",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 2500
+   "hp": 2500,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_watchtower",
@@ -119,7 +131,9 @@
    "value_per_level": "25,45,80",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 1200
+   "hp": 1200,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_wall",
@@ -136,7 +150,9 @@
    "value_per_level": "400,1200",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 400
+   "hp": 400,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_metal_extractor",
@@ -153,7 +169,9 @@
    "value_per_level": "2.0,3.5,5.5",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 800
+   "hp": 800,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_energy_gen",
@@ -164,13 +182,15 @@
    "metal": 35,
    "energy": 0,
    "build_work": 12,
-   "footprint": "4x4",
+   "footprint": "5x5",
    "produces": "none",
    "effect": "energy_per_s",
    "value_per_level": "25,40,60",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 800
+   "hp": 800,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_storage",
@@ -187,7 +207,9 @@
    "value_per_level": "1000,3000",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 1500
+   "hp": 1500,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_converter",
@@ -204,7 +226,9 @@
    "value_per_level": "1.0,2.0",
    "requires_tech": "kd_tech_t2",
    "unverified": [],
-   "hp": 800
+   "hp": 800,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_tech_center",
@@ -221,7 +245,9 @@
    "value_per_level": "1,2,3",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 2500
+   "hp": 2500,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_watchtower",
@@ -238,7 +264,9 @@
    "value_per_level": "25,45,80",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 1200
+   "hp": 1200,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_wall",
@@ -255,7 +283,9 @@
    "value_per_level": "400,1200",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 400
+   "hp": 400,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_barracks",
@@ -272,7 +302,9 @@
    "value_per_level": "10,15,22",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 3000
+   "hp": 3000,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_war_lodge",
@@ -289,7 +321,9 @@
    "value_per_level": "20,30,45",
    "requires_tech": "aw_tech_t2",
    "unverified": [],
-   "hp": 4500
+   "hp": 4500,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_hall_of_legends",
@@ -306,7 +340,9 @@
    "value_per_level": "40,60",
    "requires_tech": "aw_tech_t3",
    "unverified": [],
-   "hp": 7000
+   "hp": 7000,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "aw_siege_yard",
@@ -323,7 +359,9 @@
    "value_per_level": "40,60",
    "requires_tech": "aw_tech_t3",
    "unverified": [],
-   "hp": 7000
+   "hp": 7000,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_barracks",
@@ -340,7 +378,9 @@
    "value_per_level": "10,15,22",
    "requires_tech": "none",
    "unverified": [],
-   "hp": 3000
+   "hp": 3000,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_keep_workshop",
@@ -357,7 +397,9 @@
    "value_per_level": "20,30,45",
    "requires_tech": "kd_tech_t2",
    "unverified": [],
-   "hp": 4500
+   "hp": 4500,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_royal_court",
@@ -374,7 +416,9 @@
    "value_per_level": "40,60",
    "requires_tech": "kd_tech_t3",
    "unverified": [],
-   "hp": 7000
+   "hp": 7000,
+   "blast_radius": 0,
+   "blast_damage": 0
   },
   {
    "id": "kd_siege_works",
@@ -391,7 +435,332 @@
    "value_per_level": "40,60",
    "requires_tech": "kd_tech_t3",
    "unverified": [],
-   "hp": 7000
+   "hp": 7000,
+   "blast_radius": 0,
+   "blast_damage": 0
+  },
+  {
+   "id": "aw_heartforge",
+   "race": "ancient_world",
+   "kind": "economy",
+   "tier": 3,
+   "levels": 2,
+   "hp": 3500,
+   "metal": 900,
+   "energy": 9000,
+   "build_work": 150,
+   "footprint": "6x6",
+   "produces": "none",
+   "effect": "energy_per_s",
+   "value_per_level": "700,1000",
+   "requires_tech": "aw_tech_t3",
+   "blast_radius": 10,
+   "blast_damage": 1200,
+   "unverified": []
+  },
+  {
+   "id": "kd_crucible",
+   "race": "kingdoms",
+   "kind": "economy",
+   "tier": 3,
+   "levels": 2,
+   "hp": 3500,
+   "metal": 900,
+   "energy": 9000,
+   "build_work": 150,
+   "footprint": "6x6",
+   "produces": "none",
+   "effect": "energy_per_s",
+   "value_per_level": "700,1000",
+   "requires_tech": "kd_tech_t3",
+   "blast_radius": 10,
+   "blast_damage": 1200,
+   "unverified": []
+  },
+  {
+   "id": "aw_drum_circle",
+   "race": "ancient_world",
+   "kind": "support",
+   "tier": 2,
+   "levels": 2,
+   "hp": 700,
+   "metal": 120,
+   "energy": 1500,
+   "build_work": 25,
+   "footprint": "4x4",
+   "produces": "none",
+   "effect": "assist_power",
+   "value_per_level": "15,25",
+   "requires_tech": "aw_tech_t2",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "kd_crane",
+   "race": "kingdoms",
+   "kind": "support",
+   "tier": 2,
+   "levels": 2,
+   "hp": 700,
+   "metal": 120,
+   "energy": 1500,
+   "build_work": 25,
+   "footprint": "4x4",
+   "produces": "none",
+   "effect": "assist_power",
+   "value_per_level": "15,25",
+   "requires_tech": "kd_tech_t2",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_metal_extractor",
+   "race": "starforge",
+   "kind": "economy",
+   "tier": 1,
+   "levels": 3,
+   "hp": 800,
+   "metal": 50,
+   "energy": 500,
+   "build_work": 15,
+   "footprint": "3x3",
+   "produces": "none",
+   "effect": "metal_per_s",
+   "value_per_level": "2.0,3.5,5.5",
+   "requires_tech": "none",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_energy_gen",
+   "race": "starforge",
+   "kind": "economy",
+   "tier": 1,
+   "levels": 3,
+   "hp": 700,
+   "metal": 35,
+   "energy": 0,
+   "build_work": 12,
+   "footprint": "4x4",
+   "produces": "none",
+   "effect": "energy_per_s",
+   "value_per_level": "25,40,60",
+   "requires_tech": "none",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_storage",
+   "race": "starforge",
+   "kind": "economy",
+   "tier": 1,
+   "levels": 2,
+   "hp": 1500,
+   "metal": 100,
+   "energy": 1000,
+   "build_work": 20,
+   "footprint": "5x5",
+   "produces": "none",
+   "effect": "storage",
+   "value_per_level": "1000,3000",
+   "requires_tech": "none",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_converter",
+   "race": "starforge",
+   "kind": "economy",
+   "tier": 2,
+   "levels": 2,
+   "hp": 800,
+   "metal": 150,
+   "energy": 2000,
+   "build_work": 40,
+   "footprint": "4x4",
+   "produces": "none",
+   "effect": "energy_to_metal_per_s",
+   "value_per_level": "1.0,2.0",
+   "requires_tech": "sf_tech_t2",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_tech_center",
+   "race": "starforge",
+   "kind": "tech",
+   "tier": 1,
+   "levels": 3,
+   "hp": 2500,
+   "metal": 300,
+   "energy": 3000,
+   "build_work": 60,
+   "footprint": "7x7",
+   "produces": "none",
+   "effect": "unlock_tier",
+   "value_per_level": "1,2,3",
+   "requires_tech": "none",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_watchtower",
+   "race": "starforge",
+   "kind": "defense",
+   "tier": 1,
+   "levels": 3,
+   "hp": 1300,
+   "metal": 90,
+   "energy": 900,
+   "build_work": 18,
+   "footprint": "3x3",
+   "produces": "none",
+   "effect": "ranged_dps",
+   "value_per_level": "25,45,80",
+   "requires_tech": "none",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_wall",
+   "race": "starforge",
+   "kind": "defense",
+   "tier": 1,
+   "levels": 2,
+   "hp": 450,
+   "metal": 5,
+   "energy": 0,
+   "build_work": 1,
+   "footprint": "1x1",
+   "produces": "none",
+   "effect": "hp",
+   "value_per_level": "450,1300",
+   "requires_tech": "none",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_barracks",
+   "race": "starforge",
+   "kind": "factory",
+   "tier": 1,
+   "levels": 3,
+   "hp": 3000,
+   "metal": 150,
+   "energy": 1500,
+   "build_work": 40,
+   "footprint": "7x7",
+   "produces": "units_t1",
+   "effect": "build_power",
+   "value_per_level": "10,15,22",
+   "requires_tech": "none",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_mech_bay",
+   "race": "starforge",
+   "kind": "factory",
+   "tier": 2,
+   "levels": 3,
+   "hp": 4500,
+   "metal": 600,
+   "energy": 6000,
+   "build_work": 90,
+   "footprint": "9x9",
+   "produces": "units_t2",
+   "effect": "build_power",
+   "value_per_level": "20,30,45",
+   "requires_tech": "sf_tech_t2",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_titan_foundry",
+   "race": "starforge",
+   "kind": "factory",
+   "tier": 3,
+   "levels": 2,
+   "hp": 7000,
+   "metal": 1500,
+   "energy": 15000,
+   "build_work": 180,
+   "footprint": "11x11",
+   "produces": "units_t3",
+   "effect": "build_power",
+   "value_per_level": "40,60",
+   "requires_tech": "sf_tech_t3",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_artillery_foundry",
+   "race": "starforge",
+   "kind": "factory",
+   "tier": 3,
+   "levels": 2,
+   "hp": 7000,
+   "metal": 1500,
+   "energy": 15000,
+   "build_work": 180,
+   "footprint": "11x11",
+   "produces": "units_t3_siege",
+   "effect": "build_power",
+   "value_per_level": "40,60",
+   "requires_tech": "sf_tech_t3",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
+  },
+  {
+   "id": "sf_fusion_core",
+   "race": "starforge",
+   "kind": "economy",
+   "tier": 3,
+   "levels": 2,
+   "hp": 3500,
+   "metal": 900,
+   "energy": 9000,
+   "build_work": 150,
+   "footprint": "6x6",
+   "produces": "none",
+   "effect": "energy_per_s",
+   "value_per_level": "700,1000",
+   "requires_tech": "sf_tech_t3",
+   "blast_radius": 12,
+   "blast_damage": 1600,
+   "unverified": []
+  },
+  {
+   "id": "sf_drone_pad",
+   "race": "starforge",
+   "kind": "support",
+   "tier": 2,
+   "levels": 2,
+   "hp": 700,
+   "metal": 120,
+   "energy": 1500,
+   "build_work": 25,
+   "footprint": "4x4",
+   "produces": "none",
+   "effect": "assist_power",
+   "value_per_level": "15,25",
+   "requires_tech": "sf_tech_t2",
+   "blast_radius": 0,
+   "blast_damage": 0,
+   "unverified": []
   }
  ]
 }
