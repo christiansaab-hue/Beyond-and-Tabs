@@ -121,6 +121,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(BlockServerEvents.class);
         vanillaEventBus.register(TutorialServerEvents.class);
         vanillaEventBus.register(PlayerServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.bot.BotServerEvents.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

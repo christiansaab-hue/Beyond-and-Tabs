@@ -18,10 +18,19 @@ public final class MetalPatches {
     private MetalPatches() { }
 
     public static final Block PATCH_BLOCK = Blocks.RAW_IRON_BLOCK;
+    /** Patch centres stamped this session (per dimension); bots read these to know where to expand. */
+    private static final java.util.Map<String, java.util.List<BlockPos>> STAMPED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static java.util.List<BlockPos> getPatches(ServerLevel level) {
+        return STAMPED.getOrDefault(level.dimension().location().toString(), java.util.List.of());
+    }
+
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     /** Stamps one plus-shaped patch flush into the terrain surface at (x, z). Skips water. */
     public static void stamp(ServerLevel level, int x, int z) {
+        STAMPED.computeIfAbsent(level.dimension().location().toString(), k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()))
+                .add(new BlockPos(x, level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), z));
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
             int bx = x + d[0], bz = z + d[1];
