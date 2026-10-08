@@ -99,10 +99,11 @@ public class BotServerEvents {
         BotPlayer.Difficulty difficulty = switch (difficultyName.toLowerCase()) {
             case "easy" -> BotPlayer.Difficulty.EASY;
             case "hard" -> BotPlayer.Difficulty.HARD;
-            default -> BotPlayer.Difficulty.MEDIUM;
+            default -> BotPlayer.Difficulty.MEDIUM;   // "medium" and "far" both land here
         };
         String name = "Bot" + botNumber++ + " (" + difficultyName.toLowerCase() + ")";
-        Vec3 pos = findBotStart(caller);
+        boolean far = difficultyName.equalsIgnoreCase("far");
+        Vec3 pos = far ? findBotStart(caller, 300, 420) : findBotStart(caller);
         PlayerServerEvents.startRTSBot(name, pos, faction);
         brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
         caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "
@@ -114,12 +115,14 @@ public class BotServerEvents {
      * A base site for a new bot: far from the caller and from every existing RTS player, on dry, fairly flat ground.
      * Searches rings of 180-260 blocks in 24 directions and keeps the best-scoring spot.
      */
-    static Vec3 findBotStart(ServerPlayer caller) {
+    static Vec3 findBotStart(ServerPlayer caller) { return findBotStart(caller, 180, 260); }
+
+    static Vec3 findBotStart(ServerPlayer caller, int minR, int maxR) {
         ServerLevel level = caller.serverLevel();
         Vec3 from = caller.position();
-        Vec3 best = from.add(180, 0, 0);
+        Vec3 best = from.add(minR, 0, 0);
         double bestScore = -1e18;
-        for (int r = 180; r <= 260; r += 40) {
+        for (int r = minR; r <= maxR; r += 40) {
             for (int k = 0; k < 24; k++) {
                 double a = Math.PI * 2 * k / 24;
                 int x = (int) (from.x + Math.cos(a) * r);
