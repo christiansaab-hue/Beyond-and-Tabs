@@ -18,6 +18,9 @@ public class PortalCivilian extends AbstractPortal {
 
     public PortalCivilian() {
         super(structureName, cost);
+        // BAR economy: the civilian portal was the piglins' resource drop-off; now a small metal + energy income
+        this.metalIncome = 1f;
+        this.energyIncome = 10f;
         this.name = buildingName;
         this.portraitBlock = Blocks.CYAN_GLAZED_TERRACOTTA;
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/cyan_glazed_terracotta.png");

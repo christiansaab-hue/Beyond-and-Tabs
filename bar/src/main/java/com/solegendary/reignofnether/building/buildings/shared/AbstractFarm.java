@@ -14,6 +14,9 @@ import net.minecraft.world.level.block.Rotation;
 public abstract class AbstractFarm extends Building {
     public AbstractFarm(String structureName, ResourceCost cost, boolean isCapitol) {
         super(structureName, cost, isCapitol);
+        // BAR economy: farms no longer need workers; they act like a metal extractor (see EconomyServerEvents)
+        this.metalIncome = 1.5f;
+        this.energyIncome = 5f;
         this.maxHealth = 65d;
     }
 

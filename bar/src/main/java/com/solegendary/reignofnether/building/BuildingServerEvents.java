@@ -428,12 +428,9 @@ public class BuildingServerEvents {
                 }
             }
 
-            boolean canAfford = fromCommand || newBuilding.canAfford(ownerName);
-            if (!canAfford) {
-                warnInsufficientResources(newBuilding);
-                FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
-                return null;
-            }
+            // BAR flow economy: no upfront payment and no affordability check. The building is paid for while it
+            // is constructed (BuildingPlacement.tickFlowConstruction) and simply stalls when resources run out.
+            newBuilding.freeBuild = fromCommand;
 
             boolean isSandbox = SandboxServer.isAnyoneASandboxPlayer();
             if (!fromCommand && !isSandbox && !BuildingValidators.isInBrightChunk(serverLevel, newBuilding.centrePos, ownerName) && !ignoreFog) {
@@ -479,6 +476,7 @@ public class BuildingServerEvents {
                 if (newBuilding.isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) == 0) {
                     newBuilding.blocksPerBuild = 2;
                     newBuilding.maxBlocksPerTick = 2;
+                    newBuilding.buildSpeedMult = 2f;
                 }
                 for (BuildingBlock block : newBuilding.blocks) {
                     if (block.getBlockPos().getY() <= minY + (newBuilding.getBuilding().foundationYLayers - 1)
@@ -500,13 +498,6 @@ public class BuildingServerEvents {
                     PortalPlacement.PortalType.BASIC,
                     originPos
             );
-            if (!fromCommand) {
-                ResourcesServerEvents.addSubtractResources(new Resources(ownerName,
-                        -newBuilding.getBuilding().cost.food,
-                        -newBuilding.getBuilding().cost.wood,
-                        -newBuilding.getBuilding().cost.ore
-                ));
-            }
 
             if (SandboxServer.isAnyoneASandboxPlayer() && (ownerName.isEmpty() || ownerName.equals("Enemy")))
                 newBuilding.selfBuilding = true;
@@ -657,23 +648,26 @@ public class BuildingServerEvents {
         }
         FrozenChunkClientboundPacket.setBuildingDestroyedServerside(building.originPos);
 
-        // AOE2-style refund: return the % of the non-built portion of the building
-        // eg. cancelling a building at 70% completion will refund only 30% cost
-        // in survival, refund 50% of this amount
+        // BAR flow economy refund: an unbuilt building returns exactly what was spent on it so far
+        // (in survival, a completed building still refunds 50% of its cost scaled by its remaining blocks)
         if (!building.isBuilt || SurvivalServerEvents.isEnabled()) {
 
             float buildPercent = building.getBlocksPlacedPercent();
-            int food = Math.round(building.getBuilding().cost.food * (1 - buildPercent));
-            int wood = Math.round(building.getBuilding().cost.wood * (1 - buildPercent));
-            int ore = Math.round(building.getBuilding().cost.ore * (1 - buildPercent));
+            int food = 0;
+            int wood = Math.round(building.energySpent);
+            int ore = Math.round(building.metalSpent);
+            String refundName = building.payerName != null ? building.payerName : building.ownerName;
 
             if (building.isBuilt && SurvivalServerEvents.isEnabled()) {
                 food = Math.round(building.getBuilding().cost.food * 0.5f * buildPercent);
                 wood = Math.round(building.getBuilding().cost.wood * 0.5f * buildPercent);
                 ore = Math.round(building.getBuilding().cost.ore * 0.5f * buildPercent);
+                refundName = building.ownerName;
             }
-            if (food > 0 || wood > 0 || ore > 0) {
-                Resources res = new Resources(building.ownerName, food, wood, ore);
+            building.metalSpent = 0;
+            building.energySpent = 0;
+            if ((food > 0 || wood > 0 || ore > 0) && refundName != null && !refundName.isEmpty()) {
+                Resources res = new Resources(refundName, food, wood, ore);
                 ResourcesServerEvents.addSubtractResources(res);
                 ResourcesClientboundPacket.showFloatingText(res, building.centrePos);
             }

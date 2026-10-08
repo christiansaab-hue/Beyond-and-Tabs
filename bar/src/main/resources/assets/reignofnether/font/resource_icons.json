@@ -114,6 +114,20 @@
         },
         {
             "type": "bitmap",
+            "file": "minecraft:item/iron_ingot.png",
+            "ascent": 8,
+            "height": 9,
+            "chars": ["\uE020"]
+        },
+        {
+            "type": "bitmap",
+            "file": "minecraft:item/redstone.png",
+            "ascent": 8,
+            "height": 9,
+            "chars": ["\uE021"]
+        },
+        {
+            "type": "bitmap",
             "file": "minecraft:font/ascii.png",
             "ascent": 7,
             "chars": [
