@@ -30,7 +30,7 @@ public final class Bench {
 
     static void ragdollKnockAndRecover() {
         System.out.println("heavy hit knocks a unit down, it gets back up");
-        World w = new World(Terrain.FLAT, 2); w.addTeam("ancient_world"); w.addTeam("kingdoms");
+        World w = new World(Terrain.FLAT, 2); w.addTeam("ancient_world"); w.addTeam("kingdoms"); w.cleanCombat = false;   // classic physics brawl
         Unit u = w.spawn(0, UnitDef.AW_CLUBBER, 0, 0, 0); w.cameras.add(new float[]{0, 5, -5});
         for (int i = 0; i < 20; i++) w.tick();
         w.damage(u, 1, 25f, -2, 0, Rig.TORSO);   // big shove from the west, little damage
@@ -62,7 +62,7 @@ public final class Bench {
 
     static void battle(int perSide, boolean camNear) {
         System.out.printf("battle %d vs %d (camera %s)%n", perSide, perSide, camNear ? "near the middle" : "zoomed out");
-        World w = new World(Terrain.FLAT, 3); w.addTeam("ancient_world"); w.addTeam("kingdoms");
+        World w = new World(Terrain.FLAT, 3); w.addTeam("ancient_world"); w.addTeam("kingdoms"); w.cleanCombat = false;   // classic physics brawl
         UnitDef[] aw = {UnitDef.AW_CLUBBER, UnitDef.AW_CLUBBER, UnitDef.AW_PROTECTOR, UnitDef.AW_SPEAR_THROWER, UnitDef.AW_BERSERKER, UnitDef.AW_STONER};
         UnitDef[] kd = {UnitDef.KD_SQUIRE, UnitDef.KD_SQUIRE, UnitDef.KD_ARCHER, UnitDef.KD_FENCER, UnitDef.KD_HEALER, UnitDef.KD_SAMURAI};
         int cols = (int) Math.ceil(Math.sqrt(perSide));
