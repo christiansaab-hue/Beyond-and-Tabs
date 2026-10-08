@@ -116,6 +116,7 @@ public final class MatchRenderer {
             units(m, s, a, t, fr, camX, camY, camZ);
             ADD.to(ADD_SRC.getBuffer(BTRender.ADDITIVE), pose); ADD.vt = ADD.vc; ADD.reset(); ADD.glow = true;
             m.reset(); Fx.render(m, ADD, t);
+            buildingLife(m, s, t);
             projectiles(m, s, a);
             assistCrews(m, s, t);
         }
@@ -303,6 +304,72 @@ public final class MatchRenderer {
                 }
             }
         }
+    }
+
+    static long lifeNanos;
+
+    /**
+     * Bases at work: townsfolk (or drones) going about their business round every finished building, and the
+     * buildings showing what they're doing - forge smoke and sparks while training, dust and a miner at extractors,
+     * smoke or energy pulses from power, rising motes over research, smoke from converters. All cosmetic.
+     */
+    static void buildingLife(Mesh m, Snapshot s, float t) {
+        long now = System.nanoTime(); float dt = lifeNanos == 0 ? 0 : Math.min(.1f, (now - lifeNanos) / 1e9f); lifeNanos = now;
+        for (Snapshot.B b : s.buildings) {
+            if (b.progress < 1) continue;
+            if (!Fx.near(b.x, b.z, 60)) continue;
+            BuildingDef d = BuildingDef.ALL.get(Math.max(0, b.def)); int[] sz = BuildingModels.size(d);
+            if (sz[0] < 2) continue;
+            String race = d.race(), eff = d.effect();
+            boolean star = race.equals("starforge"), kingdoms = race.equals("kingdoms");
+            float gy = RtsCamera.ground(b.x, b.z), h = Math.min(14, measure(d, b.level)[1]);
+            int team = Look.team(b.team, s.myTeam);
+            float hx = sz[0] * .5f, hz = sz[1] * .5f;
+            // activity effects
+            if (b.producing >= 0 && Fx.R.nextFloat() < dt * 3) {
+                if (star) { Fx.flash(b.x + Fx.rnd(-hx, hx) * .6f, gy + h * .6f, b.z + Fx.rnd(-hz, hz) * .6f, .25f, .15f, 0x6FE3FF); }
+                else { Fx.P p = Fx.smoke(b.x + hx * .5f, gy + h + .3f, b.z - hz * .3f, .25f, 3f, 0x6A6560, .45f); p.vy = .9f; p.grow = 2f; }
+            }
+            if (b.producing >= 0 && Fx.R.nextFloat() < dt * 1.2f) Fx.sparks(b.x, gy + .8f, b.z + hz + .4f, 3, 2.5f, star ? 0x9FF0FF : 0xFFC060, 0, 1);
+            if (b.researching >= 0 && Fx.R.nextFloat() < dt * 6) {
+                Fx.P p = Fx.add(Fx.FIRE, b.x + Fx.rnd(-hx, hx), gy + h * .5f, b.z + Fx.rnd(-hz, hz), 1.6f, .07f, star ? 0x9FB8FF : 0xC9A0FF); p.vy = 1.2f; p.grow = .6f;
+            }
+            switch (eff) {
+                case "metal_per_s" -> { if (Fx.R.nextFloat() < dt * 1.5f) Fx.dust(b.x + Fx.rnd(-hx, hx), gy, b.z + Fx.rnd(-hz, hz), .25f, 0x8A7A68); }
+                case "energy_per_s" -> {
+                    if (star) { if (Fx.R.nextFloat() < dt * .8f) Fx.ring(b.x, gy + h * .5f, b.z, hx + 1.2f, .8f, 0x6FE3FF); }
+                    else if (Fx.R.nextFloat() < dt * 2) { Fx.P p = Fx.smoke(b.x, gy + h + .2f, b.z, .2f, 2.5f, 0xBDB6AC, .35f); p.vy = .8f; p.grow = 2f; }
+                }
+                case "energy_to_metal_per_s" -> { if (Fx.R.nextFloat() < dt * 2) { Fx.P p = Fx.smoke(b.x - hx * .4f, gy + h + .2f, b.z, .22f, 3f, 0x4A4642, .5f); p.vy = 1f; p.grow = 2f; } }
+                default -> { }
+            }
+            // townsfolk: factories and economy buildings have a couple of workers each
+            String kind = d.kind();
+            int folk = kind.equals("factory") ? 2 : kind.equals("economy") || kind.equals("tech") ? 1 : 0;
+            for (int i = 0; i < folk; i++) {
+                float seed = b.id * 1.618f + i * 2.4f, ph = (t / (9 + i * 2) + seed) % 1f;
+                // walk a lap round the building, stopping at one corner to work
+                float perim = 2 * (sz[0] + sz[1]) + 8, along = ph * perim;
+                float[] pos = lap(b.x, b.z, hx + 1.4f, hz + 1.4f, along);
+                float[] nxt = lap(b.x, b.z, hx + 1.4f, hz + 1.4f, along + .3f);
+                boolean working = (ph * 4) % 1f > .75f;   // a quarter of each leg is spent at work
+                if (working) { nxt = new float[]{b.x, b.z}; }
+                float fx = nxt[0] - pos[0], fz = nxt[1] - pos[1], fl = Math.max(.01f, (float) Math.hypot(fx, fz));
+                float g = RtsCamera.ground(pos[0], pos[1]);
+                m.reset(); m.ground(g, .4f, .2f); m.ow = .02f;
+                if (star) drone(m, pos[0], g + 1.8f + (float) Math.sin(t * 3 + seed) * .15f, pos[1], t + seed, working, b.x, gy + 1, b.z, team);
+                else worker(m, pos[0], g, pos[1], fx / fl, fz / fl, t * 6 + seed, working ? (t * 1.3f + seed) % 1f : 0, !working, kingdoms, team);
+            }
+        }
+    }
+
+    /** A point `along` blocks round a rectangle of half-sizes (hx, hz) centred on (cx, cz). */
+    static float[] lap(float cx, float cz, float hx, float hz, float along) {
+        float w = 2 * hx, d = 2 * hz, per = 2 * (w + d); along = ((along % per) + per) % per;
+        if (along < w) return new float[]{cx - hx + along, cz - hz};
+        along -= w; if (along < d) return new float[]{cx + hx, cz - hz + along};
+        along -= d; if (along < w) return new float[]{cx + hx - along, cz + hz};
+        along -= w; return new float[]{cx - hx, cz + hz - along};
     }
 
     /**
