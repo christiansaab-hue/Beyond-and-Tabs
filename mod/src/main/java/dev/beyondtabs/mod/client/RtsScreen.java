@@ -53,11 +53,14 @@ public final class RtsScreen extends Screen {
      * about 2 px per HUD unit on 1080p, 3 on 1440p. K = our scale / Minecraft's; width/height are in HUD units.
      */
     static float K = 1;
-    @Override public void init(Minecraft mc, int w, int h) {
+    /** Called by Screen.init(mc, w, h) right after it stores the GUI size: switch width/height to HUD units. */
+    @Override protected void init() {
+        Minecraft mc = Minecraft.getInstance();
         double gui = mc.getWindow().getGuiScale();
         int target = (int) Math.max(1, Math.min(gui, Math.round(mc.getWindow().getHeight() / 520.0)));
         K = (float) (target / gui);
-        super.init(mc, Math.round(w / K), Math.round(h / K));
+        width = Math.round(mc.getWindow().getGuiScaledWidth() / K); height = Math.round(mc.getWindow().getGuiScaledHeight() / K);
+        super.init();
     }
 
     static void pruneSelection(Snapshot s) {
