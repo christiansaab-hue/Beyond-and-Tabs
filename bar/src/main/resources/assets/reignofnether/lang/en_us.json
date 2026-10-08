@@ -2236,5 +2236,8 @@
   "quickbattle.reignofnether.button": "Quick Battle",
   "quickbattle.reignofnether.title": "Quick Battle - pick your side (a bot plays the other)",
   "quickbattle.reignofnether.villagers": "Play Villagers (vs Monster bot)",
-  "quickbattle.reignofnether.monsters": "Play Monsters (vs Villager bot)"
+  "quickbattle.reignofnether.monsters": "Play Monsters (vs Villager bot)",
+  "hud.actionbuttons.reignofnether.patrol": "Patrol (Y): walk between here and the target until ordered otherwise",
+  "hud.actionbuttons.reignofnether.patrol.tooltip": "Fighters attack everything on the route; workers repair and finish buildings they pass",
+  "key.reignofnether.patrol": "Patrol"
 }

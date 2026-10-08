@@ -9,6 +9,7 @@ public enum UnitAction {
     ATTACK_BUILDING,
     STOP,
     HOLD,
+    PATROL, // walk between here and the ordered point forever; fighters attack-move, workers repair en route
     MOVE,
     GARRISON,
     UNGARRISON,

@@ -21,6 +21,7 @@ import com.solegendary.reignofnether.unit.goals.*;
 import com.solegendary.reignofnether.unit.interfaces.*;
 import com.solegendary.reignofnether.util.LanguageUtil;
 import com.solegendary.reignofnether.util.MiscUtil;
+import com.solegendary.reignofnether.unit.PatrolServerEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -226,6 +227,8 @@ public class UnitActionItem {
                     }
                 }
             }
+            if (action != UnitAction.PATROL)
+                PatrolServerEvents.clear(((Entity) unit).getId());
             switch (action) {
                 case STOP -> {
                     Entity passenger = ((Entity) unit).getFirstPassenger();
@@ -279,6 +282,10 @@ public class UnitActionItem {
                     } else {
                         formationUnits.add(unit);
                     }
+                }
+                case PATROL -> {
+                    if (preselectedBlockPos != null && !preselectedBlockPos.equals(new BlockPos(0, 0, 0)))
+                        PatrolServerEvents.setPatrol(unit, preselectedBlockPos);
                 }
                 case ATTACK_MOVE -> {
                     // if the unit can't actually attack just treat this as a move action

@@ -763,7 +763,10 @@ public class UnitClientEvents {
                 getPlayerToEntityRelationship(catUnit) == Relationship.OWNED)
                 catUnit.pet();
 
-            if (!selectedUnits.isEmpty() && isLeftClickAttack()) {
+            if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.PATROL) {
+                sendUnitCommand(UnitAction.PATROL);
+            }
+            else if (!selectedUnits.isEmpty() && isLeftClickAttack()) {
                 // A + left click -> force attack single unit (even if friendly)
                 if (preselectedUnits.size() == 1 && !targetingSelf()) {
                     sendUnitCommand(UnitAction.ATTACK);
