@@ -5,6 +5,8 @@ import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
+import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -52,8 +54,8 @@ public final class UnitChunkLoader {
     // through) don't churn chunk load/unload, and paths through recently visited terrain still see loaded chunks.
     public static final int LINGER_TICKS = 20 * 30;
 
-    // Owner of the deduplicated Forge forced chunks. A fixed UUID lets the loading-validation callback below wipe
-    // them on world load (we re-add what's needed on the first update).
+    // Owner of the deduplicated Forge forced chunks. A fixed UUID lets the loading-validation callback below find
+    // them again when the world is loaded.
     public static final UUID FORGE_OWNER =
             UUID.nameUUIDFromBytes("reignofnether:unit_chunk_loader".getBytes(StandardCharsets.UTF_8));
 
@@ -62,18 +64,39 @@ public final class UnitChunkLoader {
         final Long2LongOpenHashMap regionChunks = new Long2LongOpenHashMap();
         // chunks that currently hold a Forge ticking-forced ticket
         final LongOpenHashSet forgeChunks = new LongOpenHashSet();
+        // forge chunks restored from the save, kept unconditionally until this game tick so the units inside them
+        // have time to load (entities load a little after their chunk) before we decide they're no longer needed
+        final Long2LongOpenHashMap forgeGraceUntil = new Long2LongOpenHashMap();
     }
+
+    // How long chunks restored from a save are kept regardless of whether a unit has shown up in them yet.
+    private static final int RELOAD_GRACE_TICKS = 20 * 60;
+
+    // Unit chunks found in the save by the validation callback, per level, waiting for that level's first update.
+    // Written during world load (server thread), consumed by updateLevel.
+    private static final Map<ResourceKey<Level>, LongOpenHashSet> RELOADED_CHUNKS = new HashMap<>();
 
     private static final Map<ResourceKey<Level>, LevelState> STATES = new HashMap<>();
 
-    // Called once from the mod constructor. Forge persists forced-chunk tickets in the world save; units used to
-    // own one entity-keyed ticket each and never released it on death, so old saves are full of stale ones.
-    // Entity-keyed tickets are only ever created by units in this mod, so drop all of them, plus our own
-    // deduplicated ones (re-added on the first update). Block-keyed tickets (buildings) are left untouched.
+    // Called once from the mod constructor. Forge persists forced-chunk tickets in the world save, and those
+    // tickets are what reloads far-away units (and so puts them back in UnitServerEvents.allUnits) when a world is
+    // opened again, so they must survive a restart. On load we:
+    //  - keep our own deduplicated tickets and remember their chunks;
+    //  - convert legacy entity-keyed tickets (one per unit ever spawned in an old save, never released on death)
+    //    into remembered chunks and drop the legacy tickets; the first update re-forces them under FORGE_OWNER.
+    // Every remembered chunk gets RELOAD_GRACE_TICKS before it can be released, so its units have time to load.
+    // Block-keyed tickets (buildings) are left untouched.
     public static void registerForgeValidationCallback() {
         ForgeChunkManager.setForcedChunkLoadingCallback(ReignOfNether.MOD_ID, (level, ticketHelper) -> {
-            for (UUID owner : new ArrayList<>(ticketHelper.getEntityTickets().keySet()))
-                ticketHelper.removeAllTickets(owner);
+            LongOpenHashSet chunks = new LongOpenHashSet();
+            for (Map.Entry<UUID, Pair<LongSet, LongSet>> e : new ArrayList<>(ticketHelper.getEntityTickets().entrySet())) {
+                chunks.addAll(e.getValue().getFirst());
+                chunks.addAll(e.getValue().getSecond());
+                if (!FORGE_OWNER.equals(e.getKey()))
+                    ticketHelper.removeAllTickets(e.getKey());
+            }
+            if (!chunks.isEmpty())
+                RELOADED_CHUNKS.computeIfAbsent(level.dimension(), k -> new LongOpenHashSet()).addAll(chunks);
         });
     }
 
@@ -95,7 +118,7 @@ public final class UnitChunkLoader {
         // also visit levels that no longer have units, so their tickets still age out
         for (ServerLevel level : server.getAllLevels()) {
             ResourceKey<Level> key = level.dimension();
-            if (!neededRegion.containsKey(key) && !STATES.containsKey(key))
+            if (!neededRegion.containsKey(key) && !STATES.containsKey(key) && !RELOADED_CHUNKS.containsKey(key))
                 continue;
             updateLevel(level,
                     neededRegion.getOrDefault(key, new LongOpenHashSet()),
@@ -107,6 +130,20 @@ public final class UnitChunkLoader {
         LevelState state = STATES.computeIfAbsent(level.dimension(), k -> new LevelState());
         ServerChunkCache cache = level.getChunkSource();
         long now = level.getGameTime();
+
+        // adopt unit chunks restored from the save (see registerForgeValidationCallback)
+        LongOpenHashSet reloaded = RELOADED_CHUNKS.remove(level.dimension());
+        if (reloaded != null) {
+            LongIterator rit = reloaded.iterator();
+            while (rit.hasNext()) {
+                long chunk = rit.nextLong();
+                // FORGE_OWNER tickets were kept by the callback; legacy ones were dropped, so (re)force. Forcing an
+                // already-forced chunk for the same owner is a no-op in ForgeChunkManager.
+                if (state.forgeChunks.add(chunk))
+                    forceForge(level, chunk, true);
+                state.forgeGraceUntil.put(chunk, now + RELOAD_GRACE_TICKS);
+            }
+        }
 
         // region tickets: add new, refresh still-needed
         LongIterator it = neededRegion.iterator();
@@ -139,6 +176,11 @@ public final class UnitChunkLoader {
         it = state.forgeChunks.iterator();
         while (it.hasNext()) {
             long chunk = it.nextLong();
+            if (state.forgeGraceUntil.containsKey(chunk)) {
+                if (now < state.forgeGraceUntil.get(chunk))
+                    continue;
+                state.forgeGraceUntil.remove(chunk);
+            }
             if (!neededForge.contains(chunk)) {
                 forceForge(level, chunk, false);
                 it.remove();
@@ -161,5 +203,6 @@ public final class UnitChunkLoader {
     // (singleplayer) starts clean.
     public static void clear() {
         STATES.clear();
+        RELOADED_CHUNKS.clear();
     }
 }
