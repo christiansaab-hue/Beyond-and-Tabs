@@ -82,7 +82,14 @@ public final class RtsScreen extends Screen {
         Minecraft mc = Minecraft.getInstance(); long w = mc.getWindow().getWindow();
         long now = System.nanoTime(); float dt = panNanos == 0 ? 0 : Math.min(.05f, (now - panNanos) / 1e9f); panNanos = now;
         float right = 0, fwd = 0;
-        boolean wasd = !hasControlDown() && !hasAltDown();   // Ctrl+A etc. stay hotkeys
+        boolean orbit = hasShiftDown() && !hasControlDown();   // Shift+A/D swing round sideways, Shift+W/S tilt
+        if (orbit) {
+            if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_A)) RtsCamera.yaw -= 80 * dt;
+            if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_D)) RtsCamera.yaw += 80 * dt;
+            if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_W)) RtsCamera.tiltBy(45 * dt);
+            if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_S)) RtsCamera.tiltBy(-45 * dt);
+        }
+        boolean wasd = !hasControlDown() && !hasAltDown() && !orbit;   // Ctrl+A etc. stay hotkeys
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_UP) || (wasd && InputConstants.isKeyDown(w, GLFW.GLFW_KEY_W))) fwd += 1;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_DOWN) || (wasd && InputConstants.isKeyDown(w, GLFW.GLFW_KEY_S))) fwd -= 1;
         if (InputConstants.isKeyDown(w, GLFW.GLFW_KEY_RIGHT) || (wasd && InputConstants.isKeyDown(w, GLFW.GLFW_KEY_D))) right += 1;
@@ -707,7 +714,7 @@ public final class RtsScreen extends Screen {
             if (b != null) { buildingPortrait(g, s, b, x, y, w, h); return; }
         }
         g.drawString(font, "Left-drag: select   Right-click: move / attack   Right-drag: line formation", x, y + 2, DIM);
-        g.drawString(font, "WASD / edges / middle-drag: camera   Wheel: zoom   Shift+wheel: tilt", x, y + 13, DIM);
+        g.drawString(font, "WASD / edges / middle-drag: camera   Wheel: zoom   Shift+wheel / Shift+W,S: tilt   Shift+A,D: swing round", x, y + 13, DIM);
         g.drawString(font, "F attack-move   X stop   B build   I idle builder   Space last alert", x, y + 24, DIM);
         g.drawString(font, "Click any unit or building - even the enemy's - to read its stats", x, y + 35, DIM);
     }
