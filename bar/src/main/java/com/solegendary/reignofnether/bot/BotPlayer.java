@@ -161,10 +161,13 @@ public class BotPlayer {
                     }
         }
 
-        // 5) train fighters whenever an army building is free
+        // 5) train fighters: the repeat queue keeps army buildings running once seeded
         for (BuildingPlacement bp : buildings)
-            if (bp.isBuilt && bp.getBuilding() == kit.armyBuilding() && bp instanceof ProductionPlacement pp && pp.productionQueue.size() < 2)
-                pp.startProductionItem(kit.army().get(rng.nextInt(kit.army().size())));
+            if (bp.isBuilt && bp.getBuilding() == kit.armyBuilding() && bp instanceof ProductionPlacement pp) {
+                pp.repeatQueue = true;
+                if (pp.productionQueue.size() < 2)
+                    pp.startProductionItem(kit.army().get(rng.nextInt(kit.army().size())));
+            }
 
         // 6) defend: an enemy near the base pulls the whole army home
         BlockPos intruder = nearestEnemyUnit(level, home, 45);
