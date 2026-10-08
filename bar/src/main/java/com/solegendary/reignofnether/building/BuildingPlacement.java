@@ -418,7 +418,17 @@ public class BuildingPlacement {
     }
 
     // ---- BAR flow economy: income/storage this placement currently provides (only once completed) ----
-    public float getMetalIncome() { return isBuilt ? getBuilding().getMetalIncome() : 0; }
+    public float getMetalIncome() {
+        if (!isBuilt)
+            return 0;
+        if (getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor) {
+            if (this instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp && !pp.productionQueue.isEmpty())
+                return 0;   // drills stopped while the tier 2 refit runs - killing it mid-upgrade really hurts
+            if (getUpgradeLevel() > 0)
+                return com.solegendary.reignofnether.building.buildings.shared.MetalExtractor.T2_METAL_INCOME;
+        }
+        return getBuilding().getMetalIncome();
+    }
     public float getEnergyIncome() { return isBuilt ? getBuilding().getEnergyIncome() : 0; }
     public float getMetalStorage() { return isBuilt ? getBuilding().getMetalStorage() : 0; }
     public float getEnergyStorage() { return isBuilt ? getBuilding().getEnergyStorage() : 0; }

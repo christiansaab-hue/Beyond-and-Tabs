@@ -2226,5 +2226,11 @@
   "gamerule.commanderDefeat": "Losing your Commander defeats you",
   "hud.reignofnether.patch_hint": "Metal patch - right-click: build extractor. Shift+right-click: area mex (all free patches nearby)",
   "hud.reignofnether.building_extractor": "Building Metal Extractor on the patch",
-  "hud.reignofnether.building_extractors": "Area mex: queuing %s Metal Extractors"
+  "hud.reignofnether.building_extractors": "Area mex: queuing %s Metal Extractors",
+  "research.reignofnether.tier_2": "Tier 2 Technology",
+  "research.reignofnether.tier_2.tooltip1": "Unlocks upgrading Metal Extractors to Tier 2 in place.",
+  "research.reignofnether.tier_2.tooltip2": "A big eco gamble: your income carries the drain while it runs.",
+  "research.reignofnether.upgrade_extractor": "Tier 2 Extractor",
+  "research.reignofnether.upgrade_extractor.tooltip1": "More than triples this extractor: +7 metal/s, and a copper drill tower everyone can see.",
+  "research.reignofnether.upgrade_extractor.tooltip2": "The drill stops while refitting - lose it mid-upgrade and the investment dies with it."
 }

@@ -157,6 +157,8 @@ public class ReignOfNetherCommonConfigs {
         ResearchCosts.RESEARCH_WATER_POTIONS.define(BUILDER);
         ResearchCosts.RESEARCH_EVOKER_VEXES.define(BUILDER);
         ResearchCosts.RESEARCH_UPGRADED_WINDCALLERS.define(BUILDER);
+        ResearchCosts.RESEARCH_TIER_2.define(BUILDER);
+        ResearchCosts.UPGRADE_EXTRACTOR.define(BUILDER);
         ResearchCosts.RESEARCH_CASTLE_FLAG.define(BUILDER);
         ResearchCosts.RESEARCH_GRAND_LIBRARY.define(BUILDER);
         ResearchCosts.RESEARCH_SILVERFISH.define(BUILDER);
@@ -344,6 +346,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry RESEARCH_EVOKER_VEXES = ResourceCostConfigEntry.Research(500,0,300, 120, ResourceCosts.RESEARCH_EVOKER_VEXES, "Evoker Vex Research Config");
         public static final ResourceCostConfigEntry RESEARCH_UPGRADED_WINDCALLERS = ResourceCostConfigEntry.Research(300,150,150, 140, ResourceCosts.RESEARCH_UPGRADED_WINDCALLERS, "Upgraded Windcallers Research Config");
         public static final ResourceCostConfigEntry RESEARCH_CASTLE_FLAG = ResourceCostConfigEntry.Research(200,150,150, 90, ResourceCosts.RESEARCH_CASTLE_FLAG, "Captain Banner Research Config");
+        // BAR tech: ore->metal, wood->energy at bake time
+        public static final ResourceCostConfigEntry RESEARCH_TIER_2 = ResourceCostConfigEntry.Research(0,800,160, 75, ResourceCosts.RESEARCH_TIER_2, "Tier 2 Technology Research Config");
+        public static final ResourceCostConfigEntry UPGRADE_EXTRACTOR = ResourceCostConfigEntry.Research(0,200,120, 45, ResourceCosts.UPGRADE_EXTRACTOR, "Tier 2 Extractor Upgrade Config");
         public static final ResourceCostConfigEntry RESEARCH_GRAND_LIBRARY = ResourceCostConfigEntry.Research(0,200,100, 140, ResourceCosts.RESEARCH_GRAND_LIBRARY, "Grand Library Research Config");
         public static final ResourceCostConfigEntry RESEARCH_SILVERFISH = ResourceCostConfigEntry.Research(0,300,300, 120, ResourceCosts.RESEARCH_SILVERFISH, "Silverfish Research Config");
         public static final ResourceCostConfigEntry RESEARCH_SCULK_AMPLIFIERS = ResourceCostConfigEntry.Research(0,300,500, 180, ResourceCosts.RESEARCH_SCULK_AMPLIFIERS, "Sculk Amplifier Research Config");

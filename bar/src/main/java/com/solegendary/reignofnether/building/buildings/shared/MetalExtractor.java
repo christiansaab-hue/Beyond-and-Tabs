@@ -1,7 +1,6 @@
 package com.solegendary.reignofnether.building.buildings.shared;
 
 import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
-import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.building.BuildingPlaceButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -22,10 +21,13 @@ import java.util.List;
  * steady metal income, and taking map control means taking more patches. One shared structure; each faction
  * registers its own instance.
  */
-public class MetalExtractor extends Building {
+public class MetalExtractor extends com.solegendary.reignofnether.building.production.ProductionBuilding {
 
     public final static String buildingName = "Metal Extractor";
     public final static String structureName = "metal_extractor";
+    public final static String upgradedStructureName = "metal_extractor_t2";
+    /** Metal per second at tier 2 (tier 1 is metalIncome). */
+    public final static float T2_METAL_INCOME = 7.0f;
     public final static ResourceCost cost = ResourceCosts.METAL_EXTRACTOR;
 
     public MetalExtractor() {
@@ -38,6 +40,24 @@ public class MetalExtractor extends Building {
 
         this.explodeChance = 0.2f;
         this.maxHealth = 40d;
+        this.canSetRallyPoint = false;
+
+        this.productions.add(com.solegendary.reignofnether.building.production.ProductionItems.UPGRADE_EXTRACTOR,
+                com.solegendary.reignofnether.keybinds.Keybindings.abilitySlot1);
+    }
+
+    /** Tier 2 is read from the placed blocks (the copper tower), so it survives saves for free. */
+    @Override
+    public int getUpgradeLevel(com.solegendary.reignofnether.building.BuildingPlacement placement) {
+        for (com.solegendary.reignofnether.building.BuildingBlock block : placement.getBlocks())
+            if (block.getBlockState().getBlock() == Blocks.COPPER_BLOCK || block.getBlockState().getBlock() == Blocks.CUT_COPPER)
+                return 1;
+        return 0;
+    }
+
+    @Override
+    public String getUpgradedStructureName(int upgradeLevel) {
+        return upgradeLevel > 0 ? upgradedStructureName : structureName;
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

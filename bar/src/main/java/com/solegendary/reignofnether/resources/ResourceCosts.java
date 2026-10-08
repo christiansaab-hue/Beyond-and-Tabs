@@ -145,6 +145,8 @@ public class ResourceCosts {
     public static final ResourceCost RESEARCH_EVOKER_VEXES = new ResourceCost(ID, "RESEARCH_EVOKER_VEXES");
     public static final ResourceCost RESEARCH_UPGRADED_WINDCALLERS = new ResourceCost(ID, "RESEARCH_UPGRADED_WINDCALLERS");
     public static final ResourceCost RESEARCH_CASTLE_FLAG = new ResourceCost(ID, "RESEARCH_CASTLE_FLAG");
+    public static final ResourceCost RESEARCH_TIER_2 = new ResourceCost(ID, "RESEARCH_TIER_2");
+    public static final ResourceCost UPGRADE_EXTRACTOR = new ResourceCost(ID, "UPGRADE_EXTRACTOR");
     public static final ResourceCost RESEARCH_GRAND_LIBRARY = new ResourceCost(ID, "RESEARCH_GRAND_LIBRARY");
     public static final ResourceCost RESEARCH_SILVERFISH = new ResourceCost(ID, "RESEARCH_SILVERFISH");
     public static final ResourceCost RESEARCH_SCULK_AMPLIFIERS = new ResourceCost(ID, "RESEARCH_SCULK_AMPLIFIERS");
@@ -361,6 +363,8 @@ public class ResourceCosts {
         RESEARCH_EVOKER_VEXES.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_EVOKER_VEXES);
         RESEARCH_UPGRADED_WINDCALLERS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_UPGRADED_WINDCALLERS);
         RESEARCH_CASTLE_FLAG.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_CASTLE_FLAG);
+        RESEARCH_TIER_2.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_TIER_2);
+        UPGRADE_EXTRACTOR.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.UPGRADE_EXTRACTOR);
         RESEARCH_GRAND_LIBRARY.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_GRAND_LIBRARY);
         RESEARCH_SILVERFISH.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_SILVERFISH);
         RESEARCH_SCULK_AMPLIFIERS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_SCULK_AMPLIFIERS);
