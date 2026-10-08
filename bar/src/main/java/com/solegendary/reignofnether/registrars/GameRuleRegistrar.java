@@ -30,6 +30,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.IntegerValue> PATHFINDING_CHUNK_BUILDS;
     public static GameRules.Key<GameRules.IntegerValue> ANIMAL_SPAWN_Y_DIFF;
     public static GameRules.Key<GameRules.IntegerValue> RANDOM_ITEM_DROPS;
+    public static GameRules.Key<GameRules.BooleanValue> CLEAR_START_AREAS;
 
     public static void init() {
         // do cut trees convert their logs into falling logs?
@@ -128,6 +129,11 @@ public class GameRuleRegistrar {
         // Difference in level that animals can spawn around capitols at
         RANDOM_ITEM_DROPS = GameRules.register("randomItemDrops", GameRules.Category.DROPS,
                 boundedInt(1, 0, 2)
+        );
+        // Beyond and Tabs: at a readied match start, clear trees and plant clutter round each start position
+        // and along lanes from each start position to the map centre (see StartAreaClearing)
+        CLEAR_START_AREAS = GameRules.register("clearStartAreas", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
         );
     }
 

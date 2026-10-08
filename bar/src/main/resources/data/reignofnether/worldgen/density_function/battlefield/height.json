@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "minecraft:add",
+    "argument1": {
+      "type": "minecraft:mul",
+      "argument1": 0.21875,
+      "argument2": {
+        "type": "minecraft:noise",
+        "noise": "reignofnether:battlefield_hills",
+        "xz_scale": 1.0,
+        "y_scale": 0.0
+      }
+    },
+    "argument2": {
+      "type": "minecraft:mul",
+      "argument1": 0.0625,
+      "argument2": {
+        "type": "minecraft:noise",
+        "noise": "reignofnether:battlefield_bumps",
+        "xz_scale": 1.0,
+        "y_scale": 0.0
+      }
+    }
+  }
+}

@@ -2314,5 +2314,7 @@
     "matchstart.reignofnether.hint.close": "Click Back to leave · F12 off + on to reopen.",
     "matchstart.reignofnether.settings.title": "GAME SETTINGS",
     "matchstart.reignofnether.settings.mode": "Mode",
-    "matchstart.reignofnether.settings.op_only": "Gamerule settings require op."
+    "matchstart.reignofnether.settings.op_only": "Gamerule settings require op.",
+    "generator.reignofnether.battlefield": "Beyond and Tabs Battlefield",
+    "gamerule.clearStartAreas": "Clear trees round start positions and lanes to the centre at match start"
 }

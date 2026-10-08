@@ -1,0 +1,45 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "minecraft:mul",
+    "argument1": -0.28125,
+    "argument2": {
+      "type": "minecraft:mul",
+      "argument1": {
+        "type": "minecraft:clamp",
+        "input": {
+          "type": "minecraft:mul",
+          "argument1": 25.0,
+          "argument2": {
+            "type": "minecraft:add",
+            "argument1": 0.05,
+            "argument2": {
+              "type": "minecraft:mul",
+              "argument1": -1.0,
+              "argument2": {
+                "type": "minecraft:abs",
+                "argument": "minecraft:overworld/ridges"
+              }
+            }
+          }
+        },
+        "min": 0.0,
+        "max": 1.0
+      },
+      "argument2": {
+        "type": "minecraft:clamp",
+        "input": {
+          "type": "minecraft:mul",
+          "argument1": 3.0,
+          "argument2": {
+            "type": "minecraft:add",
+            "argument1": 0.1,
+            "argument2": "minecraft:overworld/erosion"
+          }
+        },
+        "min": 0.0,
+        "max": 1.0
+      }
+    }
+  }
+}

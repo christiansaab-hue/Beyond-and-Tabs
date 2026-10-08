@@ -184,6 +184,15 @@ public class StartPosServerEvents {
                 } else {
                     PlayerServerEvents.sendMessageToAllPlayers("startpos.reignofnether.started_game", true);
                     SoundClientboundPacket.playSoundForAllPlayers(SoundAction.ALLY);
+                    // Beyond and Tabs: tidy the bases and the lanes to the centre before anything is placed.
+                    // Hand-made maps (map info json) are left exactly as their author built them.
+                    if (!RTSMapInfoServerEvents.usingMapInfoStartPositions()) {
+                        List<BlockPos> clearPoses = new ArrayList<>();
+                        for (StartPos startPos : startPoses)
+                            if (startPos.enabled && !startPos.playerName.isBlank() && startPos.faction != Factions.NONE)
+                                clearPoses.add(startPos.pos);
+                        StartAreaClearing.clearStartAreas(evt.getServer().getLevel(Level.OVERWORLD), clearPoses);
+                    }
                     for (ServerPlayer serverPlayer : PlayerServerEvents.players) {
                         for (StartPos startPos : startPoses) {
                             if (startPos.playerName.equals(serverPlayer.getName().getString()) && startPos.faction != Factions.NONE) {

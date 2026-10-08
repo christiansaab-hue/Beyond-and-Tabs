@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:add",
+  "argument1": {
+    "type": "minecraft:add",
+    "argument1": {
+      "type": "minecraft:y_clamped_gradient",
+      "from_y": -64,
+      "to_y": 320,
+      "from_value": 4.15625,
+      "to_value": -7.84375
+    },
+    "argument2": "reignofnether:battlefield/height"
+  },
+  "argument2": "reignofnether:battlefield/river"
+}
