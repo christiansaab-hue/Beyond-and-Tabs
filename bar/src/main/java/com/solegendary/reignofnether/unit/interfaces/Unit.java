@@ -13,6 +13,7 @@ import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.debug.RtsDebugClientEvents;
 import com.solegendary.reignofnether.debug.RtsDebugPathPreview;
+import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.buttons.Button;
 import com.solegendary.reignofnether.hud.effecticons.EnchantmentIcon;
@@ -273,20 +274,8 @@ public interface Unit {
 
     static void tick(Unit unit) {
         Mob unitMob = (Mob) unit;
-        if (!unitMob.level().isClientSide() && unitMob.level() instanceof ServerLevel serverLevel) {
-            ServerChunkCache chunkProvider = serverLevel.getChunkSource();
-
-            BlockPos unitPos = unitMob.blockPosition();
-            ChunkPos currentChunkPos = new ChunkPos(unitPos);
-
-            // Load a 2-chunk radius around the unit
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
-                    ChunkPos chunkPos = new ChunkPos(currentChunkPos.x + dx, currentChunkPos.z + dz);
-                    chunkProvider.addRegionTicket(TicketType.FORCED, chunkPos, 2, chunkPos);
-                }
-            }
-        }
+        // Chunk loading around units (formerly 25 addRegionTicket calls per unit per tick here) is now done once
+        // per second for all units together by UnitChunkLoader (driven from UnitServerEvents.onServerTick).
         for (Map.Entry<Ability, Float> cooldownEntry : unit.getAbilityCooldowns().entrySet()) {
             Ability ability = cooldownEntry.getKey();
             float cooldown = cooldownEntry.getValue();
@@ -334,9 +323,15 @@ public interface Unit {
                 }
             }
         } else {
-            checkAndPickupFood(unit);
-            checkAndPickupResources(unit);
-            checkAndPickupEquipment(unit);
+            // one entity query per tick shared by all three pickup checks (was three identical AABB queries).
+            // Each check re-tests isRemoved()/count, so an item consumed by an earlier check is skipped by later
+            // ones exactly as when each check ran its own query.
+            List<ItemEntity> nearbyItems = unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1));
+            if (!nearbyItems.isEmpty()) {
+                checkAndPickupFood(unit, nearbyItems);
+                checkAndPickupResources(unit, nearbyItems);
+                checkAndPickupEquipment(unit, nearbyItems);
+            }
 
             // sync target variables between goals and Mob
             if (unit.getTargetGoal().getTarget() == null || !unit.getTargetGoal().getTarget().isAlive() ||
@@ -357,15 +352,17 @@ public interface Unit {
         LivingEntity le = (LivingEntity) unit;
 
         if (!le.level().isClientSide()) {
-            if (Factions.getFaction(unit).equals(Factions.MONSTERS) &&
+            // faction looked up once (registry lookup) instead of up to three times every tick
+            Faction faction = Factions.getFaction(unit);
+            if (faction.equals(Factions.MONSTERS) &&
                     le.tickCount % MONSTER_HEALING_TICKS == 0 &&
                     (!TimeUtils.isDay(unitMob.level()))) {
                 le.heal(1);
-            } else if (Factions.getFaction(unit).equals(Factions.MONSTERS) &&
+            } else if (faction.equals(Factions.MONSTERS) &&
                     (le.tickCount + MONSTER_HEALING_TICKS / 2) % MONSTER_HEALING_TICKS == 0 &&
                     (NightUtils.isInRangeOfNightSource(le.position(), le.level().isClientSide()))) {
                 le.heal(1);
-            } else if (Factions.getFaction(unit).equals(Factions.PIGLINS) &&
+            } else if (faction.equals(Factions.PIGLINS) &&
                     le.tickCount % PIGLIN_HEALING_TICKS == 0 &&
                     (MiscUtil.isOnNetherTerrain(le) || unit instanceof GhastUnit)) {
                 le.heal(1);
@@ -373,9 +370,13 @@ public interface Unit {
         }
 
         // stuck in bridge
-        BuildingPlacement bpl = BuildingUtils.findBuilding(le.level().isClientSide(), le.getOnPos().above());
-        if (le.isInWater() && bpl != null && bpl.getBuilding() instanceof AbstractBridge) {
-            le.setDeltaMovement(0, 0.2, 0);
+        // isInWater() is checked first: findBuilding is a linear scan over every building, which used to run
+        // every tick for every unit on both sides even though its result only matters in water.
+        if (le.isInWater()) {
+            BuildingPlacement bpl = BuildingUtils.findBuilding(le.level().isClientSide(), le.getOnPos().above());
+            if (bpl != null && bpl.getBuilding() instanceof AbstractBridge) {
+                le.setDeltaMovement(0, 0.2, 0);
+            }
         }
 
         if (!le.level().getWorldBorder().isWithinBounds(le.getOnPos()))
@@ -509,10 +510,10 @@ public interface Unit {
         }
     }
 
-    private static void checkAndPickupResources(Unit unit) {
+    private static void checkAndPickupResources(Unit unit, List<ItemEntity> nearbyItems) {
         Mob unitMob = (Mob) unit;
         if (unitMob.canPickUpLoot() && (!(unit instanceof UnitInventory inv) || inv.isEmpty())) {
-            for (ItemEntity itementity : unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1))) {
+            for (ItemEntity itementity : nearbyItems) {
                 if (!itementity.isRemoved() && !itementity.getItem().isEmpty() && !itementity.hasPickUpDelay() && unitMob.isAlive()) {
                     if (!Unit.atMaxResources(unit)) {
                         ItemStack itemstack = itementity.getItem();
@@ -553,9 +554,8 @@ public interface Unit {
         }
     }
 
-    private static void checkAndPickupEquipment(Unit unit) {
-        Mob unitMob = (Mob) unit;
-        for (ItemEntity itementity : unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1))) {
+    private static void checkAndPickupEquipment(Unit unit, List<ItemEntity> nearbyItems) {
+        for (ItemEntity itementity : nearbyItems) {
             Relationship rl = UnitServerEvents.getUnitToEntityRelationship(unit, itementity);
             if (rl != Relationship.HOSTILE) {
                 if (tryPickingUpEquipment(unit, itementity))
@@ -585,10 +585,10 @@ public interface Unit {
 
     static int HOSTILE_FOOD_DELAY_TICKS = 200;
 
-    private static void checkAndPickupFood(Unit unit) {
+    private static void checkAndPickupFood(Unit unit, List<ItemEntity> nearbyItems) {
         Mob unitMob = (Mob) unit;
         if (!unit.isHoldingEdibleFood()) {
-            for (ItemEntity itementity : unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1))) {
+            for (ItemEntity itementity : nearbyItems) {
                 if (itementity.isRemoved() || itementity.tickCount < 10)
                     continue;
                 ItemStack itemstack = itementity.getItem();

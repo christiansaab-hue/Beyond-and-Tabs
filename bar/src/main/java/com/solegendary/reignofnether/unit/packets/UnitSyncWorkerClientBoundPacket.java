@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import com.solegendary.reignofnether.unit.UnitSyncBatcher;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.ResourceName;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
@@ -27,6 +28,7 @@ public class UnitSyncWorkerClientBoundPacket {
     public static void sendSyncWorkerPacket(LivingEntity entity) {
         if (entity instanceof WorkerUnit workerUnit) {
             BlockPos bp = workerUnit.getGatherResourceGoal().getGatherTarget();
+            UnitSyncBatcher.invalidate(entity.getId(), UnitBatchSyncClientboundPacket.Field.WORKER);
 
             PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
                 new UnitSyncWorkerClientBoundPacket(entity.getId(),

@@ -17,7 +17,10 @@ public final class PathfinderConfig {
     public static final int MAX_NODES_UNREACHABLE_GOAL = 8000;
     public static final int MAX_CHAIN_SEGMENTS = 10;
     public static final int MIN_DILATION = 48;
-    public static final int QUEUE_BACKPRESSURE_CAP = 500;
+    // max parked (chunk-warming) and max in-flight (A*) requests before new ones get a "busy" retry signal. Was 500;
+    // with maxPopulation 400 a single select-all move plus ongoing repaths of other units could hit 500 and leave
+    // part of the army waiting ~1 s for a retry. Requests are small (no snapshot until dispatch), so 1000 is cheap.
+    public static final int QUEUE_BACKPRESSURE_CAP = 1000;
     // walkability-grid building (getBlockState/getCollisionShape + crowd[] precompute) must run on the main
     // thread, so classifying a whole corridor in one tick spikes TPS. cap cold (uncached) chunks classified
     // per tick; cache hits are free and don't count. lower = smoother TPS but slower first path, higher = the

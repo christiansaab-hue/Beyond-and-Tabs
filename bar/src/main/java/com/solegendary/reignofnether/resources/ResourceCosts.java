@@ -212,7 +212,9 @@ public class ResourceCosts {
 
     public static final int REPLANT_WOOD_COST = 1;
     public static final int REDUCED_REPLANT_WOOD_COST = 0;
-    public static final int DEFAULT_MAX_POPULATION = 150;
+    // BAR-scale battles (150-200+ units per player): was 150. Note the maxPopulation gamerule only takes this
+    // default for NEW worlds; existing saves keep their stored value (/gamerule maxPopulation 400).
+    public static final int DEFAULT_MAX_POPULATION = 400;
     /*
         Unit costs are defined here during CommonSetup
         Do not read values and initialize from config earlier, else will result in IllegalStateException !!!

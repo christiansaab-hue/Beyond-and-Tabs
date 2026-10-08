@@ -436,5 +436,13 @@ public final class PacketHandler {
                 .decoder(ItemShopClientboundPacket::new)
                 .consumerMainThread(ItemShopClientboundPacket::handle)
                 .add();
+
+        // batched + delta-compressed periodic unit sync (replaces the per-unit stats/resources/anchor/worker/inventory
+        // packets in UnitServerEvents.onWorldTick, see UnitSyncBatcher)
+        INSTANCE.messageBuilder(UnitBatchSyncClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(UnitBatchSyncClientboundPacket::encode)
+                .decoder(UnitBatchSyncClientboundPacket::new)
+                .consumerMainThread(UnitBatchSyncClientboundPacket::handle)
+                .add();
     }
 }

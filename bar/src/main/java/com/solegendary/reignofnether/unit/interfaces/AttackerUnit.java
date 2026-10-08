@@ -41,6 +41,10 @@ import java.util.List;
 
 public interface AttackerUnit {
 
+    // how often an engaged (non-forced) attacker re-checks for a closer target; must be a multiple of 4 (the
+    // cadence of the combat-AI block in tick())
+    int RETARGET_TICKS = 12;
+
     public static final float ATTACK_DAMAGE_REDUCTION_PER_WEAK = 0.2f;
     public static final float ATTACK_DAMAGE_INCREASE_PER_STRENGTH = 0.2f;
 
@@ -315,7 +319,11 @@ public interface AttackerUnit {
                 attackerUnit.attackClosestEnemy((ServerLevel) unitMob.level());
 
             // if attacking another unit as melee, retarget the closest unit periodically unless forced on a target
-            if (!forced) {
+            // Throttled from every 4 to every RETARGET_TICKS ticks: this runs for every unit already in combat (the
+            // bulk of units in a big fight) and each call is an entity query + sort + line-of-sight checks.
+            // tickCount differs per unit (spawn time), so the scans stay staggered across ticks. Idle aggro and
+            // attack-move acquisition above still run every 4 ticks, so reaction time to new enemies is unchanged.
+            if (!forced && unitMob.tickCount % RETARGET_TICKS == 0) {
                 attackerUnit.retargetToClosestUnit((ServerLevel) unitMob.level());
             }
         }

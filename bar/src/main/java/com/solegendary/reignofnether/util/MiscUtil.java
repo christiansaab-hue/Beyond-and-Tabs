@@ -347,17 +347,29 @@ public class MiscUtil {
                 unitPosition.y + range,
                 unitPosition.z + range
         );
-        var entities = level.getEntitiesOfClass(LivingEntity.class, aabb);
+        var rawEntities = level.getEntitiesOfClass(LivingEntity.class, aabb);
         boolean isMelee = unitMob instanceof AttackerUnit aUnit && aUnit.getAttackGoal() instanceof AbstractMeleeAttackUnitGoal;
-        entities.sort(Comparator.comparingDouble(
-            e -> {
-                double dist = e.position().distanceTo(pos); // deprioritise over actual enemy units
-                boolean isMeleeAgainstFlyer = isMelee && e instanceof Unit unit && unit.isFlyingUnit();
-                if (e instanceof PhantomSummon || (e instanceof Unit unit && unit.isScout()) || isMeleeAgainstFlyer || (e instanceof BeeUnit))
-                    dist += 100;
-                return dist;
-            }
-        ));
+        // Hot path in big battles (every attacker, every few ticks). Same result as before, cheaper:
+        //  - entities outside the sphere (the cube's corners) are dropped up front; every pass below required
+        //    distance <= range anyway, so they could never be returned;
+        //  - each sort key is computed once (it used to be recomputed, with a sqrt, inside every comparison).
+        // List.sort is stable, so ties keep the same relative order as the original sort.
+        record Candidate(LivingEntity entity, double key) {}
+        ArrayList<Candidate> candidates = new ArrayList<>(rawEntities.size());
+        for (LivingEntity e : rawEntities) {
+            double dist = e.position().distanceTo(pos);
+            if (dist > range)
+                continue;
+            boolean isMeleeAgainstFlyer = isMelee && e instanceof Unit unit && unit.isFlyingUnit();
+            // deprioritise over actual enemy units
+            if (e instanceof PhantomSummon || (e instanceof Unit unit && unit.isScout()) || isMeleeAgainstFlyer || (e instanceof BeeUnit))
+                dist += 100;
+            candidates.add(new Candidate(e, dist));
+        }
+        candidates.sort(Comparator.comparingDouble(Candidate::key));
+        ArrayList<LivingEntity> entities = new ArrayList<>(candidates.size());
+        for (Candidate c : candidates)
+            entities.add(c.entity());
 
         // Determine priority effect filter for specific unit types
         Predicate<LivingEntity> priorityFilter = null;

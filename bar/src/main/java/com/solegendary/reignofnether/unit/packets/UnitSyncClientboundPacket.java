@@ -1,5 +1,6 @@
 package com.solegendary.reignofnether.unit.packets;
 
+import com.solegendary.reignofnether.unit.UnitSyncBatcher;
 import com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents;
 import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.resources.ResourceName;
@@ -39,6 +40,7 @@ public class UnitSyncClientboundPacket {
     private final String ownerName;
 
     public static void sendLeavePacket(LivingEntity entity) {
+        UnitSyncBatcher.onUnitRemoved(entity.getId());
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
                 new UnitSyncClientboundPacket(UnitSyncAction.LEAVE_LEVEL,
                         entity.getId(),0,0,0,0,0,0,0,0,0,0,0, "")
@@ -63,6 +65,8 @@ public class UnitSyncClientboundPacket {
         String owner = "";
         if (entity instanceof Unit unit)
             owner = unit.getOwnerName();
+        // out-of-band stats sync: make the next batched sync re-send authoritative stats
+        UnitSyncBatcher.invalidate(entity.getId(), UnitBatchSyncClientboundPacket.Field.STATS);
 
         for (ServerPlayer player : players) {
             if (FogOfWarServerEvents.isBlockVisibleFor(player, entity.getOnPos().getX(), entity.getOnPos().getZ())) {
@@ -80,6 +84,7 @@ public class UnitSyncClientboundPacket {
 
     public static void sendSyncResourcesPacket(Unit unit) {
         Resources res = Resources.getTotalResourcesFromItems(unit.getItems());
+        UnitSyncBatcher.invalidate(((LivingEntity) unit).getId(), UnitBatchSyncClientboundPacket.Field.RESOURCES);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
             new UnitSyncClientboundPacket(UnitSyncAction.SYNC_RESOURCES,
                 ((LivingEntity) unit).getId(), 0,0,0,0,0,0,
@@ -97,6 +102,7 @@ public class UnitSyncClientboundPacket {
     }
 
     public static void sendSyncAnchorPosPacket(LivingEntity entity, BlockPos bp) {
+        UnitSyncBatcher.invalidate(entity.getId(), UnitBatchSyncClientboundPacket.Field.ANCHOR);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
                 new UnitSyncClientboundPacket(
                         UnitSyncAction.SYNC_ANCHOR_POS,
@@ -106,6 +112,7 @@ public class UnitSyncClientboundPacket {
     }
 
     public static void sendRemoveAnchorPosPacket(LivingEntity entity) {
+        UnitSyncBatcher.invalidate(entity.getId(), UnitBatchSyncClientboundPacket.Field.ANCHOR);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(),
                 new UnitSyncClientboundPacket(
                         UnitSyncAction.SYNC_ANCHOR_POS,
