@@ -63,10 +63,16 @@ public final class RtsCamera {
 
     static void zoom(double wheel) { zoomAt(wheel, null); }
 
+    /** As far out as the loaded world reaches (render distance), never past MAX_DIST. */
+    static float maxDist() {
+        int chunks = Minecraft.getInstance().options.getEffectiveRenderDistance();
+        return Math.max(40, Math.min(MAX_DIST, chunks * 16 * .85f));
+    }
+
     /** BAR-style: zoom toward the point under the cursor (that ground point stays under the cursor). */
     static void zoomAt(double wheel, float[] cursorGround) {
         float old = targetDist;
-        targetDist = Math.max(MIN_DIST, Math.min(MAX_DIST, targetDist * (wheel > 0 ? 0.84f : 1.19f)));
+        targetDist = Math.max(MIN_DIST, Math.min(maxDist(), targetDist * (wheel > 0 ? 0.84f : 1.19f)));
         if (cursorGround != null && wheel > 0) {
             float k = 1 - targetDist / old;
             focusX += (cursorGround[0] - focusX) * k; focusZ += (cursorGround[2] - focusZ) * k;

@@ -124,8 +124,8 @@ public final class RtsScreen extends Screen {
     /** Wheel zooms; Alt+wheel tilts toward the horizon (Shift+Alt+wheel turns), like BAR. */
     @Override public boolean mouseScrolled(double mx, double my, double delta) { return mouseScrolledUi(mx / K, my / K, delta); }
     boolean mouseScrolledUi(double mx, double my, double delta) {
-        if (hasAltDown() && hasShiftDown()) { RtsCamera.yaw += (float) delta * 15; return true; }
-        if (hasAltDown()) { RtsCamera.tiltBy((float) delta * 6); return true; }
+        if (hasControlDown()) { RtsCamera.yaw += (float) delta * 15; return true; }            // Ctrl+wheel: turn
+        if (hasShiftDown() || hasAltDown()) { RtsCamera.tiltBy((float) delta * 6); return true; }   // Shift/Alt+wheel: tilt to a side-on view
         RtsCamera.zoomAt(delta, Proj.now().toGround(mx, my)); return true;
     }
 
@@ -710,7 +710,7 @@ public final class RtsScreen extends Screen {
                 "B: build menu   (walls: drag to place a line)   U: upgrade building   R: factory repeat",
                 "Space: jump to last alert   Home: commander   Ctrl+F5-F8: save camera   F5-F8: recall camera",
                 "Arrows / screen edges / middle-drag: pan   Wheel: zoom (far = strategic icons)   Q / E: rotate",
-                "Alt+wheel or PgUp/PgDn: tilt toward the horizon   Alt+middle-drag: turn and tilt   Shift+Alt+wheel: turn   End: reset tilt",
+                "Shift+wheel or PgUp/PgDn: tilt, Ctrl+wheel: turn toward the horizon   Alt+middle-drag: turn and tilt   Shift+Alt+wheel: turn   End: reset tilt",
                 "Pause or F9: pause (single player)   + / -: game speed   Alt: health bars for everyone",
                 "V or Esc: leave the RTS view",
         };

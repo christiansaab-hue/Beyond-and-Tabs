@@ -65,4 +65,12 @@ public final class RtsClient {
 
     @SubscribeEvent
     public static void fov(ViewportEvent.ComputeFov e) { if (RtsCamera.active) e.setFOV(Proj.FOV); }
+
+    /** RTS view from high up: push the distance fog out so the map doesn't wash out white when zoomed out. */
+    @SubscribeEvent
+    public static void fog(ViewportEvent.RenderFog e) {
+        if (!RtsCamera.active || e.getMode() != net.minecraft.client.renderer.FogRenderer.FogMode.FOG_TERRAIN) return;
+        float far = e.getFarPlaneDistance() + RtsCamera.dist * 1.2f;
+        e.setFarPlaneDistance(far); e.setNearPlaneDistance(far * .75f); e.setCanceled(true);
+    }
 }

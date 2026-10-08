@@ -41,7 +41,8 @@ final class BlockyUnits {
     static float[] humanoid(VertexConsumer out, Matrix4f pose, Matrix3f normal, UnitModels.Ctx c, int slot, int lightCoords, boolean dead) {
         vc = out; m = pose; n = normal; light = lightCoords; texW = AW; texH = AH; parts.clear();
         slotU = (slot % 16) * 64; slotV = (slot / 16) * 64;
-        float[] p = c.p;
+        float[] p = dead ? c.p : upright(c.p, c.scale);
+        float[] keepP = c.p; c.p = p;
         float k = c.scale, px = .0525f * k;
         // body frame
         float hx = c.x(Rig.HIP), hy = c.y(Rig.HIP), hz = c.z(Rig.HIP), nx = c.x(Rig.NECK), ny = c.y(Rig.NECK), nz = c.z(Rig.NECK);
@@ -74,7 +75,35 @@ final class BlockyUnits {
         limbs(q, c, right, Rig.SHOULDER_L, Rig.ELBOW_L, Rig.HAND_L, -1, 6 * px, ARM_L, SLEEVE_L, px, tr, tg, tb, base, 1.5f * px);
         limbs(q, c, right, Rig.LEG_R, Rig.KNEE_R, Rig.FOOT_R, +1, 2 * px, LEG_R, PANTS_R, px, tr, tg, tb, base, 0);
         limbs(q, c, right, Rig.LEG_L, Rig.KNEE_L, Rig.FOOT_L, -1, 2 * px, LEG_L, PANTS_L, px, tr, tg, tb, base, 0);
+        c.p = keepP;
         return q;
+    }
+
+    /**
+     * Living soldiers stand up straight: the ragdoll's spine leans and bends while it balances, which on a rigid
+     * Minecraft body reads as a hunchback. Keep the hip, swing the torso most of the way to vertical, set the head
+     * right on top, and carry the arms along with the shoulders. Dead units keep the raw ragdoll (they flop).
+     */
+    static float[] upright(float[] src, float scale) {
+        float[] p = src.clone();
+        int H = Rig.HIP, N = Rig.NECK;
+        float hx = p[H * 3], hy = p[H * 3 + 1], hz = p[H * 3 + 2];
+        float sx = p[N * 3] - hx, sy = p[N * 3 + 1] - hy, sz = p[N * 3 + 2] - hz, L = (float) Math.sqrt(sx * sx + sy * sy + sz * sz);
+        if (L < 1e-4f) return p;
+        float[] up = norm(sx / L * .2f, sy / L * .2f + .8f, sz / L * .2f);   // a slight lean is fine, a hunch is not
+        float nx = hx + up[0] * L, ny = hy + up[1] * L, nz = hz + up[2] * L;
+        float dx = nx - p[N * 3], dy = ny - p[N * 3 + 1], dz = nz - p[N * 3 + 2];
+        // torso particles between hip and neck: back onto the straight line
+        int T = Rig.TORSO; float tk = .5f;
+        p[T * 3] = hx + up[0] * L * tk; p[T * 3 + 1] = hy + up[1] * L * tk; p[T * 3 + 2] = hz + up[2] * L * tk;
+        p[N * 3] = nx; p[N * 3 + 1] = ny; p[N * 3 + 2] = nz;
+        for (int i : new int[]{Rig.SHOULDER_R, Rig.SHOULDER_L, Rig.ELBOW_R, Rig.ELBOW_L, Rig.HAND_R, Rig.HAND_L}) { p[i * 3] += dx; p[i * 3 + 1] += dy; p[i * 3 + 2] += dz; }
+        float headUp = .42f * scale;   // head straight above the neck, nodding a little with the original
+        float ex = src[Rig.HEAD * 3] - src[N * 3], ey = src[Rig.HEAD * 3 + 1] - src[N * 3 + 1], ez = src[Rig.HEAD * 3 + 2] - src[N * 3 + 2];
+        float[] hu = norm(ex * .25f + up[0] * .75f, ey * .25f + up[1] * .75f, ez * .25f + up[2] * .75f);
+        float hl = (float) Math.sqrt(ex * ex + ey * ey + ez * ez); if (hl < 1e-4f) hl = headUp;
+        p[Rig.HEAD * 3] = nx + hu[0] * hl; p[Rig.HEAD * 3 + 1] = ny + hu[1] * hl; p[Rig.HEAD * 3 + 2] = nz + hu[2] * hl;
+        return p;
     }
 
     /** A two-segment limb (upper / lower half of the texture), offset sideways from the body axis. */
