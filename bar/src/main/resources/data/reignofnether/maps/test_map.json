@@ -1,0 +1,14 @@
+{
+  "name": "Test Map",
+  "players": 4,
+  "description": "radda radda radda",
+  "gamerules": {
+    "doMobSpawning": false,
+    "keepInventory": true,
+    "doDaylightCycle": false,
+    "doFireTick": false,
+    "naturalRegeneration": false
+  },
+  "image": "valley_of_deceit.png"
+
+}

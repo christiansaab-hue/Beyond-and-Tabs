@@ -1,0 +1,74 @@
+package com.solegendary.reignofnether.research.researchItems;
+
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.BuildingClientboundPacket;
+import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.building.production.ProdDupeRule;
+import com.solegendary.reignofnether.building.production.ProductionItem;
+import com.solegendary.reignofnether.building.production.StartProductionButton;
+import com.solegendary.reignofnether.building.production.StopProductionButton;
+import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.resources.ResourceCosts;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.level.Level;
+
+import java.util.List;
+
+public class ResearchBeaconLevel1 extends ProductionItem {
+
+    public final static String itemName = "Iron Beacon";
+    public final static ResourceCost cost = ResourceCosts.RESEARCH_BEACON_LEVEL1;
+
+    public ResearchBeaconLevel1() {
+        super(cost, ProdDupeRule.DISALLOW_FOR_BUILDING);
+        this.onComplete = (Level level, ProductionPlacement placement) -> {
+            if (!level.isClientSide() && placement instanceof BeaconPlacement beacon) {
+                beacon.changeBeaconStructure(1);
+                beacon.sendWarning("upgraded_warning");
+                BuildingClientboundPacket.changeBeacon(beacon.originPos, 1);
+            }
+        };
+    }
+
+    public String getItemName() {
+        return itemName;
+    }
+
+    public StartProductionButton getStartButton(ProductionPlacement prodBuilding, Keybinding hotkey) {
+        return new StartProductionButton(
+                itemName,
+                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/iron_block.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame_bronze.png"),
+                hotkey,
+                () -> itemIsBeingProducedAt(prodBuilding) ||
+                        (prodBuilding instanceof BeaconPlacement beacon && beacon.getUpgradeLevel() != 0),
+                () -> true,
+                List.of(
+                        FormattedCharSequence.forward(I18n.get("research.reignofnether.beacon_level1"), Style.EMPTY.withBold(true)),
+                        ResourceCosts.getFormattedCost(cost),
+                        ResourceCosts.getFormattedTime(cost),
+                        FormattedCharSequence.forward("", Style.EMPTY),
+                        FormattedCharSequence.forward(I18n.get("research.reignofnether.beacon_level1.tooltip1"), Style.EMPTY),
+                        FormattedCharSequence.forward("", Style.EMPTY),
+                        FormattedCharSequence.forward(I18n.get("research.reignofnether.beacon_level_win"), Style.EMPTY)
+                ),
+                this
+        );
+    }
+
+    public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
+        return new StopProductionButton(
+                itemName,
+                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/iron_block.png"),
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame_bronze.png"),
+                prodBuilding,
+                this,
+                first
+        );
+    }
+}

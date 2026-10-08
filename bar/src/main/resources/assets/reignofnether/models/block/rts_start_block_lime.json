@@ -1,0 +1,6 @@
+{
+    "parent": "block/cube_all",
+    "textures": {
+        "all": "reignofnether:block/rts_start_block_lime"
+    }
+}

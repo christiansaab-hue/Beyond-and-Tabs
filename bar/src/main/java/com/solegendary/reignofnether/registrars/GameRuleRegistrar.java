@@ -1,0 +1,141 @@
+package com.solegendary.reignofnether.registrars;
+
+import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.unit.pathfinding.PathfinderConfig;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.GameRules;
+
+public class GameRuleRegistrar {
+
+    public static GameRules.Key<GameRules.BooleanValue> LOG_FALLING;
+    public static GameRules.Key<GameRules.BooleanValue> NEUTRAL_AGGRO;
+    public static GameRules.Key<GameRules.IntegerValue> MAX_POPULATION;
+    public static GameRules.Key<GameRules.BooleanValue> DO_UNIT_GRIEFING;
+    public static GameRules.Key<GameRules.BooleanValue> DO_PLAYER_GRIEFING;
+    public static GameRules.Key<GameRules.IntegerValue> GROUND_Y_LEVEL;
+    public static GameRules.Key<GameRules.IntegerValue> FLYING_MAX_Y_LEVEL;
+    public static GameRules.Key<GameRules.BooleanValue> ALLOW_BEACONS;
+    public static GameRules.Key<GameRules.IntegerValue> BEACON_WIN_MINUTES;
+    public static GameRules.Key<GameRules.BooleanValue> PVP_MODES_ONLY;
+    public static GameRules.Key<GameRules.BooleanValue> SLANTED_BUILDING;
+    public static GameRules.Key<GameRules.IntegerValue> ALLOWED_HEROES;
+    public static GameRules.Key<GameRules.BooleanValue> LOCK_ALLIANCES;
+    public static GameRules.Key<GameRules.BooleanValue> SCENARIO_MODE;
+    public static GameRules.Key<GameRules.BooleanValue> COOP_MODE;
+    public static GameRules.Key<GameRules.BooleanValue> DO_NETHER_CONVERSION;
+    public static GameRules.Key<GameRules.BooleanValue> BUILDINGS_OUTSIDE_BORDER;
+    public static GameRules.Key<GameRules.BooleanValue> FORCE_FOG;
+    public static GameRules.Key<GameRules.BooleanValue> RTS_PATHFINDING;
+    public static GameRules.Key<GameRules.IntegerValue> PATHFINDING_THREADS;
+    public static GameRules.Key<GameRules.IntegerValue> PATHFINDING_CHUNK_BUILDS;
+    public static GameRules.Key<GameRules.IntegerValue> ANIMAL_SPAWN_Y_DIFF;
+    public static GameRules.Key<GameRules.IntegerValue> RANDOM_ITEM_DROPS;
+
+    public static void init() {
+        // do cut trees convert their logs into falling logs?
+        LOG_FALLING = GameRules.register("doLogFalling", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
+        );
+        // treat neutral units as enemies? this includes auto attacks, right clicks and attack moving
+        NEUTRAL_AGGRO = GameRules.register("neutralAggro", GameRules.Category.MOBS,
+                GameRules.BooleanValue.create(true)
+        );
+        // set hard cap on population (max even with infinite houses)
+        MAX_POPULATION = GameRules.register("maxPopulation", GameRules.Category.MISC,
+                GameRules.IntegerValue.create(ResourceCosts.DEFAULT_MAX_POPULATION)
+        );
+        // allow units to damage blocks (separate from doMobGriefing which is only for vanilla mobs)
+        DO_UNIT_GRIEFING = GameRules.register("doUnitGriefing", GameRules.Category.MOBS,
+                GameRules.BooleanValue.create(false)
+        );
+        // allow players to break blocks other than buildings and resource blocks
+        DO_PLAYER_GRIEFING = GameRules.register("doPlayerGriefing", GameRules.Category.PLAYER,
+                GameRules.BooleanValue.create(true)
+        );
+        // sets the minimum Y level for the camera so it doesn't fall into the void
+        GROUND_Y_LEVEL = GameRules.register("groundYLevel", GameRules.Category.PLAYER,
+                GameRules.IntegerValue.create(-320)
+        );
+        // locks the camera to a specific Y level instead of it being calculated dynamically
+        FLYING_MAX_Y_LEVEL = GameRules.register("flyingMaxYLevel", GameRules.Category.MOBS,
+                GameRules.IntegerValue.create(320)
+        );
+        // allow beacons to be built by workers as a win condition
+        ALLOW_BEACONS = GameRules.register("allowBeacons", GameRules.Category.PLAYER,
+                GameRules.BooleanValue.create(true)
+        );
+        // allow only classic/king of the beacon gamemodes
+        PVP_MODES_ONLY = GameRules.register("pvpModesOnly", GameRules.Category.PLAYER,
+                GameRules.BooleanValue.create(false)
+        );
+        // ticks to win with a beacon
+        BEACON_WIN_MINUTES = GameRules.register("beaconWinMinutes", GameRules.Category.PLAYER,
+                GameRules.IntegerValue.create(10)
+        );
+        // buildings ignore ground flatness
+        SLANTED_BUILDING = GameRules.register("slantedBuilding", GameRules.Category.PLAYER,
+                GameRules.BooleanValue.create(false)
+        );
+        // enable heroes in all gamemodes
+        ALLOWED_HEROES = GameRules.register("allowedHeroes", GameRules.Category.PLAYER,
+                GameRules.IntegerValue.create(2)
+        );
+        // only allow alliances to be made/broken with non-RTS players (ie. before a game starts)
+        LOCK_ALLIANCES = GameRules.register("lockAlliances", GameRules.Category.PLAYER,
+                GameRules.BooleanValue.create(false)
+        );
+        // map is set to be played as a scenario by the player that opens it
+        SCENARIO_MODE = GameRules.register("scenarioMode", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(false)
+        );
+        // all players are allied and cannot change alliances, normal victory is disabled and can only be achieved via commands
+        COOP_MODE = GameRules.register("coopMode", GameRules.Category.PLAYER,
+                GameRules.BooleanValue.create(false)
+        );
+        // all players are allied and cannot change alliances, normal victory is disabled and can only be achieved via commands
+        DO_NETHER_CONVERSION = GameRules.register("doNetherConversion", GameRules.Category.UPDATES,
+                GameRules.BooleanValue.create(true)
+        );
+        // allow buildings outside the worldborder
+        BUILDINGS_OUTSIDE_BORDER = GameRules.register("buildingsOutsideBorder", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
+        );
+        // when true, fog of war auto-enables on world tick and any disable attempt is refused
+        FORCE_FOG = GameRules.register("reignofnetherForceFog", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(false)
+        );
+        // use the RTS-optimised pathfinder (async grid A*, walkability cache) instead of vanilla.
+        // Auto-enabled at world load for RTS-optimised maps (small world border) - see
+        // WorldBorderServerEvents - which also prewarms the navmesh. Off otherwise.
+        // May cause additional TPS lag on worlds without world borders as they will not have a pregenerated navmesh
+        RTS_PATHFINDING = GameRules.register("rtsPathfinding", GameRules.Category.MOBS,
+                GameRules.BooleanValue.create(false)
+        );
+        // number of background threads the RTS grid A* pathfinder uses. defaults to ~half the cores; the
+        // worker pool clamps to [1, 32] and rebuilds itself live when this changes.
+        PATHFINDING_THREADS = GameRules.register("pathfindingThreads", GameRules.Category.MOBS,
+                GameRules.IntegerValue.create(PathfinderConfig.WORKER_THREADS)
+        );
+        // cold chunks the pathfinder warms per tick (main-thread work). higher = faster first paths but more
+        // TPS cost. clamped to [1, 64] by the worker pool.
+        PATHFINDING_CHUNK_BUILDS = GameRules.register("pathfindingChunkBuildsPerTick", GameRules.Category.MOBS,
+                GameRules.IntegerValue.create(PathfinderConfig.CHUNK_BUILDS_PER_TICK_DEFAULT)
+        );
+        // Difference in level that animals can spawn around capitols at
+        ANIMAL_SPAWN_Y_DIFF = GameRules.register("animalSpawnYDiff", GameRules.Category.MOBS,
+                GameRules.IntegerValue.create(5)
+        );
+        // Difference in level that animals can spawn around capitols at
+        RANDOM_ITEM_DROPS = GameRules.register("randomItemDrops", GameRules.Category.DROPS,
+                boundedInt(1, 0, 2)
+        );
+    }
+
+    private static GameRules.Type<GameRules.IntegerValue> boundedInt(int def, int min, int max) {
+        return GameRules.IntegerValue.create(def, (server, value) -> {
+            int clamped = Mth.clamp(value.get(), 0, 2);
+            if (clamped != value.get())
+                value.set(clamped, server); // only re-set if different, avoids infinite recursion
+        });
+    }
+}

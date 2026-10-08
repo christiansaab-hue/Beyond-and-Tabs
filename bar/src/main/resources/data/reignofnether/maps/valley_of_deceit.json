@@ -1,0 +1,14 @@
+{
+  "name": "Valley of Deceit",
+  "players": 4,
+  "description": "yadda yadda yadda",
+  "gamerules": {
+    "doMobSpawning": false,
+    "keepInventory": true,
+    "doDaylightCycle": false,
+    "doFireTick": false,
+    "naturalRegeneration": false
+  },
+  "image": "valley_of_deceit.png"
+
+}

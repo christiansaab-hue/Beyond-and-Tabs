@@ -1,0 +1,980 @@
+package com.solegendary.reignofnether.building;
+
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.solegendary.reignofnether.alliance.AlliancesClient;
+import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
+import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
+import com.solegendary.reignofnether.building.buildings.neutral.NeutralTransportPortal;
+import com.solegendary.reignofnether.building.buildings.piglins.PortalBasic;
+import com.solegendary.reignofnether.building.buildings.placements.BeaconPlacement;
+import com.solegendary.reignofnether.building.buildings.placements.PortalPlacement;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
+import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
+import com.solegendary.reignofnether.building.production.ActiveProduction;
+import com.solegendary.reignofnether.cursor.CursorClientEvents;
+import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
+import com.solegendary.reignofnether.gamerules.GameruleClient;
+import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.hud.TextInputClientEvents;
+import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.minimap.MinimapClientEvents;
+import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.player.PlayerColors;
+import com.solegendary.reignofnether.research.ResearchClient;
+import com.solegendary.reignofnether.resources.ResourceName;
+import com.solegendary.reignofnether.resources.ResourceSources;
+import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
+import com.solegendary.reignofnether.tutorial.TutorialClientEvents;
+import com.solegendary.reignofnether.unit.Relationship;
+import com.solegendary.reignofnether.unit.UnitAction;
+import com.solegendary.reignofnether.unit.UnitClientEvents;
+import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
+import com.solegendary.reignofnether.util.MiscUtil;
+import com.solegendary.reignofnether.util.MyRenderer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.BeaconScreen;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import org.lwjgl.glfw.GLFW;
+
+import java.awt.*;
+import java.util.*;
+import java.util.List;
+
+import static com.solegendary.reignofnether.building.BuildingUtils.isBridge;
+import static com.solegendary.reignofnether.hud.HudClientEvents.*;
+import static com.solegendary.reignofnether.unit.UnitClientEvents.getSelectedUnits;
+public class BuildingClientEvents {
+
+    static final Minecraft MC = Minecraft.getInstance();
+
+    public static int getTotalPopulationSupply(String playerName) {
+        if (ResearchClient.hasCheat("foodforthought")) {
+            return GameruleClient.maxPopulation;
+        }
+
+        int totalPopulationSupply = 0;
+        for (BuildingPlacement building : buildings)
+            if (building.ownerName.equals(playerName) && building.isBuilt) {
+                totalPopulationSupply += building.getBuilding().cost.population;
+            }
+
+        return Math.min(GameruleClient.maxPopulation, totalPopulationSupply);
+    }
+
+    // clientside buildings used for tracking position (for cursor selection)
+    private static final ArrayList<BuildingPlacement> buildings = new ArrayList<>();
+    private static final ArrayList<BuildingPlacement> selectedBuildings = new ArrayList<>();
+    private static Building buildingToPlace = null;
+    private static Building lastBuildingToPlace = null;
+    private static ArrayList<BuildingBlock> blocksToDraw = new ArrayList<>();
+    private static boolean replacedTexture = false;
+    private static Rotation buildingRotation = Rotation.NONE;
+    private static Vec3i buildingDimensions = new Vec3i(0, 0, 0);
+
+    private static long lastLeftClickTime = 0; // to track double clicks
+    private static final long DOUBLE_CLICK_TIME_MS = 500;
+
+    // can only be one preselected building as you can't box-select them like units
+    public static BuildingPlacement  getPreselectedBuilding() {
+        BlockPos preSelBp = CursorClientEvents.getPreselectedBlockPos();
+        for (BuildingPlacement building : buildings)
+            if (building.isPosInsideBuilding(preSelBp)) {
+                if (building.getBuilding() instanceof AbstractBridge && ResourceSources.getBlockResourceName(preSelBp, MC.level) != ResourceName.NONE) {
+                    return null;
+                }
+                return building;
+            }
+        return null;
+    }
+
+    public static ArrayList<BuildingPlacement> getSelectedBuildings() {
+        return selectedBuildings;
+    }
+
+    public static List<BuildingPlacement> getBuildings() {
+        return buildings;
+    }
+
+    public static List<BuildingPlacement> getGarrisonableBuildings() {
+        ArrayList<BuildingPlacement> garrs = new ArrayList<>();
+        for (BuildingPlacement bpl : buildings)
+            if (bpl.getBuilding().hasActiveAddon(GarrisonableBuildingAddon.class))
+                garrs.add(bpl);
+        return garrs;
+    }
+
+    public static void clearSelectedBuildings() {
+        selectedBuildings.clear();
+    }
+
+    public static void addSelectedBuilding(BuildingPlacement building) {
+        CursorClientEvents.setLeftClickAction(null);
+
+        if (!FogOfWarClientEvents.isBuildingInBrightChunk(building)) {
+            return;
+        }
+        if (!SandboxClientEvents.isSandboxPlayer() && building.isOutsideWorldBorder()) {
+            return;
+        }
+        selectedBuildings.add(building);
+        selectedBuildings.sort(Comparator.comparing(b -> {
+            if (b.getBuilding() instanceof CustomBuilding) {
+                return b.getBuilding().name;
+            } else {
+                ReignOfNetherRegistries.BUILDING.getKey(b.getBuilding()).toString();
+            }
+            return "";
+        }));
+        UnitClientEvents.clearSelectedUnits();
+    }
+
+
+    // switch to the building with the least production, so we can spread out production items
+    public static void switchHudToIdlestBuilding() {
+        if (hudSelectedPlacement == null || MC.player == null)
+            return;
+        BuildingPlacement idlestBuilding = null;
+        float prodTicksLeftMax = Float.MAX_VALUE;
+        for (BuildingPlacement building : selectedBuildings) {
+            if (!(building.getBuilding().equals(hudSelectedPlacement.getBuilding()) && building.isBuilt && building.ownerName.equals(MC.player.getName().getString()))) continue;
+            if (!(building instanceof ProductionPlacement prodB)) continue;
+            float prodTicksLeft = 0f;
+            for (ActiveProduction production : prodB.productionQueue) {
+                prodTicksLeft += production.ticksLeft;
+            }
+            if (prodTicksLeft >= prodTicksLeftMax) continue;
+            prodTicksLeftMax = prodTicksLeft;
+            idlestBuilding = building;
+        }
+        if (idlestBuilding != null)
+            hudSelectedPlacement = idlestBuilding;
+    }
+
+    public static void setBuildingToPlace(Building building) {
+        buildingToPlace = building;
+
+        if ((buildingToPlace != lastBuildingToPlace) && buildingToPlace != null) {
+            // load the new buildingToPlace's data
+            try {
+                if (buildingToPlace instanceof AbstractBridge bridge) {
+                    blocksToDraw = bridge.getRelativeBlockData(MC.level, isBridgeDiagonal());
+                } else {
+                    blocksToDraw = buildingToPlace.getRelativeBlockData(MC.level);
+                }
+                buildingDimensions = BuildingUtils.getBuildingSize(blocksToDraw);
+                buildingRotation = Rotation.NONE;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            lastBuildingToPlace = buildingToPlace; // avoid loading the same data twice unnecessarily
+        }
+        if (buildingToPlace == null) {
+            blocksToDraw.clear();
+            lastBuildingToPlace = null;
+        }
+    }
+
+    public static Building getBuildingToPlace() {
+        return buildingToPlace;
+    }
+
+    // adds a green overlay option to OverlayTexture at (0,0)
+    public static void replaceOverlayTexture() {
+        NativeImage nativeimage = MC.gameRenderer.overlayTexture.texture.getPixels();
+        int bgr = MiscUtil.reverseHexRGB(0x00FF00); // for some reason setPixelRGBA reads it as ABGR with A inversed
+        if (nativeimage != null) {
+            nativeimage.setPixelRGBA(0, 0, bgr | (0xB2 << 24));
+            RenderSystem.activeTexture(33985);
+            MC.gameRenderer.overlayTexture.texture.bind();
+            nativeimage.upload(0,
+                0,
+                0,
+                0,
+                0,
+                nativeimage.getWidth(),
+                nativeimage.getHeight(),
+                false,
+                true,
+                false,
+                false
+            );
+            RenderSystem.activeTexture(33984);
+        }
+    }
+
+    public static void drawBuildingToPlace(PoseStack matrix, int forceColour) {
+        BlockPos bp = BuildingUtils.getBuildingOriginPos(CursorClientEvents.getPreselectedBlockPos(), isBridge(buildingToPlace), buildingRotation, buildingDimensions);
+        drawBuildingToPlace(matrix, bp, forceColour);
+    }
+
+    // draws the building with a green/red overlay (based on placement validity) at the target position
+    // based on whether the location is valid or not
+    // location should be 1 space above the selected spot
+    // forceColour == 0 (none), 1 (green), 2 (red)
+    public static void drawBuildingToPlace(PoseStack matrix, BlockPos originPos, int forceColour) {
+        if (buildingToPlace == null || MC.player == null)
+            return;
+
+        boolean valid = BuildingValidators.isPlacementValid(
+                MC.level, buildingToPlace, originPos, MC.player.getName().getString(), buildingRotation,
+                isBridgeDiagonal(), SandboxClientEvents.isSandboxPlayer(), true
+        );
+        boolean yellowUnderline = buildingToPlace instanceof PortalBasic && !BuildingValidators.isOnNetherBlocks(MC.level, blocksToDraw, originPos, false);
+        drawBuilding(blocksToDraw, matrix, originPos, forceColour, valid, yellowUnderline);
+    }
+
+    public static void drawBuilding(List<BuildingBlock> blocks, PoseStack matrix, BlockPos originPos, int forceColour) {
+        drawBuilding(blocks, matrix, originPos, forceColour, true, false);
+    }
+
+    public static void drawBuilding(List<BuildingBlock> blocks, PoseStack matrix, BlockPos originPos, int forceColour, boolean isGreen, boolean yellowUnderline) {
+        int minX = 999999;
+        int minY = 999999;
+        int minZ = 999999;
+        int maxX = -999999;
+        int maxY = -999999;
+        int maxZ = -999999;
+        ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
+        var vertexConsumer = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
+        for (BuildingBlock block : blocks) {
+            if (isBridge(buildingToPlace)
+                    && MC.level != null && AbstractBridge.shouldCullBlock(originPos.offset(0, 1, 0), block, MC.level, true)) {
+                continue;
+            }
+            BlockRenderDispatcher renderer = MC.getBlockRenderer();
+            BlockState bs = block.getBlockState();
+            BlockPos bp = block.getBlockPos().offset(originPos);
+            // ModelData modelData = renderer.getBlockModel(bs).getModelData(MC.level, bp, bs, ModelDataManager
+            // .getModelData(MC.level, bp));
+
+            matrix.pushPose();
+            Entity cam = MC.cameraEntity;
+            matrix.translate( // bp is center of block whereas render is corner, so offset by 0.5
+                    bp.getX() - cam.getX(), bp.getY() - cam.getY() - 0.6, bp.getZ() - cam.getZ());
+
+            int overlayColour = isGreen ? OverlayTexture.pack(0, 0) : OverlayTexture.pack(0, 3);
+            if (forceColour == 1) {
+                overlayColour = OverlayTexture.pack(0, 0);
+            } else if (forceColour == 2) {
+                overlayColour = OverlayTexture.pack(0, 3);
+            }
+            renderer.renderSingleBlock(bs,
+                    matrix,
+                    MC.renderBuffers().crumblingBufferSource(),
+                    // don't render over other stuff
+                    15728880,
+                    // red if invalid, else green
+                    overlayColour,
+                    net.minecraftforge.client.model.data.ModelData.EMPTY,
+                    null
+            );
+
+            matrix.popPose();
+
+            if (bp.getX() < minX) {
+                minX = bp.getX();
+            }
+            if (bp.getY() < minY) {
+                minY = bp.getY();
+            }
+            if (bp.getZ() < minZ) {
+                minZ = bp.getZ();
+            }
+            if (bp.getX() > maxX) {
+                maxX = bp.getX();
+            }
+            if (bp.getY() > maxY) {
+                maxY = bp.getY();
+            }
+            if (bp.getZ() > maxZ) {
+                maxZ = bp.getZ();
+            }
+        }
+        // draw placement outline below
+        maxX += 1;
+        minY += 1.05f;
+        maxZ += 1;
+
+        float r = isGreen ? 0 : 1.0f;
+        float g = isGreen ? 1.0f : 0;
+        // highlight yellow if we are placing a portal on overworld terrain
+        if (isGreen) {
+            if (yellowUnderline) {
+                r = 0.5f;
+                g = 0.5f;
+            }
+        }
+        if (forceColour == 1) {
+            r = 0;
+            g = 1;
+        } else if (forceColour == 2) {
+            r = 1;
+            g = 0;
+        }
+        if (minY < 0) {
+            minY -= 1;
+        }
+        AABB aabb = new AABB(minX, minY, minZ, maxX, minY, maxZ);
+        MyRenderer.drawLineBox(matrix, aabb, r, g, 0, 0.5f);
+        MyRenderer.drawSolidBox(matrix, vertexConsumer, aabb, Direction.UP, r, g, 0, 0.5f, rl);
+        AABB aabb2 = new AABB(minX, -64, minZ, maxX, minY, maxZ);
+        MyRenderer.drawLineBox(matrix, aabb2, r, g, 0, 0.25f);
+    }
+
+    /*
+    @SubscribeEvent
+    public static void onRenderOverLay(RenderGuiOverlayEvent.Pre evt) {
+        if (MC.level == null)
+            return;
+
+        MiscUtil.drawDebugStrings(evt.getPoseStack(), MC.font, new String[] {
+                "dist to border: " + MC.level.getWorldBorder().getDistanceToBorder(cursorPos.getX(), cursorPos.getZ()),
+        });
+    }
+     */
+
+
+    @SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent evt) throws NoSuchFieldException {
+        if (evt.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+            return;
+        }
+        if (!OrthoviewClientEvents.isEnabled()) {
+            return;
+        }
+
+        drawBuildingToPlace(
+                evt.getPoseStack(),
+                BuildingUtils.getBuildingOriginPos(CursorClientEvents.getPreselectedBlockPos(), isBridge(buildingToPlace), buildingRotation, buildingDimensions),
+                0
+        );
+
+        Map<BlockPos, List<BuildingBlock>> fogBlocksToDraw = new HashMap<>();
+        for (LivingEntity le : UnitClientEvents.getAllUnits()) {
+            if (le instanceof Unit unit && le instanceof WorkerUnit workerUnit &&
+                MC.player != null && unit.getOwnerName().equals(MC.player.getName().getString()))
+            {
+                Map<BlockPos, List<BuildingBlock>> fogBlocks = workerUnit.getExploreBuildLocationGoal().getFogQueuedBlocksToDraw();
+                fogBlocks.keySet().removeIf(bp -> buildings.stream().map(b -> b.originPos).toList().contains(bp));
+                for (BlockPos pos : fogBlocks.keySet())
+                    fogBlocksToDraw.put(pos, fogBlocks.get(pos));
+            }
+        }
+        for (BlockPos pos : fogBlocksToDraw.keySet()) {
+            drawBuilding(fogBlocksToDraw.get(pos), evt.getPoseStack(), pos, 1);
+        }
+
+        BuildingPlacement preselectedBuilding = getPreselectedBuilding();
+
+        for (BuildingPlacement building : buildings) {
+
+            boolean isInBrightChunk = FogOfWarClientEvents.isBuildingInBrightChunk(building);
+            boolean inWorldBorderOrInSandbox = SandboxClientEvents.isSandboxPlayer() || !building.isOutsideWorldBorder();
+
+            AABB aabb = new AABB(building.minCorner, building.maxCorner.offset(1, 1, 1));
+
+            var colorHex = new Color(PlayerColors.getPlayerDisplayColorHex(building.ownerName));
+            float r = colorHex.getRed() / 255.0f;
+            float g = colorHex.getGreen() / 255.0f;
+            float b = colorHex.getBlue() / 255.0f;
+
+            if (isInBrightChunk && inWorldBorderOrInSandbox) {
+                if (selectedBuildings.contains(building)) {
+                    MyRenderer.drawLineBox(evt.getPoseStack(), aabb, 1.0f, 1.0f, 1.0f, 1.0f);
+                } else if (building.equals(preselectedBuilding) && !HudClientEvents.isMouseOverAnyButtonOrHud()) {
+                    if (hudSelectedEntity instanceof WorkerUnit && MiscUtil.isRightClickDown(MC)) {
+                        MyRenderer.drawLineBox(evt.getPoseStack(), aabb, 1.0f, 1.0f, 1.0f, 1.0f);
+                    } else {
+                        MyRenderer.drawLineBox(evt.getPoseStack(),
+                                aabb,
+                                1.0f, 1.0f, 1.0f,
+                                MiscUtil.isRightClickDown(MC) ? 1.0f : 0.5f
+                        );
+                    }
+                }
+            }
+            if (MinimapClientEvents.shouldUnderline() && inWorldBorderOrInSandbox)
+                MyRenderer.drawBoxBottom(evt.getPoseStack(), aabb, r, g, b, 0.5f);
+        }
+
+        // draw rally points and lines
+        ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
+        var vertexConsumerEntityTranslucent = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
+        var vertexConsumerNoDepthLine = MC.renderBuffers().bufferSource().getBuffer(MyRenderer.LINES_NO_DEPTH_TEST);
+        var vertexConsumerLine = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINES);
+        for (BuildingPlacement selBuilding : selectedBuildings) {
+            if (selBuilding instanceof ProductionPlacement selProdBuilding) {
+                float a = MiscUtil.getOscillatingFloat(0.25f, 0.75f);
+
+                if (!selProdBuilding.getRallyPoints().isEmpty() && MC.level != null) {
+                    Vec3 lastPos = Vec3.atBottomCenterOf(selProdBuilding.centrePos.above());
+                    for (BlockPos bp : selProdBuilding.getRallyPoints()) {
+                        boolean isRed = selProdBuilding.attackRally;
+                        MyRenderer.drawLine(evt.getPoseStack(), vertexConsumerLine, lastPos, Vec3.atBottomCenterOf(bp.above()), isRed ? 1 : 0, isRed ? 0 : 1, 0, a);
+                        if (MiscUtil.isSnowLayerBlock(MC.level.getBlockState(bp.offset(0,1,0)).getBlock())) {
+                            AABB aabb = new AABB(bp);
+                            aabb = aabb.setMaxY(aabb.maxY + 0.13f);
+                            MyRenderer.drawSolidBox(evt.getPoseStack(), vertexConsumerEntityTranslucent, aabb, Direction.UP,  isRed ? 1 : 0, isRed ? 0 : 1, 0, a,
+                                    ResourceLocation.fromNamespaceAndPath("forge", "textures/white.png"));
+                        } else {
+                            MyRenderer.drawBlockFace(evt.getPoseStack(), vertexConsumerEntityTranslucent, Direction.UP, bp,  isRed ? 1 : 0, isRed ? 0 : 1, 0, a);
+                        }
+                        lastPos = Vec3.atBottomCenterOf(bp.above());
+                    }
+                } else if (selProdBuilding.getRallyPointEntity() != null) {
+                    LivingEntity le = selProdBuilding.getRallyPointEntity();
+                    boolean isRed = selProdBuilding.attackRally;
+                    MyRenderer.drawLine(evt.getPoseStack(), vertexConsumerLine, new Vec3(selBuilding.centrePos.getX(),
+                        selBuilding.centrePos.getY(),
+                        selBuilding.centrePos.getZ()
+                    ), new Vec3(le.getX(), le.getEyeY(), le.getZ()),  isRed ? 1 : 0, isRed ? 0 : 1, 0, a);
+                    MyRenderer.drawLineBoxOutlineOnly(evt.getPoseStack(), vertexConsumerNoDepthLine, le.getBoundingBox(), isRed ? 1 : 0, isRed ? 0 : 1, 0, a, false);
+                }
+            }
+            if (selBuilding instanceof PortalPlacement portal && portal.hasDestination()) {
+                float a = MiscUtil.getOscillatingFloat(0.25f, 0.75f);
+                MyRenderer.drawLine(evt.getPoseStack(), vertexConsumerLine, selBuilding.centrePos, portal.destination, 0, 1, 0, a);
+            }
+        }
+
+
+    }
+
+    // on scroll rotate the building placement by 90deg by resorting the blocks list
+    // 0 - Orthogonal, 0 deg
+    // 1 - Diagonal,   0 deg
+    // 2 - Orthogonal, 90 deg
+    // 3 - Diagonal,   90 deg
+    private static int bridgePlaceState = 0;
+
+    public static boolean isBridgeDiagonal() {
+        return bridgePlaceState % 2 != 0;
+    }
+
+    @SubscribeEvent
+    public static void onMouseScroll(ScreenEvent.MouseScrolled.Post evt) {
+        if (buildingToPlace != null) {
+            if (buildingToPlace instanceof AbstractBridge bridge) {
+                bridgePlaceState += evt.getScrollDelta() > 0 ? 1 : -1;
+                if (bridgePlaceState < 0) {
+                    bridgePlaceState = 3;
+                } else if (bridgePlaceState > 3) {
+                    bridgePlaceState = 0;
+                }
+                try {
+                    blocksToDraw = bridge.getRelativeBlockData(MC.level, isBridgeDiagonal());
+                    buildingDimensions = BuildingUtils.getBuildingSize(blocksToDraw);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                Rotation rotationDelta = List.of(0, 1).contains(bridgePlaceState)
+                                         ? Rotation.NONE
+                                         : Rotation.CLOCKWISE_90;
+                buildingRotation = rotationDelta;
+                if (bridgePlaceState == 2) {
+                    blocksToDraw.replaceAll(buildingBlock -> buildingBlock.move(MC.level, new BlockPos(-5, 0, 5)));
+                }
+                blocksToDraw.replaceAll(buildingBlock -> buildingBlock.rotate(MC.level, rotationDelta));
+            } else {
+                Rotation rotationDelta =
+                    evt.getScrollDelta() > 0 ? Rotation.CLOCKWISE_90 : Rotation.COUNTERCLOCKWISE_90;
+                buildingRotation = buildingRotation.getRotated(rotationDelta);
+                blocksToDraw.replaceAll(buildingBlock -> buildingBlock.rotate(MC.level, rotationDelta));
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onMouseClick(ScreenEvent.MouseButtonPressed.Pre evt) {
+        if (!OrthoviewClientEvents.isEnabled() || MC.level == null || MC.player == null) {
+            return;
+        }
+
+        // prevent clicking behind HUDs
+        if (HudClientEvents.isMouseOverAnyButtonOrHud()) {
+            setBuildingToPlace(null);
+            return;
+        }
+
+        BlockPos preSelPos = CursorClientEvents.getPreselectedBlockPos();
+        BlockPos originPos = BuildingUtils.getBuildingOriginPos(preSelPos, isBridge(buildingToPlace), buildingRotation, buildingDimensions);
+
+        if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_1) {
+            BuildingPlacement preSelBuilding = getPreselectedBuilding();
+
+            String errorMsgKey = BuildingValidators.getPlacementValidityError(
+                    MC.level, buildingToPlace, originPos, MC.player.getName().getString(), buildingRotation, isBridgeDiagonal(), SandboxClientEvents.isSandboxPlayer(), true
+            );
+            boolean valid = errorMsgKey == null;
+            boolean inFog = !BuildingValidators.isInBrightChunk(MC.level, preSelPos, MC.player.getName().getString());
+
+            if (errorMsgKey != null && errorMsgKey.equals("building.reignofnether.build_centre_here")) {
+                OrthoviewClientEvents.forceMoveCam(TutorialClientEvents.BUILD_CAM_POS, 50);
+            }
+
+            // place a new building
+            if (buildingToPlace != null && valid && MC.player != null) {
+                Building building = buildingToPlace;
+
+                ArrayList<Integer> builderIds = new ArrayList<>();
+                for (LivingEntity builderEntity : getSelectedUnits())
+                    if (builderEntity instanceof WorkerUnit workerUnit) {
+                        builderIds.add(builderEntity.getId());
+                        if (inFog) {
+                            if (!Keybindings.shiftMod.isDown())
+                                workerUnit.getExploreBuildLocationGoal().getFogQueuedBlocksToDraw().clear();
+                            workerUnit.getExploreBuildLocationGoal().getFogQueuedBlocksToDraw().put(originPos, new ArrayList<>(blocksToDraw));
+                        }
+                    }
+                var ids = new int[builderIds.size()];
+                for (int i = 0; i < ids.length; i++) {
+                    ids[i] = builderIds.get(i);
+                }
+                if (Keybindings.shiftMod.isDown()) {
+                    String ownerName = MC.player.getName().getString();
+                    if (SandboxClientEvents.relationship == Relationship.NEUTRAL)
+                        ownerName = "";
+                    else if (SandboxClientEvents.relationship == Relationship.HOSTILE)
+                        ownerName = "Enemy";
+
+                    BuildingServerboundPacket.placeAndQueueBuilding(building,
+                        BuildingUtils.isBridge(buildingToPlace) && bridgePlaceState == 2 ? originPos.offset(-5, 0, -5) : originPos,
+                        buildingRotation,
+                        hudSelectedEntity instanceof Unit unit ? unit.getOwnerName() : ownerName,
+                        ids,
+                        isBridgeDiagonal()
+                    );
+
+                    for (LivingEntity entity : getSelectedUnits()) {
+                        if (entity instanceof Unit unit) {
+                            unit.getCheckpoints().removeIf(c -> {
+                                if (!c.isForEntity() && c.bp == null)
+                                    return true;
+                                boolean notInBuilding = !BuildingUtils.isPosInsideAnyBuilding(true, c.bp);
+                                boolean hasFogQueue = false;
+                                if (unit instanceof WorkerUnit workerUnit) { // remove if the pos is a fog-queued position that is explored
+                                    hasFogQueue = !workerUnit.getExploreBuildLocationGoal().getFogQueuedBlocksToDraw().isEmpty();
+                                }
+                                return notInBuilding && (!hasFogQueue || FogOfWarClientEvents.isBlockVisible(c.bp));
+                            });
+                            MiscUtil.addUnitCheckpoint(unit,
+                                preSelPos.above(),
+                                true
+                            );
+                            if (unit instanceof WorkerUnit workerUnit) {
+                                workerUnit.getBuildRepairGoal().ignoreNextCheckpoint = true;
+                            }
+                        }
+                    }
+                } else {
+                    boolean hasSelectedWorkers = false;
+                    for (LivingEntity entity : getSelectedUnits()) {
+                        if (entity instanceof WorkerUnit) {
+                            hasSelectedWorkers = true;
+                            break;
+                        }
+                    }
+                    String ownerName = MC.player.getName().getString();
+                    if (SandboxClientEvents.isSandboxPlayer(ownerName) && !hasSelectedWorkers &&
+                        !(buildingToPlace instanceof AbstractBridge)) {
+                        if (SandboxClientEvents.relationship == Relationship.NEUTRAL)
+                            ownerName = "";
+                        else if (SandboxClientEvents.relationship == Relationship.HOSTILE)
+                            ownerName = "Enemy";
+                    }
+                    var builderArray = new int[builderIds.size()];
+                    for (int i = 0; i < builderIds.size(); i++) {
+                        builderArray[i] = builderIds.get(i);
+                    }
+                    BuildingServerboundPacket.placeBuilding(buildingToPlace,
+                        isBridge(buildingToPlace) && bridgePlaceState == 2 ? originPos.offset(-5, 0, -5) : originPos,
+                        buildingRotation,
+                        hudSelectedEntity instanceof Unit unit ? unit.getOwnerName() : ownerName,
+                        builderArray,
+                        isBridgeDiagonal()
+                    );
+                    setBuildingToPlace(null);
+
+                    if (hasSelectedWorkers) {
+                        for (LivingEntity entity : getSelectedUnits()) {
+                            if (entity instanceof Unit unit) {
+                                MiscUtil.addUnitCheckpoint(unit, preSelPos.above(), true);
+                                if (unit instanceof WorkerUnit workerUnit) {
+                                    workerUnit.getBuildRepairGoal().ignoreNextCheckpoint = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // equivalent of UnitClientEvents.onMouseClick()
+            else if (buildingToPlace == null) {
+
+                // select all nearby buildings of the same type when the same building is double-clicked
+                if (selectedBuildings.size() == 1 && MC.level != null && !Keybindings.shiftMod.isDown() &&
+                    ((System.currentTimeMillis() - lastLeftClickTime) < DOUBLE_CLICK_TIME_MS || Keybindings.ctrlMod.isDown()) &&
+                    preSelBuilding != null && selectedBuildings.contains(preSelBuilding)) {
+
+                    lastLeftClickTime = 0;
+                    BuildingPlacement selBuilding = selectedBuildings.get(0);
+                    BlockPos centre = selBuilding.centrePos;
+                    ArrayList<BuildingPlacement> nearbyBuildings = getBuildingsWithinRange(new Vec3(centre.getX(),
+                            centre.getY(),
+                            centre.getZ()
+                        ),
+                        OrthoviewClientEvents.getZoom() * 2,
+                        selBuilding.getBuilding()
+                    );
+                    clearSelectedBuildings();
+                    for (BuildingPlacement building : nearbyBuildings)
+                        if (getPlayerToBuildingRelationship(building) == Relationship.OWNED) {
+                            addSelectedBuilding(building);
+                        }
+                }
+
+                // left click -> select a single building
+                // if shift is held, deselect a building or add it to the selected group
+                else if (preSelBuilding != null && CursorClientEvents.getLeftClickAction() == null) {
+                    boolean deselected = false;
+
+                    if (Keybindings.shiftMod.isDown()) {
+                        deselected = selectedBuildings.remove(preSelBuilding);
+                    }
+
+                    if (Keybindings.shiftMod.isDown() && !deselected
+                        && getPlayerToBuildingRelationship(preSelBuilding) == Relationship.OWNED) {
+                        addSelectedBuilding(preSelBuilding);
+                    } else if (!deselected && UnitClientEvents.getPreselectedUnits().size()
+                        == 0) { // select a single building - this should be the only code path that allows you to
+                        // select a non-owned building
+                        clearSelectedBuildings();
+                        addSelectedBuilding(preSelBuilding);
+                    }
+                }
+            } else if (errorMsgKey != null) {
+                showTemporaryMessage(I18n.get(errorMsgKey));
+            }
+
+            // deselect any non-owned buildings if we managed to select them with owned buildings
+            // and disallow selecting > 1 non-owned building
+            if (selectedBuildings.size() > 1) {
+                selectedBuildings.removeIf(b -> getPlayerToBuildingRelationship(b) != Relationship.OWNED);
+            }
+
+            lastLeftClickTime = System.currentTimeMillis();
+        } else if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2) {
+            // set rally points
+            if (!Keybindings.altMod.isDown()) {
+                for (BuildingPlacement selBuilding : selectedBuildings) {
+                    if (selBuilding instanceof ProductionPlacement selProdBuilding
+                        && getPlayerToBuildingRelationship(selBuilding) == Relationship.OWNED) {
+                        if (!UnitClientEvents.getPreselectedUnits().isEmpty()) {
+                            LivingEntity rallyPointEntity = UnitClientEvents.getPreselectedUnits().get(0);
+                            selProdBuilding.setRallyPointEntity(rallyPointEntity);
+                            BuildingServerboundPacket.setRallyPointEntity(selBuilding.originPos,
+                                rallyPointEntity.getId()
+                            );
+                        } else {
+                            BlockPos rallyPoint = CursorClientEvents.getPreselectedBlockPos();
+                            if (Keybindings.ctrlMod.isDown()) {
+                                if (Keybindings.shiftMod.isDown()) {
+                                    selProdBuilding.addRallyPoint(rallyPoint);
+                                    selProdBuilding.attackRally = true;
+                                    BuildingServerboundPacket.addAttackRallyPoint(selBuilding.originPos, rallyPoint);
+                                } else {
+                                    selProdBuilding.setRallyPoint(rallyPoint);
+                                    selProdBuilding.attackRally = true;
+                                    BuildingServerboundPacket.setAttackRallyPoint(selBuilding.originPos, rallyPoint);
+                                }
+                            } else {
+                                if (Keybindings.shiftMod.isDown()) {
+                                    selProdBuilding.addRallyPoint(rallyPoint);
+                                    selProdBuilding.attackRally = false;
+                                    BuildingServerboundPacket.addRallyPoint(selBuilding.originPos, rallyPoint);
+                                } else {
+                                    selProdBuilding.setRallyPoint(rallyPoint);
+                                    selProdBuilding.attackRally = false;
+                                    BuildingServerboundPacket.setRallyPoint(selBuilding.originPos, rallyPoint);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onButtonPress(ScreenEvent.KeyPressed.Pre evt) {
+        if (TextInputClientEvents.isAnyInputFocused())
+            return;
+        if (evt.getKeyCode() == GLFW.GLFW_KEY_LEFT_ALT) {
+            buildingToPlace = null;
+        }
+        if (evt.getKeyCode() == GLFW.GLFW_KEY_DELETE) {
+            boolean isSandboxPlayer = MC.player != null && SandboxClientEvents.isSandboxPlayer(MC.player.getName().getString());
+            BuildingPlacement building = HudClientEvents.hudSelectedPlacement;
+            if (building != null && building.getBuilding().capturable && !isSandboxPlayer) {
+                HudClientEvents.showTemporaryMessage(I18n.get("server.reignofnether.cannot_delete_capturable"));
+            } else if (building != null &&
+                ((building.isBuilt && getPlayerToBuildingRelationship(building) == Relationship.OWNED) || isSandboxPlayer)) {
+                HudClientEvents.hudSelectedPlacement = null;
+                BuildingServerboundPacket.cancelBuilding(building.minCorner, MC.player.getName().getString());
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onButtonPress(ScreenEvent.KeyReleased.Post evt) {
+        if (TextInputClientEvents.isAnyInputFocused())
+            return;
+        if (MC.level != null && MC.player != null)
+            if (evt.getKeyCode() == GLFW.GLFW_KEY_LEFT_SHIFT)
+                setBuildingToPlace(null);
+    }
+
+    // prevent selection of buildings out of view
+    private static final int VIS_CHECK_TICKS_MAX = 10;
+    private static int ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;
+
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent evt) {
+        if (evt.phase != TickEvent.Phase.END) {
+            return;
+        }
+
+        if (!SandboxClientEvents.isSandboxPlayer())
+            selectedBuildings.removeIf(BuildingPlacement::isOutsideWorldBorder);
+
+        ticksToNextVisCheck -= 1;
+        if (ticksToNextVisCheck <= 0) {
+            ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;
+            selectedBuildings.removeIf(b -> !FogOfWarClientEvents.isBuildingInBrightChunk(b));
+        }
+
+        if (!replacedTexture) {
+            replaceOverlayTexture();
+            replacedTexture = true;
+        }
+        if (MC.level != null && MC.level.dimension() == Level.OVERWORLD) {
+            for (BuildingPlacement building : buildings)
+                if (!MC.isPaused())
+                    building.tick(MC.level);
+
+            // cleanup destroyed buildings
+            selectedBuildings.removeIf(BuildingPlacement::shouldBeDestroyed);
+            buildings.removeIf(BuildingPlacement::shouldBeDestroyed);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onScreenOpen(ScreenEvent.Opening evt) {
+        if (evt.getScreen() instanceof BeaconScreen) {
+            BlockPos bp = Item.getPlayerPOVHitResult(MC.level, MC.player, ClipContext.Fluid.NONE).getBlockPos();
+            if (BuildingUtils.findBuilding(true, bp) instanceof BeaconPlacement)
+                evt.setCanceled(true);
+        }
+    }
+
+    // on closing a chest screen check that it could be a stockpile chest so they can be consumed for resources
+    @SubscribeEvent
+    public static void onScreenClose(ScreenEvent.Closing evt) {
+        if (evt.getScreen() instanceof ContainerScreen && MC.level != null && MC.player != null) {
+            BlockPos bp = Item.getPlayerPOVHitResult(MC.level, MC.player, ClipContext.Fluid.NONE).getBlockPos();
+            BuildingServerboundPacket.checkStockpileChests(bp);
+        }
+    }
+
+    public static ArrayList<BuildingPlacement> getBuildingsWithinRange(Vec3 pos, float range, Building building) {
+        ArrayList<BuildingPlacement> retBuildings = new ArrayList<>();
+        for (BuildingPlacement placement : buildings) {
+            if (placement.getBuilding().equals(building)) {
+                BlockPos centre = placement.centrePos;
+                Vec3 centreVec3 = new Vec3(centre.getX(), centre.getY(), centre.getZ());
+                if (pos.distanceTo(centreVec3) <= range) {
+                    retBuildings.add(placement);
+                }
+            }
+        }
+        return retBuildings;
+    }
+
+    // place a building clientside that has already been registered on serverside
+    public static void placeBuilding(
+        Building building,
+        BlockPos pos,
+        Rotation rotation,
+        String ownerName,
+        int numBlocksToPlace,
+        boolean isDiagonalBridge,
+        int upgradeLevel,
+        boolean isBuilt,
+        PortalPlacement.PortalType portalType,
+        BlockPos portalDestination
+    ) {
+        BuildingPlacement newBuilding = BuildingUtils.getNewBuildingPlacement(building,
+            MC.level,
+            pos,
+            rotation,
+            ownerName,
+            isDiagonalBridge
+        );
+        for (BuildingPlacement placement : buildings)
+            if (newBuilding.originPos.equals(placement.originPos))
+                return; // skip, building already exists clientside
+
+        // add a bunch of dummy blocks so clients know not to remove buildings before the first blocks get placed
+        while (numBlocksToPlace > 0) {
+            newBuilding.addToBlockPlaceQueue(new BuildingBlock(new BlockPos(0, 0, 0), Blocks.AIR.defaultBlockState()));
+            numBlocksToPlace -= 1;
+        }
+        if (newBuilding != null && MC.player != null) {
+            newBuilding.isBuilt = isBuilt;
+
+            if (isBuilt) {
+                newBuilding.highestBlockCountReached = newBuilding.getBlocksTotal();
+            }
+
+            if (upgradeLevel > 0) {
+                if (newBuilding instanceof PortalPlacement portal) {
+                    if (!(newBuilding.getBuilding() instanceof NeutralTransportPortal)) {
+                        portal.changePortalStructure(portalType);
+                    }
+                    if (portalType == PortalPlacement.PortalType.TRANSPORT)
+                        portal.destination = portalDestination;
+                } else if (newBuilding instanceof BeaconPlacement beacon) {
+                    beacon.changeBeaconStructure(upgradeLevel);
+                } else {
+                    String upgradedStructureName = newBuilding.getBuilding().getUpgradedStructureName(upgradeLevel);
+                    if (!upgradedStructureName.equals(newBuilding.getBuilding().structureName)) {
+                        newBuilding.changeStructure(upgradedStructureName);
+                    }
+                }
+            }
+            buildings.add(newBuilding);
+            BuildingProductionServerboundPacket.requestSync(newBuilding.originPos);
+        }
+        // sync the goal so we can display the correct animations
+        Entity entity = hudSelectedEntity;
+        if (entity instanceof WorkerUnit workerUnit && entity instanceof Unit unit &&
+            unit.getOwnerName().equals(ownerName)) {
+            ((Unit) entity).resetBehaviours();
+            workerUnit.getBuildRepairGoal().setBuildingTarget(newBuilding);
+        }
+    }
+
+    public static void syncBuilding(BuildingPlacement serverBuilding, int blocksPlaced, double partialBlocksDestroyed, String ownerName, int scenarioRoleIndex) {
+        for (BuildingPlacement building : buildings) {
+            if (building.originPos.equals(serverBuilding.originPos)) {
+                building.setServerBlocksPlaced(blocksPlaced);
+                building.ownerName = ownerName;
+                building.scenarioRoleIndex = scenarioRoleIndex;
+                building.partialBlocksDestroyed = partialBlocksDestroyed;
+            }
+        }
+    }
+
+    public static Relationship getPlayerToBuildingRelationship(BuildingPlacement building) {
+        if (MC.player != null) {
+            String playerName = MC.player.getName().getString();
+            String buildingOwnerName = building.ownerName;
+
+            if (playerName.equals(buildingOwnerName)) {
+                return Relationship.OWNED;
+            } else if (AlliancesClient.isAllied(playerName, buildingOwnerName)) {
+                return Relationship.FRIENDLY;
+            } else if (buildingOwnerName.isBlank()) {
+                return Relationship.NEUTRAL;
+            } else {
+                return Relationship.HOSTILE;
+            }
+        }
+
+        // If MC.player is null, we can't determine the relationship, so return NEUTRAL.
+        return Relationship.NEUTRAL;
+    }
+
+    // does the player own one of these buildings?
+    public static boolean hasFinishedBuilding(Building building) {
+        for (BuildingPlacement bpl : buildings) {
+            if (bpl.getBuilding().isTypeOf(building) && bpl.isBuilt &&
+                    ((MC.player != null && bpl.ownerName.equals(MC.player.getName().getString())) ||
+                            allyHasFinishedBuilding(building))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // does the selected ally's unit own one of these buildings?
+    public static boolean allyHasFinishedBuilding(Building building) {
+        if (!AlliancesClient.canControlAlly(hudSelectedEntity))
+            return false;
+
+        String allyName = "";
+        if (hudSelectedEntity instanceof Unit unit)
+            allyName = unit.getOwnerName();
+
+        for (BuildingPlacement bpl : buildings) {
+            if (bpl.getBuilding().isTypeOf(building) && bpl.isBuilt &&
+                    MC.player != null && bpl.ownerName.equals(allyName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void syncBeacon(UnitAction action, BlockPos beaconPos, boolean activate) {
+        BeaconPlacement beacon = BuildingUtils.getBeacon(true);
+        if (beacon == null)
+            return;
+
+        if (activate) {
+            MobEffect effect = BeaconPlacement.getMobEffectForAction(action);
+            if (effect != null)
+                beacon.activate(effect);
+        } else {
+            beacon.deactivate();
+        }
+    }
+
+    public static void removeBuilding(BlockPos bp) {
+        buildings.removeIf(b -> b.originPos.equals(bp));
+        BuildingClientEvents.clearSelectedBuildings();
+    }
+
+    public static void removeFogQueuedBuilding(BlockPos bp) {
+        for (LivingEntity le : UnitClientEvents.getAllUnits()) {
+            if (le instanceof WorkerUnit workerUnit) {
+                workerUnit.getExploreBuildLocationGoal().getFogQueuedBlocksToDraw().remove(bp);
+                workerUnit.getExploreBuildLocationGoal().getFogQueuedBuildings().removeIf(bpl -> bpl.isPosInsideBuilding(bp));
+            }
+        }
+    }
+}

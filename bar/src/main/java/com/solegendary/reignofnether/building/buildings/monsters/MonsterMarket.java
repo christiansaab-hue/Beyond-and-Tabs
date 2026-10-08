@@ -1,0 +1,112 @@
+package com.solegendary.reignofnether.building.buildings.monsters;
+
+import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
+import com.solegendary.reignofnether.building.*;
+import com.solegendary.reignofnether.building.buildings.shared.AbstractMarket;
+import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.items.StockedShopItem;
+import com.solegendary.reignofnether.items.UnitItems;
+import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.research.ResearchClient;
+import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.tutorial.TutorialClientEvents;
+import com.solegendary.reignofnether.tutorial.TutorialStage;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.level.block.Blocks;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MonsterMarket extends AbstractMarket {
+
+    public static final String buildingName = "Conversion Crucible";
+    public static final String structureName = "market_monsters1";
+    public static final String upgradedStructureName = "market_monsters2";
+    public static final ResourceCost cost = ResourceCosts.MONSTER_MARKET;
+
+    public MonsterMarket() {
+        super(structureName, cost);
+        this.name = buildingName;
+        this.portraitBlock = Blocks.POLISHED_DEEPSLATE;
+        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/polished_deepslate.png");
+
+        this.startingBlockTypes.add(Blocks.POLISHED_DEEPSLATE);
+        this.startingBlockTypes.add(Blocks.POLISHED_BLACKSTONE_BRICKS);
+        this.startingBlockTypes.add(Blocks.DEEPSLATE_TILES);
+        this.startingBlockTypes.add(Blocks.SMOOTH_BASALT);
+        this.startingBlockTypes.add(Blocks.POLISHED_BASALT);
+        this.startingBlockTypes.add(Blocks.DEEPSLATE_TILE_SLAB);
+        this.startingBlockTypes.add(Blocks.POLISHED_DEEPSLATE_SLAB);
+        this.startingBlockTypes.add(Blocks.DARK_PRISMARINE_SLAB);
+
+        this.productions.add(ProductionItems.RESEARCH_MARKET_UPGRADE_MONSTERS, Keybindings.abilitySlot4);
+    }
+
+    @Override
+    public String getUpgradedStructureName(int upgradeLevel) {
+        return upgradeLevel > 0 ? upgradedStructureName : structureName;
+    }
+
+    @Override
+    public String getUpgradedName(BuildingPlacement placement) {
+        return Component.translatable("buildings.reignofnether.monster_market_upgraded").getString();
+    }
+
+    @Override
+    public int getUpgradeLevel(BuildingPlacement placement) {
+        for (BuildingBlock block : placement.getBlocks())
+            if (block.getBlockState().getBlock() == Blocks.BREWING_STAND) {
+                return 1;
+            }
+        return 0;
+    }
+
+    @Override
+    public ArrayList<StockedShopItem> getStartingItemsAndStock() {
+        return new ArrayList<>(List.of(
+                new StockedShopItem(UnitItems.HEALTH_POTION, 3, 60 * 20),
+                new StockedShopItem(UnitItems.MANA_POTION, 3, 60 * 20),
+                new StockedShopItem(UnitItems.BROADSWORD, 1, 180 * 20),
+                new StockedShopItem(UnitItems.IRON_HIDE_AMULET, 1, 180 * 20),
+                new StockedShopItem(UnitItems.HEART_MEDALLION, 1, 180 * 20),
+                new StockedShopItem(UnitItems.AZURE_MEDALLION, 1, 180 * 20)
+        ));
+    }
+
+    @Override
+    public ArrayList<StockedShopItem> getUpgradedItemsAndStock() {
+        return new ArrayList<>(List.of(
+                new StockedShopItem(UnitItems.FROST_WALKER_BOOTS, 1, 600 * 20),
+                new StockedShopItem(UnitItems.STAFF_OF_LIGHTNING, 1, 600 * 20),
+                new StockedShopItem(UnitItems.SHADOW_SHIFTER, 1, 600 * 20)
+        ));
+    }
+
+    public BuildingPlaceButton getBuildButton(Keybinding hotkey) {
+        ResourceLocation key = ReignOfNetherRegistries.BUILDING.getKey(this);
+        String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
+        return new BuildingPlaceButton(
+                name,
+                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/polished_deepslate.png"),
+                hotkey,
+                () -> BuildingClientEvents.getBuildingToPlace() == this,
+                () -> !TutorialClientEvents.isAtOrPastStage(TutorialStage.EXPLAIN_BUILDINGS),
+                () -> true,
+                List.of(
+                        Component.translatable("buildings.reignofnether.monster_market").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                        ResourceCosts.getFormattedCost(cost),
+                        FormattedCharSequence.EMPTY,
+                        Component.translatable("buildings.reignofnether.monster_market.tooltip1").getVisualOrderText(),
+                        FormattedCharSequence.EMPTY,
+                        Component.translatable("buildings.reignofnether.monster_market.tooltip2").getVisualOrderText()
+                ),
+                this
+        );
+    }
+}

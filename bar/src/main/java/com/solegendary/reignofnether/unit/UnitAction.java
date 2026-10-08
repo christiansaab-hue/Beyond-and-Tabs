@@ -1,0 +1,157 @@
+package com.solegendary.reignofnether.unit;
+
+public enum UnitAction {
+    // if a non-attack unit is asked to attack it will move instead
+    // same for if a non-builder unit is asked to build or repair
+
+    NONE, // basically null, but sending null to server crashes packetHandler
+    ATTACK,
+    ATTACK_BUILDING,
+    STOP,
+    HOLD,
+    MOVE,
+    GARRISON,
+    UNGARRISON,
+    ATTACK_MOVE, // enacted by attack button + left click on ground
+    FOLLOW, // enacted by move button + left click on another entity
+    BUILD_REPAIR, // build or repair the building at the targeted blockPos
+    ENABLE_AUTOCAST_BUILD_REPAIR,
+    DISABLE_AUTOCAST_BUILD_REPAIR,
+    FARM, // sets the villager's target gather resource
+    TOGGLE_GATHER_TARGET, // cycle between gathering nothing, food, wood or ore
+    RETURN_RESOURCES, // drops off resources to the building
+    RETURN_RESOURCES_TO_CLOSEST, // drops off resources to the nearest building that accepts resources
+    DELETE, // instantly kills this unit
+    DISCARD, // instantly removes this unit from the level without any death animation/event
+    ENABLE_AUTO_FIND_ENEMIES,
+    DISABLE_AUTO_FIND_ENEMIES,
+
+    ATTACK_GROUND,
+    // special abilities - these can also be assigned to cursor actions
+    EXPLODE,
+    CALL_LIGHTNING, // actually not from a unit, but we'll make an exception
+    SET_GRAVEYARD_RELEASE_ON,
+    SET_GRAVEYARD_RELEASE_OFF,
+    TELEPORT,
+    MOUNT,
+    MOUNT_SPIDER,
+    MOUNT_RAVAGER,
+    MOUNT_HOGLIN,
+    DISMOUNT, // passenger removes itself from vehicle
+    EJECT, // vehicle removes itself from passengers
+    PROMOTE_ILLAGER,
+    ROAR,
+    THROW_HEALING_POTION,
+    THROW_HEALING_POTION_AUTOCAST_ENABLE,
+    THROW_HEALING_POTION_AUTOCAST_DISABLE,
+    THROW_WATER_POTION,
+    THROW_WATER_POTION_AUTOCAST_ENABLE,
+    THROW_WATER_POTION_AUTOCAST_DISABLE,
+    THROW_LINGERING_HARMING_POTION,
+    THROW_LINGERING_HARMING_POTION_AUTOCAST_ENABLE,
+    THROW_LINGERING_HARMING_POTION_AUTOCAST_DISABLE,
+    THROW_LINGERING_REGEN_POTION,
+    THROW_LINGERING_REGEN_POTION_AUTOCAST_ENABLE,
+    THROW_LINGERING_REGEN_POTION_AUTOCAST_DISABLE,
+    SET_FANGS_LINE,
+    SET_FANGS_CIRCLE,
+    CAST_SUMMON_VEXES,
+    CAST_SUMMON_VEXES_AUTOCAST_ENABLE,
+    CAST_SUMMON_VEXES_AUTOCAST_DISABLE,
+    CAST_SONIC_BOOM,
+    TOGGLE_SHIELD_RAISE,
+    SHOOT_FIREWALL,
+    CONNECT_PORTAL,
+    DISCONNECT_PORTAL,
+    GOTO_PORTAL,
+    SACRIFICE,
+    SACRIFICE_AUTOCAST_ENABLE,
+    SACRIFICE_AUTOCAST_DISABLE,
+    WITHER_CLOUD,
+    SPIN_WEBS,
+    SPIN_WEBS_AUTOCAST_ENABLE,
+    SPIN_WEBS_AUTOCAST_DISABLE,
+    FEAR,
+    FEAR_AUTOCAST_ENABLE,
+    FEAR_AUTOCAST_DISABLE,
+    POSSESS,
+    BLOOD_LUST,
+    CALL_TO_ARMS_BUILDING,
+    CALL_TO_ARMS_UNIT,
+    BACK_TO_WORK_BUILDING,
+    BACK_TO_WORK_UNIT,
+    CONSUME_SLIME,
+    CONSUME_SLIME_AUTOCAST_ENABLE,
+    CONSUME_SLIME_AUTOCAST_DISABLE,
+    TOGGLE_SPIDER_CLIMBING,
+    MILITIA_USE_SWORD,
+    MILITIA_USE_BOW,
+
+    // hero abilities
+    BLOOD_MOON,
+    INSOMNIA_CURSE,
+    RAISE_DEAD,
+    SOUL_SIPHON_HEAL,
+    SOUL_SIPHON_UPDATE,
+    ENABLE_SOUL_SIPHON_PASSIVE,
+    DISBLE_SOUL_SIPHON_PASSIVE,
+    FANCY_FEAST,
+    ENABLE_GREED_IS_GOOD_PASSIVE,
+    DISABLE_GREED_IS_GOOD_PASSIVE,
+    LOOT_EXPLOSION,
+    THROW_TNT,
+    AVATAR,
+    MACE_SLAM,
+    TAUNTING_CRY,
+
+    CHILLING_SCREECH,
+    FROSTBLINK,
+    BLIZZARD,
+    MOLTEN_BOMB,
+    SCORCHING_GAZE,
+    SOULS_AFLAME,
+    CIVIL_ENCHANTMENT,
+    CIVIL_ENCHANTMENT_AUTOCAST_ENABLE,
+    CIVIL_ENCHANTMENT_AUTOCAST_DISABLE,
+    MARTIAL_ENCHANTMENT,
+    MARTIAL_ENCHANTMENT_AUTOCAST_ENABLE,
+    MARTIAL_ENCHANTMENT_AUTOCAST_DISABLE,
+    PROTECTIVE_ENCHANTMENT,
+    PROTECTIVE_ENCHANTMENT_AUTOCAST_ENABLE,
+    PROTECTIVE_ENCHANTMENT_AUTOCAST_DISABLE,
+    MARCH_OF_PROGRESS_TOGGLE,
+    MARCH_OF_PROGRESS_SET,
+    TOGGLE_FLYING,
+
+    ENCHANT_MULTISHOT,
+    ENCHANT_MAIMING,
+    ENCHANT_SHARPNESS,
+    ENCHANT_VIGOR,
+    ENCHANT_GUST,
+    ENCHANT_QUICKCHARGE,
+
+    SELL_FOOD,
+    SELL_WOOD,
+    SELL_ORE,
+    BUY_FOOD,
+    BUY_WOOD,
+    BUY_ORE,
+
+    EQUIP_LEATHER_ARMOR,
+    EQUIP_CHAINMAIL_ARMOR,
+
+    BEACON_HASTE,
+    BEACON_RESISTANCE,
+    BEACON_WEALTH,
+    BEACON_STRENGTH,
+    BEACON_REGENERATION,
+
+    STARTRTS_VILLAGERS,
+    STARTRTS_MONSTERS,
+    STARTRTS_PIGLINS,
+
+    SET_ATTACK_COUNT, // for marauders
+
+    DEBUG1,
+    DEBUG2
+}

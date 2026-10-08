@@ -1,0 +1,77 @@
+package com.solegendary.reignofnether.building.buildings.monsters;
+
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
+import com.solegendary.reignofnether.building.BuildingClientEvents;
+import com.solegendary.reignofnether.building.BuildingPlaceButton;
+import com.solegendary.reignofnether.building.Buildings;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.building.production.ProductionBuilding;
+import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.research.ResearchClient;
+import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.resources.ResourceCosts;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.level.block.Blocks;
+
+import java.util.List;
+
+public class SlimePit extends ProductionBuilding {
+
+    public final static String buildingName = "Slime Pit";
+    public final static String structureName = "slime_pit";
+    public final static ResourceCost cost = ResourceCosts.SLIME_PIT;
+
+    public SlimePit() {
+        super(structureName, cost, false);
+        this.name = buildingName;
+        this.portraitBlock = Blocks.SLIME_BLOCK;
+        this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/slime.png");
+
+        this.canSetRallyPoint = true;
+
+        this.startingBlockTypes.add(Blocks.POLISHED_DEEPSLATE);
+        this.startingBlockTypes.add(Blocks.COBBLED_DEEPSLATE);
+
+        this.explodeChance = 0.2f;
+        this.maxHealth = 150d;
+
+        this.productions.add(ProductionItems.SLIME, Keybindings.abilitySlot1);
+    }
+
+
+    public BuildingPlaceButton getBuildButton(Keybinding hotkey) {
+        ResourceLocation key = ReignOfNetherRegistries.BUILDING.getKey(this);
+        String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
+        return new BuildingPlaceButton(
+            name,
+            ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/slime.png"),
+            hotkey,
+            () -> BuildingClientEvents.getBuildingToPlace() == Buildings.SLIME_PIT,
+            () -> false,
+            () -> BuildingClientEvents.hasFinishedBuilding(Buildings.GRAVEYARD) ||
+                    ResearchClient.hasCheat("modifythephasevariance"),
+            List.of(
+                Component.translatable("buildings.reignofnether.slime_pit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                ResourceCosts.getFormattedCost(cost),
+                FormattedCharSequence.forward("", Style.EMPTY),
+                Component.translatable("buildings.reignofnether.slime_pit.tooltip1").getVisualOrderText(),
+                FormattedCharSequence.forward("", Style.EMPTY),
+                Component.translatable("buildings.reignofnether.slime_pit.tooltip3").getVisualOrderText()
+            ),
+            this
+        );
+    }
+
+    @Override
+    public BlockPos getDefaultOutdoorSpawnPoint(BlockPos minCorner, ProductionPlacement pp) {
+        return minCorner.offset((int) (-spawnRadiusOffset + 4), 0, (int) (-spawnRadiusOffset + 9));
+    }
+}

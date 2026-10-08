@@ -1,0 +1,12 @@
+package com.solegendary.reignofnether.player;
+
+public enum RTSPlayerScoresEnum {
+    TOTAL_BUILDINGS_CONSTRUCTED,
+    TOTAL_UNITS_PRODUCED,
+    WORKER_UNITS_PRODUCED,
+    MILITARY_UNITS_PRODUCED,
+    TOTAL_RESOURCES_HARVESTED,
+    FOOD_HARVESTED,
+    WOOD_HARVESTED,
+    ORES_HARVESTED,
+}

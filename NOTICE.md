@@ -15,3 +15,10 @@ ported from.
 No Beyond All Reason models, textures, animations, sounds, icons or unit pictures are used (those are under
 licences that forbid derivative works). All unit skins, building plans and effects in this mod are original.
 Totally Accurate Battle Simulator is an inspiration only; no TABS assets are included.
+
+## Reign of Nether
+
+`bar/` is a fork of [Reign of Nether](https://github.com/SoLegendary/reignofnether) by SoLegendary and contributors,
+licensed under the GNU GPL v3. The fork (and therefore the combined mod built from it) is distributed under GPL v3.
+The Essential partner-mod integration bundled with upstream has been removed. Upstream sound files whose origin is not
+documented are kept from upstream as distributed there; they will be replaced before any public release.

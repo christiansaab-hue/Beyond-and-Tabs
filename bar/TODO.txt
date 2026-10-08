@@ -1,0 +1,89 @@
+
+1.20.1-1.5.0-beta-4
+
+[✔] Done and tested
+[🟡] Partially done and/or needs testing
+[❌] Not done, including unmerged PRs
+
+
+
+Faction rework testing
+----------------------
+[❌] Tutorial map
+[❌] Custom buildings 'buildable by' settings
+
+
+Hero Items
+----------
+
+Shops
+    [❌] Neutral market building selling expensive items
+    [❌] Custom Item Shops
+        - Items placed in container blocks in a custom building's structure stocks that building as a shop
+        - Custom tags:
+            - Max Stock
+            - Restock
+            - Buy cooldown
+
+Balance
+-------
+[❌] Slimes and magma cubes now roll on attack too
+[❌] Add roof to dark watchtower
+[❌] Villager reworks
+    - Free-attacking vexes
+    - Siege tank mode for ravager artillery (by burrowing them partially into the ground)
+    - Reduce cost of iron armor
+    - Reduce cost of militia archers
+    - Rework enchanter absorption to be like MC dungeons (active linked buff)
+    - Royal guard ult strength from II to I but unpushable
+    - Block animations with block displays for royal guard slam
+        - And make slam single click like war stomp
+
+Quality of Life
+---------------
+[❌] Create a new homing projectile entity from the ground up
+
+[✔] Added creative tabs for all RTS-related blocks and items:
+    - RTS Mapmaker Blocks
+    - RTS Unit Spawn Eggs
+    - RTS Hero Items
+
+[✔] Reworked the unit armour tooltip for mixed armour types
+
+[✔] Added new attributes:
+     - critical_hit_chance (3x damage)
+     - explosive_hit_chance
+     - building_damage_bonus
+     - lifesteal (% of damage)
+     - mana_on_hit (% of damage)
+     - scale (visual only)
+
+[✔] Added passive icons
+
+[✔] Added new mob effects:
+    - vigor (-33% cooldown reduction per level)
+    - phasing (can walk through mobs and ignore knockback)
+    - night_warping (+2 night radius per level)
+
+[❌] Villager profession bonuses as passive icons
+[❌] Set camera hotkeys with (jump with Fnums, save with ctrl+Fnums)
+[❌] Datapack to return no-cave generation
+
+Bugfixes
+--------
+[✔] Grass blocks are tinted weirdly even when fog of war is off
+[✔] Units that spawn outside of client render range are now still counted to population totals
+[✔] Evasion chance attribute now works on all units
+[✔] Bears and Zoglins now respect evasion chance
+[✔] Iron golems and witches can now pick up resources
+[✔] Fixed large custom buildings having extreme lag while building
+[✔] Fixed Slimes and Magma cubes being unaffected by weakness and strength
+[🟡] Hero data not being wiped on game reset or start?
+    - Just delete the actual hero-unit.dat file on reset
+
+[❌] Disabling doDaylightCycle messes up the time
+[❌] Bridges don't work on snow/ice?
+    - Test on villagers campaign #3
+
+Languages
+---------

@@ -1,0 +1,86 @@
+package com.solegendary.reignofnether.building.buildings.villagers;
+
+import com.solegendary.reignofnether.api.ReignOfNetherRegistries;
+import com.solegendary.reignofnether.building.*;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.building.production.ProductionBuilding;
+import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.gamerules.GameruleClient;
+import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.research.ResearchClient;
+import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.resources.ResourceCosts;
+import com.solegendary.reignofnether.sandbox.SandboxClientEvents;
+import com.solegendary.reignofnether.tutorial.TutorialClientEvents;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Rotation;
+
+import java.util.List;
+
+public class ShrineOfProsperity extends ProductionBuilding {
+
+    public final static String buildingName = "Shrine of Prosperity";
+    public final static String structureName = "shrine_of_prosperity";
+    public final static ResourceCost cost = ResourceCosts.SHRINE_OF_PROSPERITY;
+
+    public ShrineOfProsperity() {
+        super(structureName, cost, false);
+        this.name = buildingName;
+        this.portraitBlock = Blocks.ACACIA_LOG;
+        this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/acacia_log_top.png");
+
+        this.startingBlockTypes.add(Blocks.COBBLESTONE);
+
+        this.productions.add(ProductionItems.ROYAL_GUARD, Keybindings.abilitySlot1);
+        this.productions.add(ProductionItems.ROYAL_GUARD_REVIVE, Keybindings.abilitySlot1);
+        this.productions.add(ProductionItems.ENCHANTER, Keybindings.abilitySlot2);
+        this.productions.add(ProductionItems.ENCHANTER_REVIVE, Keybindings.abilitySlot2);
+
+        this.maxHealth = 240d;
+    }
+
+    @Override
+    public BuildingPlacement createBuildingPlacement(Level level, BlockPos pos, Rotation rotation, String ownerName) {
+        ProductionPlacement pp = (ProductionPlacement) super.createBuildingPlacement(level, pos, rotation, ownerName);
+        pp.allowProdWhileBuilding = true;
+        return pp;
+    }
+
+
+    public BuildingPlaceButton getBuildButton(Keybinding hotkey) {
+        ResourceLocation key = ReignOfNetherRegistries.BUILDING.getKey(this);
+        String name = key != null ? Component.translatable("buildings." + getFaction().getName() + "." + key.getNamespace() + "." + key.getPath()).getString() : buildingName;
+        return new BuildingPlaceButton(
+                name,
+                ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/acacia_log_top.png"),
+                hotkey,
+                () -> BuildingClientEvents.getBuildingToPlace() == Buildings.SHRINE_OF_PROSPERITY,
+                () -> (!SandboxClientEvents.isSandboxPlayer() && GameruleClient.allowedHeroes <= 0) || TutorialClientEvents.isEnabled(),
+                () -> BuildingClientEvents.hasFinishedBuilding(Buildings.TOWN_CENTRE) ||
+                        ResearchClient.hasCheat("modifythephasevariance"),
+                List.of(
+                        Component.translatable("buildings.reignofnether.shrine_of_prosperity").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                        ResourceCosts.getFormattedCost(cost),
+                        FormattedCharSequence.EMPTY,
+                        Component.translatable("buildings.reignofnether.shrine_of_prosperity.tooltip1").getVisualOrderText(),
+                        Component.translatable("buildings.reignofnether.shrine_of_prosperity.tooltip2").getVisualOrderText()
+                ),
+                this
+        );
+    }
+
+    @Override
+    public BlockPos getIndoorSpawnPoint(ServerLevel level, BuildingPlacement placement) {
+        return super.getIndoorSpawnPoint(level, placement)
+                .offset(BuildingUtils.altRotatePos(new BlockPos(0,-1,2), placement.rotation));
+    }
+}

@@ -1,0 +1,1051 @@
+package com.solegendary.reignofnether.unit.interfaces;
+
+import com.solegendary.reignofnether.ability.Abilities;
+import com.solegendary.reignofnether.ability.Ability;
+import com.solegendary.reignofnether.ability.heroAbilities.enchanter.ProtectiveEnchantment;
+import com.solegendary.reignofnether.ability.heroAbilities.wildfire.ScorchingGaze;
+import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
+import com.solegendary.reignofnether.blocks.BlockServerEvents;
+import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.BuildingUtils;
+import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
+import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
+import com.solegendary.reignofnether.building.production.ProductionItems;
+import com.solegendary.reignofnether.debug.RtsDebugClientEvents;
+import com.solegendary.reignofnether.debug.RtsDebugPathPreview;
+import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.hud.buttons.Button;
+import com.solegendary.reignofnether.hud.effecticons.EnchantmentIcon;
+import com.solegendary.reignofnether.hud.effecticons.EnchantmentIcons;
+import com.solegendary.reignofnether.hud.effecticons.MobEffectIcon;
+import com.solegendary.reignofnether.items.ItemUtil;
+import com.solegendary.reignofnether.items.UnitInventory;
+import com.solegendary.reignofnether.items.UnitItem;
+import com.solegendary.reignofnether.items.unititems.EdibleFoodItem;
+import com.solegendary.reignofnether.keybinds.Keybindings;
+import com.solegendary.reignofnether.player.PlayerClientEvents;
+import com.solegendary.reignofnether.player.PlayerServerEvents;
+import com.solegendary.reignofnether.player.RTSPlayer;
+import com.solegendary.reignofnether.registrars.AttributeRegistrar;
+import com.solegendary.reignofnether.registrars.BlockRegistrar;
+import com.solegendary.reignofnether.registrars.EnchantmentRegistrar;
+import com.solegendary.reignofnether.registrars.MobEffectRegistrar;
+import com.solegendary.reignofnether.research.ResearchClient;
+import com.solegendary.reignofnether.research.ResearchServerEvents;
+import com.solegendary.reignofnether.resources.*;
+import com.solegendary.reignofnether.scenario.ScenarioUtils;
+import com.solegendary.reignofnether.sounds.SoundAction;
+import com.solegendary.reignofnether.sounds.SoundClientboundPacket;
+import com.solegendary.reignofnether.time.NightUtils;
+import com.solegendary.reignofnether.time.TimeUtils;
+import com.solegendary.reignofnether.unit.*;
+import com.solegendary.reignofnether.unit.goals.*;
+import com.solegendary.reignofnether.unit.packets.UnitAnimationClientboundPacket;
+import com.solegendary.reignofnether.unit.packets.UnitSyncClientboundPacket;
+import com.solegendary.reignofnether.unit.units.monsters.BatUnit;
+import com.solegendary.reignofnether.unit.units.piglins.GhastUnit;
+import com.solegendary.reignofnether.unit.units.piglins.StriderUnit;
+import com.solegendary.reignofnether.unit.units.villagers.ScoutCatUnit;
+import com.solegendary.reignofnether.unit.units.villagers.ScoutDogUnit;
+import com.solegendary.reignofnether.util.ParticleUtil;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
+import com.solegendary.reignofnether.util.MiscUtil;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerChunkCache;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.damagesource.CombatRules;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
+
+import javax.annotation.Nullable;
+import java.util.*;
+
+import static com.solegendary.reignofnether.util.MiscUtil.fcs;
+
+// Defines method bodies for Units
+// workaround for trying to have units inherit from both their base vanilla Mob class and a Unit class
+// Note that we can't write any default methods if they need to use Unit fields without a getter/setter
+// (including getters/setters themselves)
+
+public interface Unit {
+
+    int DEFAULT_SIGHT_RANGE = 16;
+    int ANCHOR_RETREAT_RANGE = 30;
+
+    int PIGLIN_HEALING_TICKS = 8 * ResourceCost.TICKS_PER_SECOND;
+    int MONSTER_HEALING_TICKS = 8 * ResourceCost.TICKS_PER_SECOND;
+
+    // used for increasing pathfinding calculation range, default is 16 for most mobs
+    int FOLLOW_RANGE_IMPROVED = 64;
+    int FOLLOW_RANGE = 16;
+
+
+    public static AttributeSupplier.Builder createDefaultAttributes() {
+        return Mob.createMobAttributes()
+                .add(Attributes.ATTACK_DAMAGE, 0)
+                .add(Attributes.MOVEMENT_SPEED, 0.25)
+                .add(Attributes.MAX_HEALTH, 1)
+                .add(Attributes.FOLLOW_RANGE, Unit.getFollowRange())
+                .add(Attributes.ARMOR, 0)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0)
+                .add(AttributeRegistrar.ATTACK_DAMAGE.get(), 0)
+                .add(AttributeRegistrar.ATTACKS_PER_SECOND.get(), 0)
+                .add(AttributeRegistrar.ATTACK_RANGE.get(), 0)
+                .add(AttributeRegistrar.AGGRO_RANGE.get(), 10)
+                .add(AttributeRegistrar.SIGHT_RANGE.get(), Unit.DEFAULT_SIGHT_RANGE)
+                .add(AttributeRegistrar.RANGED_DAMAGE_RESIST.get(), 0)
+                .add(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get(), 0)
+                .add(AttributeRegistrar.EVASION_CHANCE.get(), 0)
+                .add(AttributeRegistrar.CRITICAL_HIT_CHANCE.get(), 0)
+                .add(AttributeRegistrar.EXPLOSIVE_HIT_CHANCE.get(), 0)
+                .add(AttributeRegistrar.BUILDING_DAMAGE_BONUS.get(), 0)
+                .add(AttributeRegistrar.LIFESTEAL.get(), 0)
+                .add(AttributeRegistrar.MANA_ON_HIT.get(), 0)
+                .add(AttributeRegistrar.SCALE.get(), 1.0f);
+    }
+
+    static Object2ObjectArrayMap<Ability, Float> createCooldownMap() {
+        Object2ObjectArrayMap<Ability, Float> map = new Object2ObjectArrayMap<>();
+        map.defaultReturnValue(0F);
+        return map;
+    }
+
+    // position that neutral units run back to when past leash range
+    void setAnchor(BlockPos bp);
+    BlockPos getAnchor();
+
+    static int getFollowRange() {
+        return FOLLOW_RANGE_IMPROVED;
+    }
+
+    // list of positions to draw lines between to indicate unit intents - will fade over time unless shift is held
+    ArrayList<Checkpoint> getCheckpoints();
+
+    GarrisonGoal getGarrisonGoal();
+    boolean canGarrison();
+
+    MoveToTargetBlockGoal getUsePortalGoal();
+    boolean canUsePortal();
+    
+    Abilities getAbilities();
+    default List<Button> getAbilityButtons() {
+        return getAbilities().getButtons(this);
+    }
+    List<ItemStack> getItems();
+    int getMaxResources();
+
+    public default boolean isEatingFood() { return getEatingTicksLeft() > 0; };
+    public default boolean isHoldingEdibleFood() {
+        for (ItemStack itemStack : getItems())
+            if (ItemUtil.isEdibleFoodOrDrink(itemStack.getItem()))
+                return true;
+        return false;
+    };
+    public default Item getFoodBeingEaten() {
+        for (ItemStack itemStack : getItems())
+            if (ItemUtil.isEdibleFoodOrDrink(itemStack.getItem()))
+                return itemStack.getItem();
+        return Items.AIR;
+    }
+    public void setEatingTicksLeft(int amount);
+    public int getEatingTicksLeft();
+
+    // note that attackGoal is specific to unit types
+    MoveToTargetBlockGoal getMoveGoal();
+    SelectedTargetGoal<?> getTargetGoal();
+    ReturnResourcesGoal getReturnResourcesGoal();
+
+    public default float getBaseMovementSpeed() {
+        AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MOVEMENT_SPEED);
+        return (float) (attr != null ?  attr.getBaseValue() : Attributes.MOVEMENT_SPEED.getDefaultValue());
+    }
+    public default float getMovementSpeed() {
+        AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MOVEMENT_SPEED);
+        float ms = (float) (attr != null ?  attr.getValue() : Attributes.MOVEMENT_SPEED.getDefaultValue());
+        boolean isInWater = ((LivingEntity) this).isInWater();
+        float waterSlowdown = ((LivingEntity) this).getWaterSlowDown() * ((LivingEntity) this).getWaterSlowDown();
+        return ms * (isInWater ? waterSlowdown : 1f);
+    }
+    public default float getUnitMaxHealth() {
+        float bonus = 0;
+        if (this instanceof HeroUnit heroUnit) {
+            bonus = heroUnit.getHealthBonusPerLevel() * heroUnit.getHeroLevel();
+        }
+        AttributeInstance attr = ((LivingEntity) this).getAttribute(Attributes.MAX_HEALTH);
+        return (float) (attr != null ? attr.getValue() : Attributes.MAX_HEALTH.getDefaultValue()) + bonus;
+    }
+    public default int getSightRange() {
+        AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.SIGHT_RANGE.get());
+        return (int) Math.round(attr != null ? attr.getValue() : AttributeRegistrar.SIGHT_RANGE.get().getDefaultValue());
+    }
+
+    public ResourceCost getCost();
+
+    LivingEntity getFollowTarget();
+    boolean getHoldPosition();
+    void setHoldPosition(boolean holdPosition);
+
+    String getOwnerName();
+    void setOwnerName(String name);
+
+    int getScenarioRoleIndex(); // if -1, no role
+    void setScenarioRoleIndex(int index);
+    
+    String getOnDeathCommand();
+    void setOnDeathCommand(String command);
+
+    default double getDamageTakenIncrease() {
+        MobEffectInstance mei = ((LivingEntity) this).getEffect(MobEffectRegistrar.DAMAGE_TAKEN_INCREASE.get());
+        double value = mei == null ? 0 : (mei.getAmplifier() + 1) * 0.05d;
+        return Math.round(value / 0.05d) * 0.05d;
+    }
+
+    // SOURCE: armour attribute, armour items and the damage amplifier debuff
+    default double getUnitPhysicalArmorPercentage() {
+        Mob mob = (Mob) this;
+        double dmgAfterAbsorb = CombatRules.getDamageAfterAbsorb(1, (float)mob.getArmorValue(), (float)mob.getAttributeValue(Attributes.ARMOR_TOUGHNESS));
+        dmgAfterAbsorb += getDamageTakenIncrease();
+        return Math.round((1 - dmgAfterAbsorb)/ 0.01d) * 0.01d;
+    }
+
+    // SOURCE: inherent unit stats and abilities
+    default double getUnitRangedArmorPercentage() {
+        AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.RANGED_DAMAGE_RESIST.get());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.RANGED_DAMAGE_RESIST.get().getDefaultValue());
+    }
+
+    // SOURCE: inherent unit stats and vanilla mechanics (like resistance)
+    default double getUnitMagicArmorPercentage() {
+        AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.MAGIC_DAMAGE_RESIST.get());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.MAGIC_DAMAGE_RESIST.get().getDefaultValue());
+    }
+
+    public default float getEvasionChance() {
+        AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.EVASION_CHANCE.get());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.EVASION_CHANCE.get().getDefaultValue());
+    }
+
+    public default float getScaleAttribute() {
+        AttributeInstance attr = ((LivingEntity) this).getAttribute(AttributeRegistrar.SCALE.get());
+        return (float) (attr != null ?  attr.getValue() : AttributeRegistrar.SCALE.get().getDefaultValue());
+    }
+
+    // SOURCE: resistance mob effect
+    default double getUnitResistPercentage() {
+        Mob mob = (Mob) this;
+        MobEffectInstance mei = mob.getEffect(MobEffects.DAMAGE_RESISTANCE);
+        if (mei != null) {
+            return (float) (0.2 * (mei.getAmplifier() + 1));
+        } else {
+            return 0;
+        }
+    }
+
+    static void tick(Unit unit) {
+        Mob unitMob = (Mob) unit;
+        if (!unitMob.level().isClientSide() && unitMob.level() instanceof ServerLevel serverLevel) {
+            ServerChunkCache chunkProvider = serverLevel.getChunkSource();
+
+            BlockPos unitPos = unitMob.blockPosition();
+            ChunkPos currentChunkPos = new ChunkPos(unitPos);
+
+            // Load a 2-chunk radius around the unit
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    ChunkPos chunkPos = new ChunkPos(currentChunkPos.x + dx, currentChunkPos.z + dz);
+                    chunkProvider.addRegionTicket(TicketType.FORCED, chunkPos, 2, chunkPos);
+                }
+            }
+        }
+        for (Map.Entry<Ability, Float> cooldownEntry : unit.getAbilityCooldowns().entrySet()) {
+            Ability ability = cooldownEntry.getKey();
+            float cooldown = cooldownEntry.getValue();
+            if (cooldown > 0 || unit.getAbilityCharges(ability) < ability.maxCharges) {
+                if (unitMob.tickCount % 2 == 0) {
+                    MobEffectInstance mei = unitMob.getEffect(MobEffectRegistrar.VIGOR.get());
+                    int amp = mei == null ? 0 : mei.getAmplifier() + 1;
+                    if (amp > 0 && unit instanceof HeroUnit heroUnit && unitMob.tickCount % 20 == 0) {
+                        heroUnit.setMana(heroUnit.getMana() + (0.5f * amp));
+                    }
+                }
+
+                if (((Entity) unit).level().isClientSide())
+                    unit.getAbilityCooldowns().put(ability, (float) (cooldown - (RtsDebugClientEvents.getCappedTPS() / 20D)));
+                else
+                    unit.getAbilityCooldowns().put(ability, cooldown - 1);
+
+                if (cooldown <= 0 && ability.usesCharges() && unit.getAbilityCharges(ability) < ability.maxCharges) {
+                    unit.setCharges(ability, unit.getAbilityCharges(ability) + 1);
+                    if (unit.getAbilityCharges(ability) < ability.maxCharges)
+                        unit.getAbilityCooldowns().put(ability, ability.cooldownMax);
+                    if (unit.getAbilityCharges(ability) > ability.maxCharges)
+                        unit.setCharges(ability, ability.maxCharges);
+                }
+            }
+        }
+
+        // ------------- CHECKPOINT LOGIC ------------- //
+        if (unitMob.level().isClientSide()) {
+
+            unit.getCheckpoints().removeIf(c -> (c.isForEntity() && !c.entity.isAlive()) || c.ticksLeft <= 0);
+
+            for (Checkpoint cp : unit.getCheckpoints()) {
+                cp.tick();
+                boolean buildingIsDone = false;
+                if (unit instanceof WorkerUnit && !cp.isForEntity()) {
+                    if (cp.placement != null && cp.placement.isBuilt && cp.placement.getHealth() >= cp.placement.getMaxHealth())
+                        buildingIsDone = true;
+                }
+                if (cp.isGreen) {
+                    if (((Mob) unit).getOnPos().distToCenterSqr(cp.getPos()) < 4f || buildingIsDone)
+                        cp.startFading();
+                } else if (cp.isForEntity() && !cp.entity.isAlive()) {
+                    cp.startFading();
+                }
+            }
+        } else {
+            checkAndPickupFood(unit);
+            checkAndPickupResources(unit);
+            checkAndPickupEquipment(unit);
+
+            // sync target variables between goals and Mob
+            if (unit.getTargetGoal().getTarget() == null || !unit.getTargetGoal().getTarget().isAlive() ||
+                    unitMob.getTarget() == null || !unitMob.getTarget().isAlive()) {
+                unitMob.setTarget(null);
+                unit.getTargetGoal().setTarget(null);
+            }
+
+            // no iframes after being damaged so multiple units can attack at once
+            unitMob.invulnerableTime = 0;
+
+            // enact target-following, and stop followTarget being reset
+            if (unit.getFollowTarget() != null && unitMob.tickCount % 20 == 0)
+                unit.setMoveTarget(unit.getFollowTarget().blockPosition());
+        }
+
+        // slow regen for monster and piglin units
+        LivingEntity le = (LivingEntity) unit;
+
+        if (!le.level().isClientSide()) {
+            if (Factions.getFaction(unit).equals(Factions.MONSTERS) &&
+                    le.tickCount % MONSTER_HEALING_TICKS == 0 &&
+                    (!TimeUtils.isDay(unitMob.level()))) {
+                le.heal(1);
+            } else if (Factions.getFaction(unit).equals(Factions.MONSTERS) &&
+                    (le.tickCount + MONSTER_HEALING_TICKS / 2) % MONSTER_HEALING_TICKS == 0 &&
+                    (NightUtils.isInRangeOfNightSource(le.position(), le.level().isClientSide()))) {
+                le.heal(1);
+            } else if (Factions.getFaction(unit).equals(Factions.PIGLINS) &&
+                    le.tickCount % PIGLIN_HEALING_TICKS == 0 &&
+                    (MiscUtil.isOnNetherTerrain(le) || unit instanceof GhastUnit)) {
+                le.heal(1);
+            }
+        }
+
+        // stuck in bridge
+        BuildingPlacement bpl = BuildingUtils.findBuilding(le.level().isClientSide(), le.getOnPos().above());
+        if (le.isInWater() && bpl != null && bpl.getBuilding() instanceof AbstractBridge) {
+            le.setDeltaMovement(0, 0.2, 0);
+        }
+
+        if (!le.level().getWorldBorder().isWithinBounds(le.getOnPos()))
+            le.kill();
+
+        if (unitMob.tickCount % 50 == 0)
+            checkAndRetreatToAnchor(unit);
+
+        if (unit.getSunlightEffect() == SunlightEffect.SLOWNESS_II ||
+            unit.getSunlightEffect() == SunlightEffect.SLOWNESS_I ||
+            unit.getSunlightEffect() == SunlightEffect.SLOWNESS_MINOR) {
+            // apply slowness during daytime for a short time repeatedly
+            if (unitMob.tickCount % 10 == 0 && !unitMob.level().isClientSide() && TimeUtils.isDay(unitMob.level()) &&
+                    !NightUtils.isInRangeOfNightSource(unitMob.getEyePosition(), false) &&
+                    !ResearchServerEvents.playerHasCheat(unit.getOwnerName(), "slipslopslap")) {
+
+                if (unit.getSunlightEffect() == SunlightEffect.SLOWNESS_MINOR) {
+                    unitMob.addEffect(new MobEffectInstance(MobEffectRegistrar.MINOR_MOVEMENT_SLOWDOWN.get(), 15, 1));
+                } else {
+                    unitMob.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 15,
+                            unit.getSunlightEffect() == SunlightEffect.SLOWNESS_I ? 0 : 1
+                    ));
+                }
+            }
+        }
+
+        if (unitMob.tickCount % 20 == 0) {
+            if (unit.hasEffectWithDuration(MobEffectRegistrar.ANGRY.get())) {
+                addParticlesAroundSelf(unit, ParticleTypes.ANGRY_VILLAGER);
+            }
+            if (unit.hasEffectWithDuration(MobEffectRegistrar.FEARFUL.get())) {
+                addParticlesAroundSelf(unit, ParticleTypes.SCULK_SOUL);
+            }
+        }
+
+        if (unit.isEatingFood()) {
+            unit.setEatingTicksLeft(unit.getEatingTicksLeft() - 1);
+            if (!unit.isEatingFood()) {
+                for (ItemStack itemStack : unit.getItems()) {
+                    if (ItemUtil.isEdibleFoodOrDrink(itemStack.getItem())) {
+                        if (ItemUtil.isEdibleFood(itemStack.getItem())) {
+                            unitMob.level().playSound(null, unitMob.getX(), unitMob.getY(), unitMob.getZ(),
+                                    SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.5F,
+                                    unitMob.getRandom().nextFloat() * 0.1F + 0.9F
+                            );
+                        }
+                        if (itemStack.getItem() == Items.GOLDEN_APPLE) {
+                            int absorb = EdibleFoodItem.GOLDEN_APPLE_ABSORB;
+                            unitMob.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 999999, (absorb / 4) - 1));
+                            unitMob.setAbsorptionAmount(absorb);
+                        } else if (itemStack.getItem() == Items.ENCHANTED_GOLDEN_APPLE) {
+                            int absorb = EdibleFoodItem.ENCHANTED_GOLDEN_APPLE_ABSORB;
+                            unitMob.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 999999, (absorb / 4) - 1));
+                            unitMob.setAbsorptionAmount(absorb);
+                        } else if (ItemUtil.isEdibleFood(itemStack.getItem())) {
+                            unitMob.heal(ItemUtil.getFoodHealAmount(itemStack));
+                        } else if (ItemUtil.isEdibleDrink(itemStack.getItem())) {
+                            ItemUtil.applyDrinkEffect(itemStack.getItem(), unitMob);
+                        }
+                        itemStack.setCount(itemStack.getCount() - 1);
+                        break;
+                    }
+                }
+            } else if (unit.getEatingTicksLeft() % 4 == 0) {
+                boolean isFood = false;
+                for (ItemStack itemStack : unit.getItems())
+                    if (ItemUtil.isEdibleFood(itemStack.getItem()))
+                        isFood = true;
+                unitMob.level().playSound(null, unitMob.getX(), unitMob.getY(), unitMob.getZ(),
+                        isFood ? SoundEvents.GENERIC_EAT : SoundEvents.GENERIC_DRINK, SoundSource.PLAYERS, 0.5F,
+                        unitMob.getRandom().nextFloat() * 0.1F + 0.9F
+                );
+            }
+        } else {
+            for (ItemStack itemStack : unit.getItems()) {
+                if (ItemUtil.isEdibleFoodOrDrink(itemStack.getItem())) {
+                    unit.setEatingTicksLeft(40);
+                    break;
+                }
+            }
+        }
+        if (unitMob.hasEffect(MobEffects.ABSORPTION) && unitMob.getAbsorptionAmount() <= 0)
+            unitMob.removeEffect(MobEffects.ABSORPTION);
+
+        if (unitMob.tickCount % 10 == 0 &&
+            !(unit instanceof WorkerUnit) &&
+            Factions.getFaction(unit).equals(Factions.PIGLINS) &&
+            MiscUtil.isOnNetherTerrain(unitMob)) {
+            unitMob.addEffect(new MobEffectInstance(MobEffectRegistrar.MINOR_MOVEMENT_SPEED.get(), 15, 1, true, false));
+        }
+        if (unitMob.tickCount % 10 == 0 &&
+            !(unit instanceof WorkerUnit) &&
+            Factions.getFaction(unit).equals(Factions.MONSTERS) &&
+            NightUtils.isInRangeOfNightSource(unitMob.getEyePosition(), unitMob.level().isClientSide)) {
+            unitMob.addEffect(new MobEffectInstance(MobEffectRegistrar.MINOR_MOVEMENT_SPEED.get(), 15, 1, true, false));
+        }
+
+        if (unitMob.tickCount % 80 == 0) {
+            int fortifyingLevel = unitMob.getItemBySlot(EquipmentSlot.CHEST).getEnchantmentLevel(EnchantmentRegistrar.FORTYIFYING.get());
+            float absorbHp = unitMob.getAbsorptionAmount();
+            if (fortifyingLevel > 0 && absorbHp < fortifyingLevel * ProtectiveEnchantment.MAX_ABSORB_HP_PER_FORTIFYING_LEVEL)
+                unitMob.setAbsorptionAmount(absorbHp + 1);
+        }
+
+        if (unitMob.tickCount % 4 == 0 && unitMob.hasEffect(MobEffectRegistrar.SCORCHING_FIRE.get()) &&
+            unitMob.onGround() && !unitMob.level().isClientSide()) {
+            BlockState bsOn = unitMob.level().getBlockState(unitMob.getOnPos());
+            BlockState bsMagma = BlockRegistrar.WALKABLE_MAGMA_BLOCK.get().defaultBlockState();
+            if (bsOn.getBlock() != BlockRegistrar.WALKABLE_MAGMA_BLOCK.get()) {
+                BlockServerEvents.addTempBlock((ServerLevel) unitMob.level(), unitMob.getOnPos(), bsMagma, bsOn, unitMob.getRandom()
+                        .nextInt(ScorchingGaze.MIN_MAGMA_DURATION, ScorchingGaze.MAX_MAGMA_DURATION));
+            }
+            ParticleUtil.addParticleExplosion(ParticleTypes.LAVA, 1, unitMob.level(), unitMob.position());
+            if (!unitMob.isOnFire()) {
+                int ticks = unitMob.getEffect(MobEffectRegistrar.SCORCHING_FIRE.get()).getDuration();
+                unitMob.setRemainingFireTicks(ticks);
+            }
+        }
+
+        // possible fix for units getting stuck randomly on rtsPathfinding
+        /*
+        if (unitMob.tickCount % 60 == 0 && BuildingUtils.isPosInsideAnyBuilding(unitMob.level().isClientSide(), unitMob.getOnPos())) {
+            boolean bool1 = unitMob.getRandom().nextBoolean();
+            boolean bool2 = unitMob.getRandom().nextBoolean();
+            unitMob.push(0.005d * (bool1 ? -1 : 1), 0, 0.005d * (bool2 ? -1 : 1));
+        }
+         */
+
+        if (unit.getItemGoal() != null) {
+            unit.getItemGoal().tick();
+        }
+    }
+
+    private static void checkAndPickupResources(Unit unit) {
+        Mob unitMob = (Mob) unit;
+        if (unitMob.canPickUpLoot() && (!(unit instanceof UnitInventory inv) || inv.isEmpty())) {
+            for (ItemEntity itementity : unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1))) {
+                if (!itementity.isRemoved() && !itementity.getItem().isEmpty() && !itementity.hasPickUpDelay() && unitMob.isAlive()) {
+                    if (!Unit.atMaxResources(unit)) {
+                        ItemStack itemstack = itementity.getItem();
+                        ResourceSource resBlock = ResourceSources.getFromItem(itemstack.getItem());
+                        if (resBlock != null) {
+                            while (!Unit.atMaxResources(unit) && itemstack.getCount() > 0) {
+                                unitMob.onItemPickup(itementity);
+                                unitMob.take(itementity, 1);
+                                unit.getItems().add(new ItemStack(itemstack.getItem(), 1));
+                                itemstack.setCount(itemstack.getCount() - 1);
+                            }
+                            if (itemstack.getCount() <= 0)
+                                itementity.discard();
+
+                            UnitSyncClientboundPacket.sendSyncResourcesPacket(unit);
+                        }
+                        if (Unit.atThresholdResources(unit) && unit instanceof WorkerUnit workerUnit) {
+                            GatherResourcesGoal goal = workerUnit.getGatherResourceGoal();
+                            if (goal != null && goal.getTargetResourceName() != ResourceName.NONE)
+                                goal.saveAndReturnResources();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public default void dropAllResources() {
+        if (!((LivingEntity) this).level().isClientSide()) {
+            getItems().removeIf(itemStack -> {
+                if (ResourceSources.getFromItem(itemStack.getItem()) != null) {
+                    ((LivingEntity) this).spawnAtLocation(itemStack);
+                    return true;
+                }
+                return false;
+            });
+            UnitSyncClientboundPacket.sendSyncResourcesPacket(this);
+        }
+    }
+
+    private static void checkAndPickupEquipment(Unit unit) {
+        Mob unitMob = (Mob) unit;
+        for (ItemEntity itementity : unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1))) {
+            Relationship rl = UnitServerEvents.getUnitToEntityRelationship(unit, itementity);
+            if (rl != Relationship.HOSTILE) {
+                if (tryPickingUpEquipment(unit, itementity))
+                    break;
+            }
+        }
+    }
+
+    public static boolean tryPickingUpEquipment(Unit unit, ItemEntity itemEntity) {
+        Mob unitMob = (Mob) unit;
+        ItemStack itemstack = itemEntity.getItem();
+        if (unit.canPickUpEquipment(itemstack) && !itemEntity.isRemoved() &&
+                !itemstack.isEmpty() && !itemEntity.hasPickUpDelay() && unitMob.isAlive() &&
+                (itemEntity.tickCount >= 100)) {
+            unitMob.onItemPickup(itemEntity);
+            unitMob.take(itemEntity, 1);
+            unit.onPickupEquipment(itemstack);
+            itemEntity.discard();
+            return true;
+        }
+        return false;
+    }
+
+    default boolean canPickUpEquipment(ItemStack itemStack) { return false; }
+
+    default void onPickupEquipment(ItemStack itemStack) { }
+
+    static int HOSTILE_FOOD_DELAY_TICKS = 200;
+
+    private static void checkAndPickupFood(Unit unit) {
+        Mob unitMob = (Mob) unit;
+        if (!unit.isHoldingEdibleFood()) {
+            for (ItemEntity itementity : unitMob.level().getEntitiesOfClass(ItemEntity.class, unitMob.getBoundingBox().inflate(1, 0, 1))) {
+                if (itementity.isRemoved() || itementity.tickCount < 10)
+                    continue;
+                ItemStack itemstack = itementity.getItem();
+                if (itemstack.getItem() == Items.ENCHANTED_GOLDEN_APPLE) {
+                    if (unitMob.getAbsorptionAmount() > 0)
+                        continue;
+                } else if (unitMob.getHealth() >= unitMob.getMaxHealth()) {
+                    continue;
+                }
+                Relationship rl = UnitServerEvents.getUnitToEntityRelationship(unit, itementity);
+                Item item = itemstack.getItem();
+                if (!itementity.isRemoved() && !itemstack.isEmpty() && !itementity.hasPickUpDelay() && unitMob.isAlive() && !unit.getOwnerName().isEmpty() &&
+                    (rl != Relationship.HOSTILE || itementity.tickCount > HOSTILE_FOOD_DELAY_TICKS) && ItemUtil.isEdibleFood(item)) {
+
+                    boolean isApple = item == Items.ENCHANTED_GOLDEN_APPLE || item == Items.GOLDEN_APPLE;
+                    boolean noAbsorb = unitMob.getAbsorptionAmount() <= 0;
+                    boolean isHurt = unitMob.getHealth() < ((Mob) unit).getMaxHealth();
+                    if ((isApple && noAbsorb) || (!isApple && isHurt)) {
+                        startEatingOrDrinking(unit, itementity);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    public static void startEatingOrDrinking(Unit unit, ItemEntity itemEntity) {
+        if (ItemUtil.isEdibleDrink(itemEntity.getItem().getItem())) {
+            SoundClientboundPacket.playSoundAtPos(SoundAction.POTION_POP, ((LivingEntity) unit).blockPosition(), 1.5f);
+        }
+        ItemStack itemStack = itemEntity.getItem();
+        ((LivingEntity) unit).onItemPickup(itemEntity);
+        ((LivingEntity) unit).take(itemEntity, 1);
+        unit.getItems().add(new ItemStack(itemStack.getItem(), 1));
+        UnitAnimationClientboundPacket.sendEatFoodPacket(((LivingEntity) unit), BuiltInRegistries.ITEM.getId(itemStack.getItem()));
+        itemStack.setCount(itemStack.getCount() - 1);
+        if (itemStack.getCount() <= 0)
+            itemEntity.discard();
+    }
+
+    // call from addAdditionalSaveData
+    public default void addUnitSaveData(@NotNull CompoundTag pCompound) {
+        pCompound.putString("ownerName", getOwnerName());
+        pCompound.putInt("scenarioRoleIndex", getScenarioRoleIndex());
+        if (getAnchor() != null) {
+            pCompound.putInt("anchorPosX", getAnchor().getX());
+            pCompound.putInt("anchorPosY", getAnchor().getY());
+            pCompound.putInt("anchorPosZ", getAnchor().getZ());
+        }
+        if (this instanceof HeroUnit heroUnit)
+            heroUnit.addHeroUnitSaveData(pCompound);
+
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemStack itemStack = ((LivingEntity) this).getItemBySlot(slot);
+            if (itemStack.getItem() != Items.AIR)
+                pCompound.put(slot.name() + "Item", itemStack.serializeNBT());
+        }
+        pCompound.putString("onDeathCommand", getOnDeathCommand());
+    }
+
+    // call from readAdditionalSaveData
+    public default void readUnitSaveData(@NotNull CompoundTag pCompound) {
+        setOwnerName(pCompound.getString("ownerName"));
+        setScenarioRoleIndex(pCompound.getInt("scenarioRoleIndex"));
+        BlockPos anchorPos = new BlockPos(
+            pCompound.getInt("anchorPosX"),
+            pCompound.getInt("anchorPosY"),
+            pCompound.getInt("anchorPosZ")
+        );
+        if (!anchorPos.equals(new BlockPos(0,0,0))) {
+            setAnchor(anchorPos);
+        }
+        if (this instanceof HeroUnit heroUnit)
+            heroUnit.readHeroUnitSaveData(pCompound);
+
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            String keyName = slot.name() + "Item";
+            if (pCompound.contains(keyName)) {
+                CompoundTag itemNbt = (CompoundTag) pCompound.get(keyName);
+                if (itemNbt != null) {
+                    ((LivingEntity) this).setItemSlot(slot, ItemStack.of(itemNbt));
+                }
+            }
+        }
+        setOnDeathCommand(pCompound.getString("onDeathCommand"));
+    }
+
+    public enum SunlightEffect {
+        NONE,
+        SLOWNESS_II,
+        SLOWNESS_I,
+        SLOWNESS_MINOR,
+        FIRE
+    }
+
+    public default SunlightEffect getSunlightEffect() {
+        return SunlightEffect.NONE;
+    }
+
+    static boolean hasAnchor(Unit unit) {
+        return unit.getAnchor() != null && !unit.getAnchor().equals(new BlockPos(0,0,0));
+    }
+
+    private static void checkAndRetreatToAnchor(Unit unit) {
+        LivingEntity le = (LivingEntity) unit;
+        if (!hasAnchor(unit) || le.level().isClientSide())
+            return;
+
+        if ((unit.isIdle() || le.distanceToSqr(Vec3.atCenterOf(unit.getAnchor())) > ANCHOR_RETREAT_RANGE * ANCHOR_RETREAT_RANGE) &&
+                !le.getOnPos().equals(unit.getAnchor())) {
+            fullResetBehaviours(unit);
+            unit.getMoveGoal().setMoveTarget(unit.getAnchor());
+        }
+    }
+
+    private static int getThresholdResources(Unit unit) {
+        boolean hasCarryBags;
+        if (((LivingEntity) unit).level().isClientSide())
+            hasCarryBags = ResearchClient.hasResearch(ProductionItems.RESEARCH_RESOURCE_CAPACITY);
+        else
+            hasCarryBags = ResearchServerEvents.playerHasResearch(unit.getOwnerName(), ProductionItems.RESEARCH_RESOURCE_CAPACITY);
+        return hasCarryBags ? 100 : 50;
+    }
+
+    static boolean atMaxResources(Unit unit) {
+        return Resources.getTotalResourcesFromItems(unit.getItems()).getTotalValue() >= unit.getMaxResources();
+    }
+
+    static boolean atThresholdResources(Unit unit) {
+        return Resources.getTotalResourcesFromItems(unit.getItems()).getTotalValue() >= getThresholdResources(unit);
+    }
+
+    default boolean hasLivingTarget() {
+        Mob unitMob = (Mob) this;
+        return unitMob.getTarget() != null && unitMob.getTarget().isAlive();
+    }
+
+    static void fullResetBehaviours(Unit unit) {
+        if (((Entity) unit).level().isClientSide() && !Keybindings.shiftMod.isDown()) {
+            unit.getCheckpoints().clear();
+            RtsDebugPathPreview.removeUnitPath(((Entity) unit).getId());
+        }
+        unit.resetBehaviours();
+        Unit.resetBehaviours(unit);
+        if (unit instanceof WorkerUnit workerUnit) {
+            WorkerUnit.resetBehaviours(workerUnit);
+        }
+        if (unit instanceof AttackerUnit attackerUnit) {
+            AttackerUnit.resetBehaviours(attackerUnit);
+        }
+    }
+
+    static void resetBehaviours(Unit unit) {
+        unit.getTargetGoal().setTarget(null);
+        unit.getMoveGoal().stopMoving();
+        if (unit.getReturnResourcesGoal() != null)
+            unit.getReturnResourcesGoal().stopReturning();
+        unit.setFollowTarget(null);
+        unit.setHoldPosition(false);
+        if (unit.canGarrison())
+            unit.getGarrisonGoal().stopGarrisoning();
+        if (unit.canUsePortal()) {
+            if (unit.getUsePortalGoal() instanceof FlyingUsePortalGoal flyingUsePortalGoal)
+                flyingUsePortalGoal.stopUsingPortal();
+            if (unit.getUsePortalGoal() instanceof UsePortalGoal usePortalGoal)
+                usePortalGoal.stopUsingPortal();
+        }
+        if (unit.getItemGoal() != null)
+            unit.getItemGoal().stopGoal();
+    }
+
+    // can be overridden in the Unit's class to do additional logic on a reset
+    default void resetBehaviours() { }
+
+    // this setter sets a Unit field and so can't be defaulted
+    // move to a block ignoring all else until reaching it
+    default void setMoveTarget(@Nullable BlockPos bp) {
+        this.getMoveGoal().setMoveTarget(bp);
+    }
+
+    // continuously move to a target until told to do something else
+    void setFollowTarget(@Nullable LivingEntity target);
+
+    void initialiseGoals();
+
+    // weapons aren't provided automatically when spawned by custom code
+    // also recalculate stats based on upgrades
+    default void setupEquipmentAndUpgradesServer() { }
+
+    // equipment only needs to be done serverside, but mod-specific fields need to be done clientside too
+    default void setupEquipmentAndUpgradesClient() { }
+
+    default float getSpeedModifier() {
+        return 1.0f;
+    }
+
+    static Ability getAbility(Unit unit, UnitAction abilityAction) {
+        for (Ability ability : unit.getAbilities().get())
+            if (ability.action.equals(abilityAction))
+                return ability;
+        return null;
+    }
+
+    default boolean isIdle() {
+        boolean idleAttacker = true;
+        if (this instanceof AttackerUnit attackerUnit) {
+            idleAttacker = attackerUnit.getAttackMoveTarget() == null &&
+                    !((Unit) attackerUnit).hasLivingTarget() &&
+                    !AttackerUnit.isAttackingBuilding(attackerUnit);
+        }
+        boolean idleRangedAttacker = true;
+        if (this instanceof RangedAttackerUnit rangedAttackerUnit) {
+            idleRangedAttacker = rangedAttackerUnit.getRangedAttackGroundGoal() == null ||
+                                rangedAttackerUnit.getRangedAttackGroundGoal().getGroundTarget() == null;
+        }
+        boolean idleWorker = true;
+        if (this instanceof WorkerUnit)
+            idleWorker = WorkerUnit.isIdle((WorkerUnit) this);
+
+        for (Goal goal : ((Mob) this).goalSelector.getAvailableGoals()) {
+            if (goal instanceof GenericUntargetedSpellGoal spellGoal && spellGoal.isCasting())
+                return false;
+            if (goal instanceof GenericTargetedSpellGoal spellGoal && spellGoal.isCasting())
+                return false;
+        }
+        // some larger mobs like bears get stuck near their movetarget so nav won't be done but it also won't be null
+        boolean stationaryNearMoveTarget = false;
+        if (this.getMoveGoal().getMoveTarget() != null) {
+            double distToMoveTarget = ((LivingEntity) this).distanceToSqr(this.getMoveGoal().getMoveTarget().getCenter());
+            // Genuinely stuck = barely moving on BOTH axes. Must be && (not ||): a unit walking straight along
+            // one axis has ~0 velocity on the other, so || wrongly reads it as stationary while it's still moving.
+            // Epsilon, not == 0: physics rarely lands exactly on zero.
+            net.minecraft.world.phys.Vec3 dm = ((Mob) this).getDeltaMovement();
+            boolean stationary = Math.abs(dm.x) < 1.0e-3 && Math.abs(dm.z) < 1.0e-3;
+            stationaryNearMoveTarget = stationary && distToMoveTarget < 4;
+        }
+        boolean isMoving = !((Mob) this).getNavigation().isDone() || this.getMoveGoal().getMoveTarget() != null;
+        return (!isMoving || stationaryNearMoveTarget) &&
+                this.getFollowTarget() == null &&
+                idleAttacker &&
+                idleWorker &&
+                idleRangedAttacker &&
+                (getItemGoal() == null || getItemGoal().isIdle());
+    }
+
+    static Random RANDOM = new Random();
+
+    public static void addParticlesAroundSelf(Unit unit, ParticleOptions pParticleOption) {
+        for(int i = 0; i < 5; ++i) {
+            double d0 = RANDOM.nextGaussian() * 0.02;
+            double d1 = RANDOM.nextGaussian() * 0.02;
+            double d2 = RANDOM.nextGaussian() * 0.02;
+            Entity entity = (Entity) unit;
+
+            if (!entity.level().isClientSide) {
+                ((ServerLevel) entity.level()).sendParticles(pParticleOption,
+                        entity.getRandomX(1.0),
+                        entity.getRandomY() + 1.0,
+                        entity.getRandomZ(1.0),
+                        1, d0, d1, d2, 0
+                );
+            }
+        }
+    }
+
+    void updateAbilityButtons();
+
+    default boolean isCasting() {
+        for (Ability ability : getAbilities().get())
+            if (ability.isCasting(this))
+                return true;
+        return false;
+    }
+
+    public default List<FormattedCharSequence> getAttackDamageStatTooltip() {
+        return List.of(fcs(I18n.get("unitstats.reignofnether.attack_damage"), true));
+    }
+
+    public default List<FormattedCharSequence> getAttackSpeedStatTooltip() {
+        if (this instanceof GhastUnit ghastUnit && ghastUnit.hasEffect(MobEffectRegistrar.DISARM.get())) {
+            return List.of(
+                    fcs(I18n.get("unitstats.reignofnether.attack_speed"), true),
+                    fcs(I18n.get("unitstats.reignofnether.ghast_disarmed"))
+            );
+        } else {
+            return List.of(fcs(I18n.get("unitstats.reignofnether.attack_speed"), true));
+        }
+    }
+
+    public default List<FormattedCharSequence> getRangeStatTooltip() {
+        return List.of(fcs(I18n.get("unitstats.reignofnether.range"), true));
+    }
+
+    public default List<FormattedCharSequence> getArmourStatTooltip() {
+        ArrayList<FormattedCharSequence> fcsList = new ArrayList<>();
+        fcsList.add(fcs(I18n.get("unitstats.reignofnether.armour"), true));
+        if (getUnitPhysicalArmorPercentage() != 0) {
+            fcsList.add(fcs(I18n.get("unitstats.reignofnether.armour_melee_and_ranged", (int) (getUnitPhysicalArmorPercentage() * 100)), false));
+        }
+        if (getUnitRangedArmorPercentage() > 0) {
+            fcsList.add(fcs(I18n.get("unitstats.reignofnether.armour_ranged", (int) (getUnitRangedArmorPercentage() * 100)), false));
+        }
+        if (getUnitResistPercentage() > 0) {
+            fcsList.add(fcs(I18n.get("unitstats.reignofnether.armour_all", (int) (getUnitResistPercentage() * 100)), false));
+        }
+        else if (getUnitMagicArmorPercentage() > 0) {
+            fcsList.add(fcs(I18n.get("unitstats.reignofnether.armour_magic", (int) (getUnitMagicArmorPercentage() * 100)), false));
+        }
+        return fcsList;
+    }
+
+    public default List<FormattedCharSequence> getMovementSpeedStatTooltip() {
+        return List.of(fcs(I18n.get("unitstats.reignofnether.movement_speed"), true));
+    }
+
+    public default List<FormattedCharSequence> getStatTooltip(UnitStatType unitStatType) {
+        return switch (unitStatType) {
+            case ATTACK_DAMAGE -> getAttackDamageStatTooltip();
+            case ATTACK_SPEED -> getAttackSpeedStatTooltip();
+            case RANGE -> getRangeStatTooltip();
+            case ARMOUR -> getArmourStatTooltip();
+            case MOVEMENT_SPEED -> getMovementSpeedStatTooltip();
+        };
+    }
+
+    default void setCooldown(Ability abilityClass, float cooldown) {
+        getAbilityCooldowns().put(abilityClass, cooldown);
+    }
+
+    default float getCooldown(Ability abilityClass) {
+        return getAbilityCooldowns().get(abilityClass);
+    }
+
+    Object2ObjectArrayMap<Ability,Float> getAbilityCooldowns();
+
+    boolean hasAutocast(Ability ability);
+    void setAutocast(Ability ability);
+    default void setCharges(Ability abilityClass, int charges) {
+        getAbilityCharges().put(abilityClass, Math.min(charges, abilityClass.maxCharges));
+    }
+
+    default int getAbilityCharges(Ability ability) {
+        if (!getAbilityCharges().containsKey(ability))
+            getAbilityCharges().put(ability, ability.maxCharges);
+        return getAbilityCharges().get(ability);
+    }
+    Object2ObjectArrayMap<Ability,Integer> getAbilityCharges();
+
+    default List<Button> getPassiveIcons() {
+        ArrayList<Button> icons = new ArrayList<>();
+        LivingEntity entity = (LivingEntity) this;
+        for (EnchantmentIcon enchantIcon : EnchantmentIcons.ENCHANTMENT_ICONS) {
+            ItemStack itemStack = entity.getItemBySlot(enchantIcon.slot);
+            for (Enchantment enchant : itemStack.getAllEnchantments().keySet()) {
+                if (enchant == enchantIcon.enchantment) {
+                    icons.add(enchantIcon);
+                }
+            }
+        }
+        synchronized (UnitClientEvents.mobEffectIcons) {
+            HashMap<MobEffect, MobEffectIcon> mobEffects = UnitClientEvents.mobEffectIcons.get(entity.getId());
+            if (mobEffects != null) {
+                for (MobEffect effect : mobEffects.keySet()) {
+                    if (mobEffects.get(effect) != null)
+                        icons.add(mobEffects.get(effect));
+                }
+            }
+        }
+        return icons;
+    }
+
+    default AABB getInflatedSelectionBox() {
+        return ((Entity) this).getBoundingBox();
+    }
+
+    default boolean hasEffectWithDuration(MobEffect mobEffect) {
+        MobEffectInstance mei = ((LivingEntity) this).getEffect(mobEffect);
+        return mei != null && mei.getDuration() > 0;
+    }
+
+    default float getBonusMeleeRangeForAttackers() {
+        return 0.4f;
+    }
+
+    default boolean hasAnyEnchants() {
+        return !(((LivingEntity) this).getMainHandItem().getAllEnchantments().isEmpty()) ||
+               !(((LivingEntity) this).getItemBySlot(EquipmentSlot.CHEST).getAllEnchantments().isEmpty());
+    }
+
+    default boolean uninterruptable() {
+        return false;
+    }
+
+    default boolean hasLineOfSight(Vec3 pos) {
+        Entity thisEntity = (Entity) this;
+        Vec3 vec3 = new Vec3(thisEntity.getX(), thisEntity.getEyeY(), thisEntity.getZ());
+        Vec3 vec31 = new Vec3(pos.x, pos.y, pos.z);
+        if (vec31.distanceToSqr(vec3) > 16384) {
+            return false;
+        } else {
+            return thisEntity.level()
+                    .clip(new ClipContext(vec3, vec31, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, thisEntity))
+                    .getType() == HitResult.Type.MISS;
+        }
+    }
+
+    default boolean isFlyingUnit() {
+        return getMoveGoal() instanceof FlyingMoveToTargetGoal;
+    }
+
+    // if true, will ignore all commands except for stop (S)
+    // used for things like channeling blizzard on the wraith to prevent accidental cancels
+    default boolean ignoreNonStopCommands() {
+        return false;
+    }
+
+    default void aggroToEnemyIfIdle(Unit aggroTarget) {
+        if (((Entity) this).level().isClientSide())
+            return;
+        if (isIdle() && !AlliancesServerEvents.isAlliedOrOwned(this.getOwnerName(), aggroTarget.getOwnerName()))
+            this.getTargetGoal().setTarget((LivingEntity) aggroTarget);
+    }
+
+    public default boolean hasRtsPlayerOwner() {
+        RTSPlayer rtsPlayer = ((Entity) this).level().isClientSide() ?
+                PlayerClientEvents.getRTSPlayer(getOwnerName()) :
+                PlayerServerEvents.getRTSPlayer(getOwnerName());
+        return rtsPlayer != null;
+    }
+
+    public default boolean hasScenarioNpcOwner() {
+        return ScenarioUtils.isScenarioNpc(((Entity) this).level().isClientSide(), this.getOwnerName());
+    }
+
+    public default boolean isScout() {
+        return this instanceof ScoutDogUnit || this instanceof ScoutCatUnit || this instanceof BatUnit || this instanceof StriderUnit;
+    }
+
+    public default boolean isGarrisoned() {
+        return getGarrison() != null;
+    }
+
+    public default BuildingPlacement getGarrison() {
+        return GarrisonableBuildingAddon.getGarrison(this);
+    }
+
+    @Nullable
+    public default UnitItemGoal getItemGoal() {
+        return null;
+    }
+
+    public default boolean isHolding(UnitItem unitItem) {
+        if (!(this instanceof UnitInventory inv)) return false;
+        return inv.isHolding(unitItem);
+    }
+
+    public default double getAttackerRangeBonus(Mob attacker) {
+        return 0f;
+    }
+}

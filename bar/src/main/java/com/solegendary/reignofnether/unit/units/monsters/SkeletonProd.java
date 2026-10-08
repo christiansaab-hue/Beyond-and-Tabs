@@ -1,0 +1,109 @@
+package com.solegendary.reignofnether.unit.units.monsters;
+
+import com.solegendary.reignofnether.ReignOfNether;
+import com.solegendary.reignofnether.building.buildings.placements.CustomBuildingPlacement;
+import com.solegendary.reignofnether.building.buildings.placements.GraveyardPlacement;
+import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
+import com.solegendary.reignofnether.building.production.*;
+import com.solegendary.reignofnether.hud.buttons.UnitSpawnButton;
+import com.solegendary.reignofnether.keybinds.Keybinding;
+import com.solegendary.reignofnether.registrars.EntityRegistrar;
+import com.solegendary.reignofnether.research.ResearchClient;
+import com.solegendary.reignofnether.research.ResearchServerEvents;
+import com.solegendary.reignofnether.resources.ResourceCost;
+import com.solegendary.reignofnether.resources.ResourceCosts;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.level.Level;
+
+import java.util.List;
+
+public class SkeletonProd extends GraveyardUnitProductionItem implements IUnitProductionItem {
+
+    public final static String itemName = "Skeleton";
+    public final static ResourceCost cost = ResourceCosts.SKELETON;
+
+    public SkeletonProd() {
+        super(cost);
+        this.onComplete = (Level level, ProductionPlacement placement) -> {
+            if (!level.isClientSide()) {
+                if (placement instanceof GraveyardPlacement gy && placement.getUpgradeLevel() > 0) {
+                    if (ResearchServerEvents.playerHasResearch(placement.ownerName, ProductionItems.RESEARCH_STRAYS))
+                        gy.createSkull(EntityRegistrar.STRAY_UNIT.get());
+                    else
+                        gy.createSkull(EntityRegistrar.SKELETON_UNIT.get());
+                } else {
+                    if (ResearchServerEvents.playerHasResearch(placement.ownerName, ProductionItems.RESEARCH_STRAYS) && !(placement instanceof CustomBuildingPlacement))
+                        placement.produceUnit((ServerLevel) level, EntityRegistrar.STRAY_UNIT.get(), placement.ownerName, true);
+                    else
+                        placement.produceUnit((ServerLevel) level, EntityRegistrar.SKELETON_UNIT.get(), placement.ownerName, true);
+                }
+            }
+        };
+    }
+
+    public String getItemName() {
+        return SkeletonProd.itemName;
+    }
+
+    private static ResourceLocation getIcon(ProductionPlacement prodBuilding) {
+        if (ResearchClient.hasResearch(ProductionItems.RESEARCH_STRAYS) && !(prodBuilding instanceof CustomBuildingPlacement))
+            return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/stray.png");
+        else
+            return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/skeleton.png");
+    }
+
+    private static String getCancelName(ProductionPlacement prodBuilding) {
+        if (ResearchClient.hasResearch(ProductionItems.RESEARCH_STRAYS) && !(prodBuilding instanceof CustomBuildingPlacement))
+            return "Stray";
+        else
+            return "Skeleton";
+    }
+
+    public UnitSpawnButton getPlaceButton() {
+        return new UnitSpawnButton(
+                itemName,
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/skeleton.png"),
+                List.of(
+                        Component.translatable("entity.reignofnether.skeleton_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                        FormattedCharSequence.EMPTY,
+                        Component.translatable("entity.reignofnether.skeleton_unit.tooltip1").getVisualOrderText(),
+                        FormattedCharSequence.EMPTY,
+                        Component.translatable("entity.reignofnether.skeleton_unit.tooltip2").getVisualOrderText()
+                )
+        );
+    }
+
+    public StartProductionButton getStartButton(ProductionPlacement prodBuilding, Keybinding hotkey) {
+        return new StartProductionButton(
+            SkeletonProd.itemName,
+            getIcon(prodBuilding),
+            hotkey,
+            () -> ResearchClient.hasResearch(ProductionItems.RESEARCH_STRAYS) && !(prodBuilding instanceof CustomBuildingPlacement),
+            () -> true,
+            List.of(
+                Component.translatable("entity.reignofnether.skeleton_unit").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
+                ResourceCosts.getFormattedCost(cost),
+                ResourceCosts.getFormattedPopAndTime(cost),
+                FormattedCharSequence.forward("", Style.EMPTY),
+                Component.translatable("entity.reignofnether.skeleton_unit.tooltip1").getVisualOrderText(),
+                FormattedCharSequence.forward("", Style.EMPTY),
+                Component.translatable("entity.reignofnether.skeleton_unit.tooltip2").getVisualOrderText()
+            ),
+            this
+        );
+    }
+
+    public StopProductionButton getCancelButton(ProductionPlacement prodBuilding, boolean first) {
+        return new StopProductionButton(
+            getCancelName(prodBuilding),
+            getIcon(prodBuilding),
+            prodBuilding,
+            this,
+            first
+        );
+    }
+}
