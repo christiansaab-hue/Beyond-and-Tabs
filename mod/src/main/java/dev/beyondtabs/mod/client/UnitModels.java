@@ -16,7 +16,7 @@ final class UnitModels {
     /** Per-unit drawing context (reused; the renderer is single-threaded). */
     static final class Ctx {
         float[] p; int team; float fx, fz, rx, rz;   // forward / right (horizontal, unit length)
-        int sides, headSl, headSt; boolean near; float t; float scale = 1;
+        int sides, headSl, headSt; boolean near, mid; float t; float scale = 1;
         UnitDef d; String faction = ""; String key = "";
         int shirt, trousers, skin;
         float x(int i) { return p[i * 3]; } float y(int i) { return p[i * 3 + 1]; } float z(int i) { return p[i * 3 + 2]; }

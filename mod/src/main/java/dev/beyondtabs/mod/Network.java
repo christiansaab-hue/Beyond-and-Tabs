@@ -74,7 +74,7 @@ public final class Network {
             su.orders = (byte) Math.min(127, u.orders.size());
             if (u.team == team && u.inCombat) su.style = (byte) u.style.ordinal();
             float dx = u.x - px, dz = u.z - pz;
-            if (u.lod < 2 && dx * dx + dz * dz < DETAIL_RANGE * DETAIL_RANGE) {
+            if (!u.alive && u.lod < 2 && dx * dx + dz * dz < DETAIL_RANGE * DETAIL_RANGE) {   // only the fallen need their ragdoll (the living use mob animations)
                 var r = u.ragdoll; int n = r.rig.n; su.parts = new float[n * 3];
                 for (int i = 0; i < n; i++) { su.parts[i * 3] = r.x[i]; su.parts[i * 3 + 1] = r.y[i]; su.parts[i * 3 + 2] = r.z[i]; }
             }

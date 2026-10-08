@@ -447,7 +447,7 @@ public final class MatchRenderer {
             if (surf - gy > .2f && u.alive && u.walkAmount > .15f && Fx.R.nextInt(14) == 0) Fx.wake(xz[0], surf, xz[1], k);   // wading
             float[] pts = parts(u, a);
             float ddx = xz[0] - camX, ddy = gy - camY, ddz = xz[1] - camZ, dist = (float) Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
-            c.near = dist < 32; boolean mid = dist < 75;
+            c.near = dist < 32; boolean mid = dist < 75; c.mid = mid;
             c.sides = c.near ? 10 : mid ? 6 : 4; c.headSl = c.near ? 14 : mid ? 9 : 6; c.headSt = c.near ? 9 : mid ? 6 : 4;
             c.p = pts; c.d = d; c.team = u.team; c.scale = k; c.key = d.tabsKey(); c.faction = UnitModels.faction(d.tabsKey());
             int team = Look.team(u.team, s.myTeam);
@@ -469,8 +469,19 @@ public final class MatchRenderer {
             if (pts.length / 3 == Rig.HUMANOID_PARTICLES) {   // Minecraft-style blocky soldier with its own pixel skin
                 Minecraft mcI = Minecraft.getInstance();
                 int light = mcI.level == null ? 0xF000F0 : net.minecraft.client.renderer.LevelRenderer.getLightColor(mcI.level, net.minecraft.core.BlockPos.containing(xz[0], gy + 1.2, xz[1]));
-                float[] arms = BlockyUnits.humanoid(ENTITY_SRC.getBuffer(BlockyUnits.TYPE), POSE, NORMAL, c, Math.max(0, u.def), light, !u.alive);
                 Gear.Kit kit = Gear.of(d);
+                float[] live = null;
+                if (u.alive) {   // living: Minecraft's own player model and animations
+                    Snapshot.U pu = ClientMatch.prevById.get(u.id);
+                    float yaw = u.yaw;
+                    if (pu != null) { float dy = (float) Math.atan2(Math.sin(u.yaw - pu.yaw), Math.cos(u.yaw - pu.yaw)); yaw = pu.yaw + dy * a; }
+                    live = VanillaUnits.draw(u, d, c, xz[0], gy, xz[1], yaw, team, light, POSE, NORMAL, mcI.renderBuffers().bufferSource());
+                }
+                if (live != null) {
+                    if (kit == null) { float[] keep = c.p; int sides = c.sides; c.p = live; c.sides = 4; Weapons.draw(m, c); c.p = keep; c.sides = sides; }
+                    continue;
+                }
+                float[] arms = BlockyUnits.humanoid(ENTITY_SRC.getBuffer(BlockyUnits.TYPE), POSE, NORMAL, c, Math.max(0, u.def), light, !u.alive);
                 if (kit != null && (c.near || mid)) BlockyUnits.armour(ENTITY_SRC, kit.armour(), team, k, !u.alive);
                 float[] keep = c.p; int sides = c.sides; c.p = arms; c.sides = 4;
                 if (kit != null && (kit.right() != null || kit.left() != null)) {   // real Minecraft items in the hands
