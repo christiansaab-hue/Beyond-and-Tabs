@@ -70,6 +70,9 @@ public class BuildingValidators {
             return "building.reignofnether.outside_map";
         } else if (!isNotTutorialOrNearValidCapitolPosition(level, building, originPos)) {
             return "building.reignofnether.build_centre_here";
+        } else if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
+                && !com.solegendary.reignofnether.resources.MetalPatches.isOnPatch(level, originPos, 5, 5)) {
+            return "building.reignofnether.needs_metal_patch";
         }
         return null;
     }

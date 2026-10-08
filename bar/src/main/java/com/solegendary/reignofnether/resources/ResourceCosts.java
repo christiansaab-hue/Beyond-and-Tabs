@@ -72,6 +72,8 @@ public class ResourceCosts {
     public static final ResourceCost BEACON = new ResourceCost(ID, "BEACON");
 
     public static final ResourceCost STOCKPILE = new ResourceCost(ID, "STOCKPILE");
+    public static final ResourceCost METAL_EXTRACTOR = new ResourceCost(ID, "METAL_EXTRACTOR");
+    public static final ResourceCost WIND_GENERATOR = new ResourceCost(ID, "WIND_GENERATOR");
     public static final ResourceCost OAK_BRIDGE = new ResourceCost(ID, "OAK_BRIDGE");
     public static final ResourceCost SPRUCE_BRIDGE = new ResourceCost(ID, "SPRUCE_BRIDGE");
     public static final ResourceCost BLACKSTONE_BRIDGE = new ResourceCost(ID, "BLACKSTONE_BRIDGE");

@@ -153,6 +153,8 @@ public class Factions {
 		// Monsters
 		registerStartBuilding(MONSTERS, Buildings.MAUSOLEUM, Keybindings.abilitySlot1);
 		registerBuildings(MONSTERS, Buildings.SPRUCE_STOCKPILE, Keybindings.abilitySlot2);
+		registerBuildings(MONSTERS, Buildings.METAL_EXTRACTOR_MONSTERS, Keybindings.hotkey5);
+		registerBuildings(MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Keybindings.hotkey6);
 		registerBuildings(MONSTERS, Buildings.SCULK_CATALYST, Keybindings.abilitySlot3);
 		registerBuildings(MONSTERS, Buildings.PUMPKIN_FARM, Keybindings.abilitySlot4);
 		registerBuildings(MONSTERS, Buildings.DARK_WATCHTOWER, Keybindings.abilitySlot5);
@@ -181,6 +183,8 @@ public class Factions {
 		registerBuildings(PIGLINS, Buildings.FORTRESS, Keybindings.abilitySlot9);
 		registerBuildings(PIGLINS, Buildings.INFERNAL_PORTAL, Keybindings.hotkey3);
 		registerBuildings(PIGLINS, Buildings.BLACKSTONE_BRIDGE, Keybindings.hotkey4);
+		registerBuildings(PIGLINS, Buildings.METAL_EXTRACTOR_PIGLINS, Keybindings.hotkey5);
+		registerBuildings(PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Keybindings.hotkey6);
 		registerBuildings(PIGLINS, Buildings.PIGLIN_MARKET, Keybindings.hotkey10);
 		registerBuildings(PIGLINS, Buildings.BEACON);
 		registerBuilding(PIGLINS, Buildings.PORTAL_CIVILIAN);
@@ -191,6 +195,8 @@ public class Factions {
 		//VillagersFaction
 		registerStartBuilding(VILLAGERS, Buildings.TOWN_CENTRE, Keybindings.abilitySlot1);
 		registerBuildings(VILLAGERS, Buildings.OAK_STOCKPILE, Keybindings.abilitySlot2);
+		registerBuildings(VILLAGERS, Buildings.METAL_EXTRACTOR_VILLAGERS, Keybindings.hotkey5);
+		registerBuildings(VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Keybindings.hotkey6);
 		registerBuildings(VILLAGERS, Buildings.VILLAGER_HOUSE, Keybindings.abilitySlot3);
 		registerBuildings(VILLAGERS, Buildings.WHEAT_FARM, Keybindings.abilitySlot4);
 		registerBuildings(VILLAGERS, Buildings.WATCHTOWER, Keybindings.abilitySlot5);

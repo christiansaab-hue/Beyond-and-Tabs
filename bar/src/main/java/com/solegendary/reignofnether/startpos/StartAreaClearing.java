@@ -58,10 +58,38 @@ public final class StartAreaClearing {
                     lane(level, x0, z0, x0 + dx, z0 + dz, LANE_WIDTH);
                 }
             }
+            stampMetalPatches(level, positions, cx, cz);
             ReignOfNether.LOGGER.info("[StartAreaClearing] cleared {} start areas and lanes to [{}, {}]", positions.size(), cx, cz);
         } catch (Exception e) {
             ReignOfNether.LOGGER.error("[StartAreaClearing] failed to clear start areas", e);
         }
+    }
+
+    /**
+     * BAR-style map economy: three metal patches round every base, one forward patch along each lane towards the
+     * middle, and a contested cluster in the centre. Extractors only work on these (see MetalPatches).
+     */
+    static void stampMetalPatches(ServerLevel level, List<BlockPos> positions, float cx, float cz) {
+        for (BlockPos p : positions) {
+            float x0 = p.getX() + 0.5f, z0 = p.getZ() + 0.5f;
+            float dx = cx - x0, dz = cz - z0, len = (float) Math.hypot(dx, dz);
+            double toCentre = len < 1e-3f ? 0 : Math.atan2(dz, dx);
+            for (int k = -1; k <= 1; k++) {   // home ring, symmetric about the lane
+                double a = toCentre + Math.PI + k * (Math.PI / 2.2);   // behind and beside the base
+                com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
+                        (int) (x0 + Math.cos(a) * 17), (int) (z0 + Math.sin(a) * 17));
+            }
+            if (len > 40) {   // a forward patch worth walking out for
+                float k = Math.min(0.45f, 90f / Math.max(1f, len));
+                com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (x0 + dx * k), (int) (z0 + dz * k));
+            }
+        }
+        if (positions.size() > 1)
+            for (int i = 0; i < 4; i++) {   // the contested middle
+                double a = i * Math.PI / 2 + Math.PI / 4;
+                com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
+                        (int) (cx + Math.cos(a) * 9), (int) (cz + Math.sin(a) * 9));
+            }
     }
 
     static boolean clutter(BlockState s) {

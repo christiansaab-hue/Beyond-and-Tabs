@@ -11,6 +11,12 @@ import net.minecraft.resources.ResourceLocation;
 
 public class Buildings {
     public static final Mausoleum MAUSOLEUM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "mausoleum"), new Mausoleum());
+    public static final com.solegendary.reignofnether.building.buildings.shared.MetalExtractor METAL_EXTRACTOR_VILLAGERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "metal_extractor_villagers"), new com.solegendary.reignofnether.building.buildings.shared.MetalExtractor());
+    public static final com.solegendary.reignofnether.building.buildings.shared.MetalExtractor METAL_EXTRACTOR_MONSTERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "metal_extractor_monsters"), new com.solegendary.reignofnether.building.buildings.shared.MetalExtractor());
+    public static final com.solegendary.reignofnether.building.buildings.shared.MetalExtractor METAL_EXTRACTOR_PIGLINS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "metal_extractor_piglins"), new com.solegendary.reignofnether.building.buildings.shared.MetalExtractor());
+    public static final com.solegendary.reignofnether.building.buildings.shared.WindGenerator WIND_GENERATOR_VILLAGERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_villagers"), new com.solegendary.reignofnether.building.buildings.shared.WindGenerator());
+    public static final com.solegendary.reignofnether.building.buildings.shared.WindGenerator WIND_GENERATOR_MONSTERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_monsters"), new com.solegendary.reignofnether.building.buildings.shared.WindGenerator());
+    public static final com.solegendary.reignofnether.building.buildings.shared.WindGenerator WIND_GENERATOR_PIGLINS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_piglins"), new com.solegendary.reignofnether.building.buildings.shared.WindGenerator());
     public static final SpruceStockpile SPRUCE_STOCKPILE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "spruce_stockpile"), new SpruceStockpile());
     public static final HauntedHouse HAUNTED_HOUSE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "haunted_house"), new HauntedHouse());
     public static final PumpkinFarm PUMPKIN_FARM = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pumpkin_farm"), new PumpkinFarm());
