@@ -10,6 +10,8 @@ import com.solegendary.reignofnether.player.RTSPlayer;
 import com.solegendary.reignofnether.player.RTSPlayerScoresEnum;
 import com.solegendary.reignofnether.research.ResearchClient;
 import com.solegendary.reignofnether.research.ResearchServerEvents;
+import com.solegendary.reignofnether.resources.EconomyClientEvents;
+import com.solegendary.reignofnether.resources.EconomyServerEvents;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesServerEvents;
@@ -61,13 +63,13 @@ public abstract class ProductionItem {
 
     public abstract String getItemName();
 
+    // BAR flow economy: metal/energy are paid while the item is produced, so queueing only needs population
+    // (and emeralds, which are still paid upfront for item-shop style costs)
     public boolean canAfford(ProductionPlacement pp) {
         for (Resources resources : ResourcesServerEvents.resourcesList)
             if (resources.ownerName.equals(pp.ownerName))
-                return (resources.food >= getCost(pp.getLevel().isClientSide(), pp.ownerName).food &&
-                        resources.wood >= getCost(pp.getLevel().isClientSide(), pp.ownerName).wood &&
-                        resources.ore >= getCost(pp.getLevel().isClientSide(), pp.ownerName).ore &&
-                        canAffordPopulation(pp));
+                return resources.emerald >= getCost(pp.getLevel().isClientSide(), pp.ownerName).emerald &&
+                        canAffordPopulation(pp);
         return false;
     }
 
@@ -178,31 +180,52 @@ public abstract class ProductionItem {
     }
 
     // return true if the tick finished
+    // BAR flow economy: nothing was paid when the item was queued. Each tick the item asks the owner's economy for
+    // the metal/energy matching the progress it wants to make (production build power * cheat speed); progress is
+    // slowed down by the owner's stall when they are short of resources.
     public boolean tick(ProductionPlacement placement, ActiveProduction active) {
-        if (active.ticksLeft > 0 && isBelowPopulationSupply(placement) && placement.isBuilt) {
-            if ((placement.getLevel().isClientSide() && ResearchClient.hasCheat("warpten")) ||
-                (!placement.getLevel().isClientSide() && ResearchServerEvents.playerHasCheat(placement.ownerName, "warpten"))) {
-                if (placement.getLevel().isClientSide())
-                    active.ticksLeft -= (RtsDebugClientEvents.getCappedTPS() / 20D) * 10;
-                else
-                    active.ticksLeft -= 10;
-            }
-            else {
-                if (placement.getLevel().isClientSide())
-                    active.ticksLeft -= (RtsDebugClientEvents.getCappedTPS() / 20D);
-                else
-                    active.ticksLeft -= 1;
-            }
+        boolean isClientSide = placement.getLevel().isClientSide();
+        boolean hasCheat = (isClientSide && ResearchClient.hasCheat("warpten")) ||
+                (!isClientSide && ResearchServerEvents.playerHasCheat(placement.ownerName, "warpten"));
+        float speed = (hasCheat ? 10f : 1f) * placement.getProductionBuildPower();
 
+        if (active.ticksLeft > 0 && isBelowPopulationSupply(placement) && placement.isBuilt) {
+            if (isClientSide) {
+                // clientside prediction only; completion is always decided by the server
+                active.ticksLeft -= (RtsDebugClientEvents.getCappedTPS() / 20D) * speed *
+                        EconomyClientEvents.getStall(placement.ownerName);
+            } else {
+                ResourceCost cost = getCost(false, placement.ownerName);
+                float totalTicks = Math.max(1, cost.ticks);
+                float dTicks = Math.min(active.ticksLeft, speed);
+                float df = dTicks / totalTicks;
+                float granted = hasCheat ? 1f : EconomyServerEvents.requestFlow(placement.ownerName, cost.ore, cost.wood, df);
+                if (!hasCheat) {
+                    active.metalSpent += cost.ore * df * granted;
+                    active.energySpent += cost.wood * df * granted;
+                }
+                active.ticksLeft -= dTicks * granted;
+            }
             if (active.ticksLeft < 0)
                 active.ticksLeft = 0;
         }
-        if (!placement.level.isClientSide() && active.ticksLeft <= 0 && isBelowPopulationSupply(placement) && !active.completed) {
+        // items without a production time still have to be paid for in full before they complete
+        if (!isClientSide && active.ticksLeft <= 0 && !active.completed && isBelowPopulationSupply(placement)) {
+            ResourceCost cost = getCost(false, placement.ownerName);
+            if (cost.ticks <= 0 && active.paidFraction < 1f && !hasCheat) {
+                float df = 1f - active.paidFraction;
+                float granted = EconomyServerEvents.requestFlow(placement.ownerName, cost.ore, cost.wood, df);
+                active.paidFraction += df * granted;
+                active.metalSpent += cost.ore * df * granted;
+                active.energySpent += cost.wood * df * granted;
+                if (active.paidFraction < 0.999f)
+                    return false;
+            }
+        }
+        if (!isClientSide && active.ticksLeft <= 0 && isBelowPopulationSupply(placement) && !active.completed) {
             active.complete(placement);
             return true;
         }
         return false;
     }
-
-
 }

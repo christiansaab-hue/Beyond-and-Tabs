@@ -27,6 +27,8 @@ public class HauntedHouse extends Building {
 
     public HauntedHouse() {
         super(structureName, cost, false);
+        // BAR economy: population buildings double as small energy generators
+        this.energyIncome = 5f;
         this.name = buildingName;
         this.portraitBlock = Blocks.DARK_OAK_LOG;
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/dark_oak_log.png");

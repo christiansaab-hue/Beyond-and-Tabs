@@ -59,10 +59,31 @@ public class ResourceCost {
         return new ResourceCost(0);
     }
     public void bakeValues(ResourceCostConfigEntry rcce) {
-        this.food = rcce.getFood();
-        this.wood = rcce.getWood();
-        this.ore = rcce.getOre();
+        // BAR economy: the config still holds Reign of Nether's food/wood/ore prices; convert them to
+        // Metal (stored in the ore field) and Energy (stored in the wood field). Food is no longer a cost.
+        this.ore = toMetal(rcce.getFood(), rcce.getWood(), rcce.getOre());
+        this.wood = toEnergy(rcce.getFood(), rcce.getWood(), rcce.getOre());
+        this.food = 0;
         this.ticks = rcce.getSeconds() * TICKS_PER_SECOND;
         this.population = rcce.getPopulation();
     }
+
+    // ---- BAR economy conversion (Reign of Nether food/wood/ore -> Metal/Energy) ----
+    // metal  = ore + food*0.6 + wood*0.3, rounded to the nearest 5
+    // energy = wood*1.5 + food*0.8,       rounded to the nearest 10
+    // After conversion a ResourceCost's ore field means Metal, its wood field means Energy and food is 0.
+    // Emerald costs (item shops) are untouched.
+    public static int toMetal(int food, int wood, int ore) {
+        return roundTo(ore + food * 0.6f + wood * 0.3f, 5);
+    }
+    public static int toEnergy(int food, int wood, int ore) {
+        return roundTo(wood * 1.5f + food * 0.8f, 10);
+    }
+    private static int roundTo(float value, int step) {
+        return Math.round(value / step) * step;
+    }
+
+    // convenience accessors that make the BAR meaning of the reused fields explicit
+    public int metal() { return ore; }
+    public int energy() { return wood; }
 }

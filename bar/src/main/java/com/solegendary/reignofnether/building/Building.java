@@ -40,6 +40,7 @@ public abstract class Building {
     protected float explodeRadius = 2.0f;
     protected float fireThreshold = 0.75f; // if building has less %hp than this, explosions caused can make fires
     protected float buildTimeModifier = 1.0f; // only affects non-built buildings, not repair times
+    public float getBuildTimeModifier() { return buildTimeModifier; }
     protected float repairTimeModifier = 1.25f; // only affects built buildings
 
     public int captureRange = 20;
@@ -55,6 +56,26 @@ public abstract class Building {
 
     public ResourceCost cost;
     public boolean selfBuilding = false;
+
+    // ---- BAR flow economy ----
+    // passive income (per second) and extra storage this building type gives its owner once completed.
+    // See EconomyServerEvents for the economy itself. Default 0; set by subclasses (farms, stockpiles, etc.).
+    // Hook for upcoming Metal Extractor / Energy Generator buildings: override the getters (or set the fields).
+    protected float metalIncome = 0;
+    protected float energyIncome = 0;
+    protected float metalStorage = 0;
+    protected float energyStorage = 0;
+
+    public float getMetalIncome() { return metalIncome; }
+    public float getEnergyIncome() { return energyIncome; }
+    public float getMetalStorage() { return metalStorage; }
+    public float getEnergyStorage() { return energyStorage; }
+
+    // ticks of construction needed for EACH block with a total build power of 1.0 (one worker), before
+    // buildTimeModifier. Reign of Nether used 10 ticks/block for one villager with diminishing returns for more
+    // villagers; BAR build power adds up linearly, so this is set a bit higher to keep 2-3 builders close to the
+    // old timings (eg. "60s for a Town Centre with 3 villagers").
+    public static final float BUILD_TICKS_PER_BLOCK = 15f;
     public double maxHealth = 0;
     protected double maxHealthBonusPerUpgradeLevel = 0;
 

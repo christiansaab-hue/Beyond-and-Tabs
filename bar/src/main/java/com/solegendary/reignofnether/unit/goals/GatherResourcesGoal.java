@@ -173,10 +173,31 @@ public class GatherResourcesGoal extends MoveToTargetBlockGoal {
         }
     }
 
+    // BAR economy: workers no longer gather or return resources (income comes from buildings, see
+    // EconomyServerEvents). They still build and repair. Set to true to restore Reign of Nether's gathering.
+    public static final boolean GATHERING_ENABLED = false;
+
+    // drop any gathering state without touching the mob's navigation (so other orders are not interrupted)
+    private void clearGatherData() {
+        data.todoGatherTargets.clear();
+        data.targetFarm = null;
+        data.gatherTarget = null;
+        data.targetResourceSource = null;
+        data.targetResourceName = ResourceName.NONE;
+        saveData.delete();
+        this.moveTarget = null;
+    }
+
     // move towards the targeted block and start gathering it
     public void tick() {
         if (this.mob.level().isClientSide()) {
             tickClient();
+            return;
+        }
+        if (!GATHERING_ENABLED) {
+            if (data.targetResourceName != ResourceName.NONE || data.gatherTarget != null || data.targetFarm != null)
+                clearGatherData();
+            ticksIdle += 1;
             return;
         }
 
@@ -472,6 +493,8 @@ public class GatherResourcesGoal extends MoveToTargetBlockGoal {
     // entity position is interpolated, so it can't compute isBlockInRange consistently); the SERVER computes
     // it authoritatively and syncs it via UnitSyncWorkerClientBoundPacket.
     public boolean isGathering() {
+        if (!GATHERING_ENABLED)
+            return false;
         if (this.mob.level().isClientSide())
             return isGatheringServerside;
 
@@ -486,7 +509,7 @@ public class GatherResourcesGoal extends MoveToTargetBlockGoal {
     }
 
     public void setTargetResourceName(ResourceName resourceName) {
-        data.targetResourceName = resourceName;
+        data.targetResourceName = GATHERING_ENABLED ? resourceName : ResourceName.NONE;
     }
 
     public ResourceName getTargetResourceName() {
@@ -495,6 +518,8 @@ public class GatherResourcesGoal extends MoveToTargetBlockGoal {
 
     @Override
     public void setMoveTarget(@Nullable BlockPos bp) {
+        if (!GATHERING_ENABLED) // gather orders are no-ops in the BAR economy
+            return;
         if (bp != null) {
             MiscUtil.addUnitCheckpoint((Unit) mob, bp, true);
         }
@@ -524,6 +549,10 @@ public class GatherResourcesGoal extends MoveToTargetBlockGoal {
 
     // locks the worker to only gather from this specific building
     public void setTargetFarm(BuildingPlacement building) {
+        if (!GATHERING_ENABLED) {
+            this.data.targetFarm = null;
+            return;
+        }
         if (building != null) {
             MiscUtil.addUnitCheckpoint((Unit) mob, building.centrePos, true);
         }

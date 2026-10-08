@@ -47,6 +47,8 @@ public class SculkCatalyst extends Building implements NightSourceAddon, RangeIn
 
     public SculkCatalyst() {
         super(structureName, cost, false);
+        // BAR economy: population buildings double as small energy generators
+        this.energyIncome = 5f;
         this.name = buildingName;
         this.portraitBlock = Blocks.SCULK_CATALYST;
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/sculk_catalyst_side.png");

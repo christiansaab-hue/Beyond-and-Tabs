@@ -28,6 +28,8 @@ public class VillagerHouse extends Building {
 
     public VillagerHouse() {
         super(structureName, cost, false);
+        // BAR economy: population buildings double as small energy generators
+        this.energyIncome = 5f;
         this.name = buildingName;
         this.portraitBlock = Blocks.OAK_LOG;
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/oak_log.png");

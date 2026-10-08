@@ -53,19 +53,23 @@ public class ResourcesServerEvents {
     // tracks all players' resources
     public static ArrayList<Resources> resourcesList = new ArrayList<>();
 
-    public static final int STARTING_FOOD_TUTORIAL = 750;
-    public static final int STARTING_WOOD_TUTORIAL = 850;
-    public static final int STARTING_ORE_TUTORIAL = 250;
+    // BAR economy: only Metal (the 'ore' field) and Energy (the 'wood' field) are used; food is always 0.
+    // Every mode starts with 1000 metal and 1000 energy (the default storage), except sandbox.
+    public static final int STARTING_METAL = 1000;
+    public static final int STARTING_ENERGY = 1000;
+    public static final int STARTING_FOOD_TUTORIAL = 0;
+    public static final int STARTING_WOOD_TUTORIAL = STARTING_ENERGY;
+    public static final int STARTING_ORE_TUTORIAL = STARTING_METAL;
     public static final int STARTING_FOOD_SANDBOX = 999999;
     public static final int STARTING_WOOD_SANDBOX = 999999;
     public static final int STARTING_ORE_SANDBOX = 999999;
     public static final int STARTING_EMERALD_SANDBOX = 999999;
-    public static final int STARTING_FOOD = 150;
-    public static final int STARTING_WOOD = 500;
-    public static final int STARTING_ORE = 300;
-    public static final int STARTING_FOOD_READIED = 150;
-    public static final int STARTING_WOOD_READIED = 150;
-    public static final int STARTING_ORE_READIED = 50;
+    public static final int STARTING_FOOD = 0;
+    public static final int STARTING_WOOD = STARTING_ENERGY;
+    public static final int STARTING_ORE = STARTING_METAL;
+    public static final int STARTING_FOOD_READIED = 0;
+    public static final int STARTING_WOOD_READIED = STARTING_ENERGY;
+    public static final int STARTING_ORE_READIED = STARTING_METAL;
 
     public static final float UNIT_BOUNTY_PERCENT_PER_LOOTING_LEVEL = 0.25f;
     public static final float NEUTRAL_UNIT_BOUNTY_PERCENT = 0.25f;
@@ -94,17 +98,17 @@ public class ResourcesServerEvents {
                     unitEmerald += unitRes.emerald;
                 }
             }
-            // add all production item costs since they will be cancelled on server shutdown
+            // add back what was already spent on production items since they will be cancelled on server shutdown
+            // (BAR flow economy: only the spent part of each item has been paid; emeralds are still paid upfront)
             int prodFood = 0;
             int prodWood = 0;
             int prodOre = 0;
             int prodEmerald = 0;
             for (BuildingPlacement building : BuildingServerEvents.getBuildings()) {
-                if (building instanceof ProductionPlacement pBuilding) {
+                if (building instanceof ProductionPlacement pBuilding && pBuilding.ownerName.equals(r.ownerName)) {
                     for (ActiveProduction item : pBuilding.productionQueue) {
-                        prodFood += item.item.getCost(false, pBuilding.ownerName).food;
-                        prodWood += item.item.getCost(false, pBuilding.ownerName).wood;
-                        prodOre += item.item.getCost(false, pBuilding.ownerName).ore;
+                        prodWood += Math.round(item.energySpent);
+                        prodOre += Math.round(item.metalSpent);
                         prodEmerald += item.item.getCost(false, pBuilding.ownerName).emerald;
                     }
                 }
@@ -140,6 +144,9 @@ public class ResourcesServerEvents {
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
         if (evt.phase != TickEvent.Phase.END)
             return;
+        // BAR flow economy: income, stall calculation and client sync
+        EconomyServerEvents.onServerTickEnd();
+
         saveTicks += 1;
         if (saveTicks >= SAVE_TICKS_MAX) {
             ServerLevel level = evt.getServer().getLevel(Level.OVERWORLD);

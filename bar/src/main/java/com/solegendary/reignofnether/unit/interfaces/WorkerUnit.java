@@ -33,6 +33,11 @@ public interface WorkerUnit {
 
     public BlockState getReplantBlockState();
 
+    // BAR flow economy: how fast this worker constructs buildings. The building's construction progress per tick is
+    // the sum of its builders' build power / the building's build ticks (see BuildingPlacement.tickFlowConstruction)
+    float DEFAULT_BUILD_POWER = 1.0f;
+    default float getBuildPower() { return DEFAULT_BUILD_POWER; }
+
     public static void tick(WorkerUnit unit) {
         BuildRepairGoal buildRepairGoal = unit.getBuildRepairGoal();
         if (buildRepairGoal != null)

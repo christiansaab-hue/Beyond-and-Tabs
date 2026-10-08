@@ -96,7 +96,8 @@ public class ReturnResourcesGoal extends MoveToTargetBlockGoal {
     }
 
     public void returnToClosestBuilding() {
-        if (this.mob.level().isClientSide())
+        // BAR economy: workers don't carry resources back any more (see GatherResourcesGoal.GATHERING_ENABLED)
+        if (this.mob.level().isClientSide() || !GatherResourcesGoal.GATHERING_ENABLED)
             return;
 
         BlockPos pos = mob.getOnPos();
@@ -117,6 +118,8 @@ public class ReturnResourcesGoal extends MoveToTargetBlockGoal {
     }
 
     public void setBuildingTarget(@Nullable BuildingPlacement target) {
+        if (target != null && !GatherResourcesGoal.GATHERING_ENABLED)
+            return; // return-resources orders are no-ops in the BAR economy
         if (target != null) {
             MiscUtil.addUnitCheckpoint((Unit) mob, target.centrePos, true);
         }

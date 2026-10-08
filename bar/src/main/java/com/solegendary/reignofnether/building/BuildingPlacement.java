@@ -24,6 +24,7 @@ import com.solegendary.reignofnether.building.buildings.placements.PortalPlaceme
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractStockpile;
 import com.solegendary.reignofnether.building.custombuilding.CustomBuilding;
+import com.solegendary.reignofnether.resources.EconomyServerEvents;
 import com.solegendary.reignofnether.building.data.DataStorage;
 import com.solegendary.reignofnether.building.production.ProductionItems;
 import com.solegendary.reignofnether.debug.RtsDebugClientEvents;
@@ -180,6 +181,18 @@ public class BuildingPlacement {
     public boolean selfBuilding = false; // if set to true, will build itself quickly without workers (but not repair)
     public int maxBlocksPerTick = 1; // maximum number of blocks that can be built per tick
 
+    // ---- BAR flow economy (serverside, not saved) ----
+    // Construction is no longer paid upfront: each tick the builders' build power advances buildProgress (0-1) and
+    // the matching share of the building's metal/energy cost is drained from the payer (see tickFlowConstruction).
+    // Blocks are placed so the number of placed blocks follows buildProgress.
+    public float buildProgress = 0;
+    public float metalSpent = 0;  // actually paid so far, refunded if construction is cancelled
+    public float energySpent = 0;
+    private boolean flowInitialised = false; // spent/progress are rebuilt from placed blocks after a reload
+    public String payerName; // who pays for construction (bridges lose their ownerName after placement)
+    public boolean freeBuild = false; // placed by a command: built the old way without any cost
+    public float buildSpeedMult = 1f; // eg. 2 for a player's first capitol
+
     protected List<AbilityButton> abilityButtons = new ArrayList<>();
     protected List<Ability> abilities = new ArrayList<>();
 
@@ -263,6 +276,7 @@ public class BuildingPlacement {
         this.originPos = originPos;
         this.rotation = rotation;
         this.ownerName = ownerName;
+        this.payerName = ownerName;
         this.isCapitol = isCapitol;
 
         setBlocks(blocks);
@@ -401,6 +415,30 @@ public class BuildingPlacement {
                 );
             }
         return false;
+    }
+
+    // ---- BAR flow economy: income/storage this placement currently provides (only once completed) ----
+    public float getMetalIncome() { return isBuilt ? getBuilding().getMetalIncome() : 0; }
+    public float getEnergyIncome() { return isBuilt ? getBuilding().getEnergyIncome() : 0; }
+    public float getMetalStorage() { return isBuilt ? getBuilding().getMetalStorage() : 0; }
+    public float getEnergyStorage() { return isBuilt ? getBuilding().getEnergyStorage() : 0; }
+
+    // build power a completed factory applies to its production queue (1.0 = an item's base production time)
+    public float getProductionBuildPower() { return 1.0f; }
+
+    // sum of the build power of every worker currently constructing this building
+    public static float getTotalBuildPower(List<WorkerUnit> workerUnits) {
+        float power = 0;
+        for (WorkerUnit workerUnit : workerUnits) {
+            power += workerUnit.getBuildPower();
+            // Reign of Nether bonuses kept as extra build power: masons (+1, veterans +2) and haste/efficiency (+1)
+            if (workerUnit instanceof VillagerUnit vUnit && vUnit.getUnitProfession() == VillagerUnitProfession.MASON)
+                power += vUnit.isVeteran() ? 2 : 1;
+            if (((Mob) workerUnit).getActiveEffectsMap().containsKey(MobEffects.DIG_SPEED) ||
+                ((Mob) workerUnit).getActiveEffectsMap().containsKey(MobEffectRegistrar.TEMPORARY_EFFICIENCY.get()))
+                power += 1;
+        }
+        return power;
     }
 
     public boolean isPosInsideBuilding(BlockPos bp) {
@@ -1000,9 +1038,15 @@ public class BuildingPlacement {
 
         boolean hasFastBuildCheat = ResearchServerEvents.playerHasCheat(this.ownerName, "warpten");
 
+        // BAR flow economy: unbuilt buildings are constructed by build power and paid for while they are built.
+        // Repairs, command-placed buildings and the 'warpten' cheat keep Reign of Nether's original logic below.
+        boolean flowConstruction = !isBuilt && !hasFastBuildCheat && !freeBuild;
+
         // place a block if the tick has run down
         if (blocksPlaced < blocksTotal) {
-            if (builderCount > 0) {
+            if (flowConstruction) {
+                tickFlowConstruction(serverLevel, workerUnits, (int) blocksPlaced, (int) blocksTotal);
+            } else if (builderCount > 0) {
                 this.ticksToExtinguish += 1;
                 if (ticksToExtinguish >= ticksToExtinguishMax) {
                     if (!(getBuilding() instanceof FlameSanctuary) && !(getBuilding() instanceof Fortress)) {
@@ -1068,6 +1112,86 @@ public class BuildingPlacement {
         }
         if (isBuilt && tickAgeAfterBuilt % 10 == 0 && getBuilding().capturable) {
             checkAndDoCapture(serverLevel);
+        }
+    }
+
+    // BAR flow economy construction step, run once per server tick while the building is unbuilt.
+    // buildTicks = blocks * BUILD_TICKS_PER_BLOCK * buildTimeModifier is the time needed with a build power of 1.0;
+    // the builders' summed build power advances buildProgress by power / buildTicks per tick, throttled by the
+    // payer's stall, and the same fraction of the metal/energy cost is drained. Blocks are then queued so the
+    // placed blocks follow buildProgress.
+    private void tickFlowConstruction(ServerLevel serverLevel, ArrayList<WorkerUnit> workerUnits, int blocksPlaced, int blocksTotal) {
+        if (blocksTotal <= 0)
+            return;
+        if (!flowInitialised) {
+            // a fresh building starts at 0; a partially built one loaded from a save is assumed to be paid so far
+            flowInitialised = true;
+            buildProgress = Math.max(buildProgress, (float) blocksPlaced / blocksTotal);
+            metalSpent = Math.max(metalSpent, building.cost.ore * buildProgress);
+            energySpent = Math.max(energySpent, building.cost.wood * buildProgress);
+        }
+        float ticksPerBlock = Building.BUILD_TICKS_PER_BLOCK * building.buildTimeModifier;
+        if (isCapitol && BuildingUtils.getTotalCompletedBuildingsOwned(false, ownerName) > 0)
+            ticksPerBlock *= 2;
+        if (getBuilding() instanceof PortalBasic && !BuildingValidators.isOnNetherBlocks(serverLevel, blocks, originPos, true)
+            && !ResearchServerEvents.playerHasResearch(ownerName, ProductionItems.RESEARCH_ADVANCED_PORTALS)) {
+            ticksPerBlock *= PortalPlacement.NON_NETHER_BUILD_TIME_MODIFIER;
+        }
+        float buildTicks = Math.max(1f, ticksPerBlock * blocksTotal);
+
+        float buildPower = getTotalBuildPower(workerUnits);
+        if (selfBuilding)
+            buildPower = Math.max(buildPower, buildTicks / blocksTotal); // about 1 block per tick
+        buildPower *= buildSpeedMult;
+
+        // progress may only run a few blocks ahead of the blocks actually placed (block placement is rate limited
+        // and blocks destroyed during construction must be rebuilt), so builders never pay for nothing
+        int queued = blockPlaceQueue.size();
+        float maxProgress = Math.min(1f, (float) (blocksPlaced + queued + 2 * Math.max(1, blocksPerBuild)) / blocksTotal);
+        if (buildProgress > maxProgress)
+            buildProgress = maxProgress;
+
+        if (buildPower > 0 && buildProgress < maxProgress) {
+            if (!workerUnits.isEmpty()) {
+                this.ticksToExtinguish += 1;
+                if (ticksToExtinguish >= ticksToExtinguishMax) {
+                    if (!(getBuilding() instanceof FlameSanctuary) && !(getBuilding() instanceof Fortress))
+                        extinguishFires(serverLevel);
+                    ticksToExtinguish = 0;
+                }
+            }
+            float df = Math.min(buildPower / buildTicks, maxProgress - buildProgress);
+            float granted = EconomyServerEvents.requestFlow(payerName, building.cost.ore, building.cost.wood, df);
+            buildProgress += df * granted;
+            metalSpent += building.cost.ore * df * granted;
+            energySpent += building.cost.wood * df * granted;
+            if (buildProgress > 0.9999f)
+                buildProgress = 1f;
+        }
+
+        // queue the next block(s) if the placed blocks are behind the paid progress
+        int targetBlocks = buildProgress >= 1f ? blocksTotal : (int) Math.ceil(buildProgress * blocksTotal - 0.0001f);
+        if (blocksPlaced + blockPlaceQueue.size() < targetBlocks) {
+            int queuedBefore = blockPlaceQueue.size();
+            queueNextBlock(serverLevel, ownerName);
+            if (blockPlaceQueue.size() > queuedBefore && !workerUnits.isEmpty())
+                giveMasonExp(workerUnits);
+        }
+    }
+
+    // same rule as the original build loop: a random builder gains mason exp per block, unless it is the
+    // owner's very first building
+    private void giveMasonExp(ArrayList<WorkerUnit> workerUnits) {
+        WorkerUnit wUnit = workerUnits.get(new Random().nextInt(workerUnits.size()));
+        if (!(wUnit instanceof VillagerUnit vUnit))
+            return;
+        String builderOwner = ((Unit) wUnit).getOwnerName();
+        int count = 0;
+        for (BuildingPlacement placement : BuildingServerEvents.getBuildings()) {
+            if (placement.ownerName.equals(builderOwner) && ++count > 1) {
+                vUnit.incrementMasonExp();
+                break;
+            }
         }
     }
 

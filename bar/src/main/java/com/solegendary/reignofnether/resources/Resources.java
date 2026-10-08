@@ -24,6 +24,30 @@ public class Resources {
     public int oreToAdd = 0;
     public int emeraldToAdd = 0;
 
+    // ---- BAR economy ----
+    // Only two resources matter for costs now: METAL (kept in the 'ore' field) and ENERGY (kept in the 'wood'
+    // field). The flow economy (EconomyServerEvents) spends fractions of a resource every tick, so the
+    // fractional remainder lives here; the int fields always hold the whole-number part (what the HUD shows).
+    // Serverside only, not saved (at most 1 unit of each resource is lost on restart).
+    public float oreFrac = 0;
+    public float woodFrac = 0;
+
+    public float getMetal() { return ore + oreFrac; }
+    public float getEnergy() { return wood + woodFrac; }
+
+    // add (or subtract when negative) a fractional amount of metal
+    public void addMetal(float amount) {
+        double total = (double) ore + oreFrac + amount;
+        this.ore = (int) Math.floor(total);
+        this.oreFrac = (float) (total - this.ore);
+    }
+    // add (or subtract when negative) a fractional amount of energy
+    public void addEnergy(float amount) {
+        double total = (double) wood + woodFrac + amount;
+        this.wood = (int) Math.floor(total);
+        this.woodFrac = (float) (total - this.wood);
+    }
+
     public Resources(String ownerName, int food, int wood, int ore) {
         this.ownerName = ownerName;
         this.food = food;

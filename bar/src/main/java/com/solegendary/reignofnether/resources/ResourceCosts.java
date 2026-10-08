@@ -185,18 +185,19 @@ public class ResourceCosts {
     public static final ResourceCost RESEARCH_PILLAGER_CROSSBOWS = new ResourceCost(ID, "RESEARCH_PILLAGER_CROSSBOWS");
 
     public static FormattedCharSequence getFormattedCost(ResourceCost resCost) {
+        // BAR economy: costs are Metal (ore field, iron ingot icon \uE020) and Energy (wood field, redstone icon \uE021)
         String str = "";
         if (resCost.food > 0)
             str += "\uE000  " + resCost.food + "     ";
-        if (resCost.wood > 0)
-            str += "\uE001  " + resCost.wood + "     ";
         if (resCost.ore > 0)
-            str += "\uE002  " + resCost.ore + "     ";
+            str += "\uE020  " + resCost.ore + "     ";
+        if (resCost.wood > 0)
+            str += "\uE021  " + resCost.wood + "     ";
         if (resCost.emerald > 0)
             str += "\uE010  " + resCost.emerald + "     ";
 
         if (str.isEmpty())
-            str += "\uE000  0     ";
+            str += "\uE020  0     ";
         str = str.trim();
         return FormattedCharSequence.forward(str, MyRenderer.iconStyle);
     }

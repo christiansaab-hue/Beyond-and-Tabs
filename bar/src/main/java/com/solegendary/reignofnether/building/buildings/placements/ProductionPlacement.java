@@ -268,15 +268,13 @@ public class ProductionPlacement extends BuildingPlacement {
                     }
                 }
                 else if (allow && prodItem.canAfford(this)) {
+                    // BAR flow economy: metal and energy are drained while the item is produced (see
+                    // ProductionItem.tick), so queueing is allowed with 0 resources. Only emeralds are paid upfront.
                     ActiveProduction activeProduction = new ActiveProduction(prodItem, false, ownerName);
                     productionQueue.add(activeProduction);
-                    ResourcesServerEvents.addSubtractResources(new Resources(
-                            ownerName,
-                            -prodItem.getCost(level.isClientSide(), ownerName).food,
-                            -prodItem.getCost(level.isClientSide(), ownerName).wood,
-                            -prodItem.getCost(level.isClientSide(), ownerName).ore,
-                            -prodItem.getCost(level.isClientSide(), ownerName).emerald
-                    ));
+                    int emeraldCost = prodItem.getCost(level.isClientSide(), ownerName).emerald;
+                    if (emeraldCost > 0)
+                        ResourcesServerEvents.addSubtractResources(Resources.emeralds(ownerName, -emeraldCost));
                     success = true;
                 }
                 else {
@@ -289,13 +287,9 @@ public class ProductionPlacement extends BuildingPlacement {
                             ResourcesClientboundPacket.warnInsufficientPopulation(ownerName);
                         }
                     }
-                    else
-                        ResourcesClientboundPacket.warnInsufficientResources(ownerName,
-                                ResourcesServerEvents.canAfford(ownerName, ResourceName.FOOD, prodItem.getCost(level.isClientSide(), ownerName).food),
-                                ResourcesServerEvents.canAfford(ownerName, ResourceName.WOOD, prodItem.getCost(level.isClientSide(), ownerName).wood),
-                                ResourcesServerEvents.canAfford(ownerName, ResourceName.ORE, prodItem.getCost(level.isClientSide(), ownerName).ore),
-                                ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald)
-                        );
+                    else if (!ResourcesServerEvents.canAfford(ownerName, ResourceName.EMERALD, prodItem.getCost(level.isClientSide(), ownerName).emerald))
+                        // only emeralds are still paid upfront; metal and energy never block queueing
+                        ResourcesClientboundPacket.warnInsufficientResources(ownerName, true, true, true, false);
                 }
             }
         }
@@ -320,14 +314,8 @@ public class ProductionPlacement extends BuildingPlacement {
             if (frontItem) {
                 ActiveProduction prodItem = productionQueue.get(0);
                 productionQueue.remove(0);
-                if (!getLevel().isClientSide()) {
-                    ResourcesServerEvents.addSubtractResources(new Resources(
-                            ownerName,
-                            prodItem.item.getCost(level.isClientSide(), ownerName).food,
-                            prodItem.item.getCost(level.isClientSide(), ownerName).wood,
-                            prodItem.item.getCost(level.isClientSide(), ownerName).ore
-                    ));
-                }
+                if (!getLevel().isClientSide())
+                    refundProduction(prodItem);
                 success = true;
             }
             else {
@@ -337,14 +325,8 @@ public class ProductionPlacement extends BuildingPlacement {
                     if (prodItem.item.equals(item) &&
                             prodItem.ticksLeft >= prodItem.item.getCost(level.isClientSide(), ownerName).ticks) {
                         productionQueue.remove(prodItem);
-                        if (!getLevel().isClientSide()) {
-                            ResourcesServerEvents.addSubtractResources(new Resources(
-                                    ownerName,
-                                    prodItem.item.getCost(level.isClientSide(), ownerName).food,
-                                    prodItem.item.getCost(level.isClientSide(), ownerName).wood,
-                                    prodItem.item.getCost(level.isClientSide(), ownerName).ore
-                            ));
-                        }
+                        if (!getLevel().isClientSide())
+                            refundProduction(prodItem);
                         success = true;
                         break;
                     }
@@ -352,6 +334,16 @@ public class ProductionPlacement extends BuildingPlacement {
             }
         }
         return success;
+    }
+
+    // BAR flow economy: refund only what was actually spent on the item so far (+ any upfront emerald cost)
+    private void refundProduction(ActiveProduction prodItem) {
+        EconomyServerEvents.refund(ownerName, prodItem.metalSpent, prodItem.energySpent);
+        int emeraldCost = prodItem.item.getCost(false, ownerName).emerald;
+        if (emeraldCost > 0)
+            ResourcesServerEvents.addSubtractResources(Resources.emeralds(ownerName, emeraldCost));
+        prodItem.metalSpent = 0;
+        prodItem.energySpent = 0;
     }
 
     @Override

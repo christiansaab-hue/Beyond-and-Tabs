@@ -36,6 +36,7 @@ import com.solegendary.reignofnether.player.PlayerServerboundPacket;
 import com.solegendary.reignofnether.research.ResearchClientboundPacket;
 import com.solegendary.reignofnether.research.ResearchServerboundPacket;
 import com.solegendary.reignofnether.resources.ResourcesClientboundPacket;
+import com.solegendary.reignofnether.resources.EconomyClientboundPacket;
 import com.solegendary.reignofnether.resources.ResourcesServerboundPacket;
 import com.solegendary.reignofnether.rtsmap.RTSMapInfoClientboundPacket;
 import com.solegendary.reignofnether.rtsmap.RTSMapInfoServerboundPacket;
@@ -435,6 +436,13 @@ public final class PacketHandler {
                 .encoder(ItemShopClientboundPacket::encode)
                 .decoder(ItemShopClientboundPacket::new)
                 .consumerMainThread(ItemShopClientboundPacket::handle)
+                .add();
+
+        // BAR flow economy state (metal/energy, storage, income, expense, stall)
+        INSTANCE.messageBuilder(EconomyClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(EconomyClientboundPacket::encode)
+                .decoder(EconomyClientboundPacket::new)
+                .consumerMainThread(EconomyClientboundPacket::handle)
                 .add();
     }
 }

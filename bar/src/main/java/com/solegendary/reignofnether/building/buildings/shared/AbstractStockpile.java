@@ -22,6 +22,10 @@ public abstract class AbstractStockpile extends ProductionBuilding {
     public final static ResourceCost cost = ResourceCosts.STOCKPILE;
     public AbstractStockpile(String structureName) {
         super(structureName, cost, false);
+        // BAR economy: stockpiles are storage buildings (+500 metal/energy storage) with a trickle of metal
+        this.metalIncome = 0.5f;
+        this.metalStorage = 500f;
+        this.energyStorage = 500f;
         this.portraitBlock = Blocks.CHEST;
         this.icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/blocks/chest.png");
 
