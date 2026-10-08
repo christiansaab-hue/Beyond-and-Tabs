@@ -494,6 +494,8 @@ public class PlayerServerEvents {
                             .above();
                     unit.setOwnerName(playerName);
                     entity.moveTo(bp, 0, 0);
+                    if (startingWorkers.isEmpty())
+                        CommanderServerEvents.makeCommander(entity);   // BAR: you start with your commander
                     if (!readiedStart)
                         level.addFreshEntity(entity);
                     startingWorkers.add(entity);
@@ -603,6 +605,7 @@ public class PlayerServerEvents {
             FogOfWarServerEvents.invalidateRtsCache();
             ResourcesServerEvents.assignResources(bot.name);
 
+            boolean first = true;
             for (int i = -1; i <= 1; i++) {
                 Entity entity = entityType != null ? entityType.create(level) : null;
                 if (entity instanceof Unit unit) {
@@ -611,6 +614,10 @@ public class PlayerServerEvents {
                         .above();
                     unit.setOwnerName(bot.name);
                     entity.moveTo(bp, 0, 0);
+                    if (first) {
+                        CommanderServerEvents.makeCommander(entity);
+                        first = false;
+                    }
                     level.addFreshEntity(entity);
                 }
             }

@@ -49,6 +49,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(BlockServerEvents.class);
         vanillaEventBus.register(PlayerServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.bot.BotServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

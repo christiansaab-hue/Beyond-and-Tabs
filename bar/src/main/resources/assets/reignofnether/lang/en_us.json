@@ -2219,5 +2219,9 @@
   "buildings.reignofnether.wind_generator.tooltip1": "A cheap mast with a steady trickle of energy.",
   "buildings.reignofnether.wind_generator.tooltip2": "Explodes a little when destroyed - keep them in rows behind the base.",
   "building.reignofnether.needs_metal_patch": "Must be built on a metal patch",
-  "server.reignofnether.defeat_bot_removed": "%s was removed"
+  "server.reignofnether.defeat_bot_removed": "%s was removed",
+  "unit.reignofnether.commander": "Commander",
+  "server.reignofnether.commander_fallen": "%s's Commander has fallen!",
+  "server.reignofnether.defeat_commander": "%s lost their Commander",
+  "gamerule.commanderDefeat": "Losing your Commander defeats you"
 }

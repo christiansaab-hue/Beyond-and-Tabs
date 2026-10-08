@@ -36,7 +36,12 @@ public interface WorkerUnit {
     // BAR flow economy: how fast this worker constructs buildings. The building's construction progress per tick is
     // the sum of its builders' build power / the building's build ticks (see BuildingPlacement.tickFlowConstruction)
     float DEFAULT_BUILD_POWER = 1.0f;
-    default float getBuildPower() { return DEFAULT_BUILD_POWER; }
+    float COMMANDER_BUILD_POWER = 3.0f;
+    default float getBuildPower() {
+        if (this instanceof net.minecraft.world.entity.Entity e && com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(e))
+            return COMMANDER_BUILD_POWER;
+        return DEFAULT_BUILD_POWER;
+    }
 
     public static void tick(WorkerUnit unit) {
         BuildRepairGoal buildRepairGoal = unit.getBuildRepairGoal();

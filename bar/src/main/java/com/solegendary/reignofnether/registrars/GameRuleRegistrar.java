@@ -31,6 +31,7 @@ public class GameRuleRegistrar {
     public static GameRules.Key<GameRules.IntegerValue> ANIMAL_SPAWN_Y_DIFF;
     public static GameRules.Key<GameRules.IntegerValue> RANDOM_ITEM_DROPS;
     public static GameRules.Key<GameRules.BooleanValue> CLEAR_START_AREAS;
+    public static GameRules.Key<GameRules.BooleanValue> COMMANDER_DEFEAT;
 
     public static void init() {
         // do cut trees convert their logs into falling logs?
@@ -133,6 +134,9 @@ public class GameRuleRegistrar {
         // Beyond and Tabs: at a readied match start, clear trees and plant clutter round each start position
         // and along lanes from each start position to the map centre (see StartAreaClearing)
         CLEAR_START_AREAS = GameRules.register("clearStartAreas", GameRules.Category.MISC,
+                GameRules.BooleanValue.create(true)
+        );
+        COMMANDER_DEFEAT = GameRules.register("commanderDefeat", GameRules.Category.MISC,
                 GameRules.BooleanValue.create(true)
         );
     }
