@@ -271,7 +271,8 @@ public class OrthoviewClientEvents {
         if (MC.player == null || MC.level == null)
             return ZOOM_MAX;
         double renderRadius = (MC.options.getEffectiveRenderDistance() - 1) * 16.0;
-        double pitch = Math.toRadians(Mth.clamp(getCamRotY(), 5f, 90f));
+        // camRotY is negative (0 = horizon, -90 = straight down); the maths wants the downward tilt magnitude
+        double pitch = Math.toRadians(Mth.clamp(Math.abs(getCamRotY()), 5f, 90f));
         double sinP = Math.sin(pitch);
         Vec3 cam = MC.gameRenderer.getMainCamera().getPosition();
         double height = Math.max(0, cam.y - lastGroundY);
@@ -286,7 +287,9 @@ public class OrthoviewClientEvents {
         double c = d0 * d0 - renderRadius * renderRadius;
         double disc = b * b - 4 * a * c;
         double h = disc < 0 ? 0 : (-b + Math.sqrt(disc)) / (2 * a);
-        return (float) Mth.clamp(h, ZOOM_MAX, ZOOM_MAX_HARD);
+        // let the player zoom well past the strictly-loaded view: the strategic icon view keeps it readable
+        // and distance fog is already pushed out, so a soft edge beats a hard zoom stop mid-battle
+        return (float) Mth.clamp(h * 1.5, ZOOM_MAX * 1.5f, ZOOM_MAX_HARD);
     }
 
     public static void panCam(float x, float y, float z) { // pan camera relative to rotation
