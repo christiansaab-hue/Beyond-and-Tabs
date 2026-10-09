@@ -229,6 +229,8 @@ public class UnitActionItem {
             }
             if (action != UnitAction.PATROL)
                 PatrolServerEvents.clear(((Entity) unit).getId());
+            if (action != UnitAction.GUARD)
+                GuardServerEvents.clear(((Entity) unit).getId());
             switch (action) {
                 case STOP -> {
                     Entity passenger = ((Entity) unit).getFirstPassenger();
@@ -286,6 +288,18 @@ public class UnitActionItem {
                 case PATROL -> {
                     if (preselectedBlockPos != null && !preselectedBlockPos.equals(new BlockPos(0, 0, 0)))
                         PatrolServerEvents.setPatrol(unit, preselectedBlockPos);
+                }
+                case GUARD -> {
+                    Entity targetEntity = unitId >= 0 ? level.getEntity(unitId) : null;
+                    if (targetEntity instanceof LivingEntity targetLe && targetEntity instanceof Unit
+                            && targetEntity.getId() != ((Entity) unit).getId()) {
+                        GuardServerEvents.setGuardUnit(unit, targetLe);
+                    } else if (preselectedBlockPos != null && !preselectedBlockPos.equals(new BlockPos(0, 0, 0))) {
+                        BuildingPlacement wardBuilding =
+                            BuildingUtils.findBuilding(level.isClientSide(), preselectedBlockPos);
+                        if (wardBuilding != null)
+                            GuardServerEvents.setGuardBuilding(unit, wardBuilding);
+                    }
                 }
                 case ATTACK_MOVE -> {
                     // if the unit can't actually attack just treat this as a move action

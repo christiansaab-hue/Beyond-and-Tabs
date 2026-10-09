@@ -766,6 +766,12 @@ public class UnitClientEvents {
             if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.PATROL) {
                 sendUnitCommand(UnitAction.PATROL);
             }
+            else if (!selectedUnits.isEmpty() && CursorClientEvents.getLeftClickAction() == UnitAction.GUARD) {
+                // needs something to guard: a unit under the cursor or a building at the clicked spot
+                if (!preselectedUnits.isEmpty() || BuildingClientEvents.getPreselectedBuilding() != null)
+                    sendUnitCommand(UnitAction.GUARD);
+                CursorClientEvents.setLeftClickAction(null);
+            }
             else if (!selectedUnits.isEmpty() && isLeftClickAttack()) {
                 // A + left click -> force attack single unit (even if friendly)
                 if (preselectedUnits.size() == 1 && !targetingSelf()) {

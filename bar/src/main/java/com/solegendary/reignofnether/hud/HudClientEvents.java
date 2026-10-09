@@ -972,6 +972,7 @@ public class HudClientEvents {
                 actionButtons.add(ActionButtons.hold);
             }
             actionButtons.add(ActionButtons.patrol);
+            actionButtons.add(ActionButtons.guard);
             actionButtons.add(ActionButtons.stop);
 
             if (hudSelectedEntity instanceof VillagerUnit vUnit)

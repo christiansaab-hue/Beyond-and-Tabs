@@ -28,6 +28,7 @@ public class ActionButtons {
     public static Button attack;
     public static Button stop;
     public static Button patrol;
+    public static Button guard;
     public static Button hold;
     public static Button garrison;
     public static Button ungarrison;
@@ -98,6 +99,19 @@ public class ActionButtons {
                 null,
                 List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.patrol"), Style.EMPTY),
                         FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.patrol.tooltip"), Style.EMPTY))
+        );
+        guard = new Button(
+                "Guard",
+                Button.itemIconSize,
+                ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/chestplate.png"),
+                Keybindings.guard,
+                () -> CursorClientEvents.getLeftClickAction() == UnitAction.GUARD,
+                () -> false,
+                () -> true,
+                () -> CursorClientEvents.setLeftClickAction(UnitAction.GUARD),
+                null,
+                List.of(FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.guard"), Style.EMPTY),
+                        FormattedCharSequence.forward(LanguageUtil.getTranslation("hud.actionbuttons.reignofnether.guard.tooltip"), Style.EMPTY))
         );
         stop = new Button(
                 "Stop",

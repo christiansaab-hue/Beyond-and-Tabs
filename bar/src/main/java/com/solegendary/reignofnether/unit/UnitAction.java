@@ -10,6 +10,7 @@ public enum UnitAction {
     STOP,
     HOLD,
     PATROL, // walk between here and the ordered point forever; fighters attack-move, workers repair en route
+    GUARD, // stick with the clicked unit/building: fighters defend it, workers assist/repair it
     MOVE,
     GARRISON,
     UNGARRISON,

@@ -67,6 +67,7 @@ public class Keybindings {
     public static final Keybinding build       = new Keybinding("key.reignofnether.build",        GLFW.GLFW_KEY_B,             CATEGORY_RTS, "B");
     public static final Keybinding gather      = new Keybinding("key.reignofnether.gather",       GLFW.GLFW_KEY_G,             CATEGORY_RTS, "G");
     public static final Keybinding patrol      = new Keybinding("key.reignofnether.patrol",       GLFW.GLFW_KEY_Y,             CATEGORY_RTS, "Y");
+    public static final Keybinding guard       = new Keybinding("key.reignofnether.guard",        GLFW.GLFW_KEY_P,             CATEGORY_RTS, "P");
     public static final Keybinding garrison    = new Keybinding("key.reignofnether.garrison",     GLFW.GLFW_KEY_N,             CATEGORY_RTS, "N");
     public static final Keybinding chat        = new Keybinding("key.reignofnether.chat",         GLFW.GLFW_KEY_ENTER,         CATEGORY_RTS, "");
     public static final Keybinding deselect    = new Keybinding("key.reignofnether.deselect",     GLFW.GLFW_KEY_GRAVE_ACCENT,  CATEGORY_RTS, "~");
