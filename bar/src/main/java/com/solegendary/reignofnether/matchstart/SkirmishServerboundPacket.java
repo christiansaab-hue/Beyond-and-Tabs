@@ -32,35 +32,38 @@ import java.util.function.Supplier;
 public class SkirmishServerboundPacket {
 
     /** @param colorMapId PlayerPalette map colour id, or 0 for "first free colour" */
-    public record BotSpec(int faction, int difficulty, int colorMapId) { }
+    public record BotSpec(int faction, int difficulty, int colorMapId, int team) { }
 
     private final int faction;
     private final int colorMapId;
+    private final int team;
     private final List<BotSpec> bots;
     private final int arena;
     private final int metal;
     private final int spawnDistance;
 
-    public SkirmishServerboundPacket(int faction, int colorMapId, List<BotSpec> bots, int arena, int metal, int spawnDistance) {
+    public SkirmishServerboundPacket(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance) {
         this.faction = faction;
         this.colorMapId = colorMapId;
+        this.team = team;
         this.bots = bots;
         this.arena = arena;
         this.metal = metal;
         this.spawnDistance = spawnDistance;
     }
 
-    public static void send(int faction, int colorMapId, List<BotSpec> bots, int arena, int metal, int spawnDistance) {
-        PacketHandler.INSTANCE.sendToServer(new SkirmishServerboundPacket(faction, colorMapId, bots, arena, metal, spawnDistance));
+    public static void send(int faction, int colorMapId, int team, List<BotSpec> bots, int arena, int metal, int spawnDistance) {
+        PacketHandler.INSTANCE.sendToServer(new SkirmishServerboundPacket(faction, colorMapId, team, bots, arena, metal, spawnDistance));
     }
 
     public SkirmishServerboundPacket(FriendlyByteBuf buf) {
         faction = buf.readByte();
         colorMapId = buf.readInt();
+        team = buf.readByte();
         int n = buf.readByte();
         bots = new ArrayList<>(n);
         for (int i = 0; i < n; i++)
-            bots.add(new BotSpec(buf.readByte(), buf.readByte(), buf.readInt()));
+            bots.add(new BotSpec(buf.readByte(), buf.readByte(), buf.readInt(), buf.readByte()));
         arena = buf.readByte();
         metal = buf.readByte();
         spawnDistance = buf.readByte();
@@ -69,11 +72,13 @@ public class SkirmishServerboundPacket {
     public void encode(FriendlyByteBuf buf) {
         buf.writeByte(faction);
         buf.writeInt(colorMapId);
+        buf.writeByte(team);
         buf.writeByte(bots.size());
         for (BotSpec b : bots) {
             buf.writeByte(b.faction());
             buf.writeByte(b.difficulty());
             buf.writeInt(b.colorMapId());
+            buf.writeByte(b.team());
         }
         buf.writeByte(arena);
         buf.writeByte(metal);
@@ -130,11 +135,24 @@ public class SkirmishServerboundPacket {
             Vec3 pos = new Vec3(gx + 0.5, gy, gz + 0.5);
             PlayerServerEvents.startRTS(player.getId(), pos, mine, colorMapId != 0 ? colorMapId : 1);
 
+            // bigger lobbies need a wider spawn ring so bases do not pile up
+            maxR += Math.max(0, bots.size() - 1) * 35;
+
             int added = 0;
+            java.util.Map<Integer, List<String>> teams = new java.util.HashMap<>();
+            teams.computeIfAbsent(team, k -> new ArrayList<>()).add(player.getName().getString());
             for (BotSpec b : bots) {
                 String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; default -> "medium"; };
+                BotServerEvents.lastBotName = null;
                 added += BotServerEvents.addBot(player, factionName(factionOf(b.faction(), rng)), diff, minR, maxR, b.colorMapId());
+                if (BotServerEvents.lastBotName != null)
+                    teams.computeIfAbsent(b.team(), k -> new ArrayList<>()).add(BotServerEvents.lastBotName);
             }
+            // teams are alliances: everyone sharing a team fights together
+            for (List<String> members : teams.values())
+                for (int i = 0; i < members.size(); i++)
+                    for (int j = i + 1; j < members.size(); j++)
+                        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(members.get(i), members.get(j));
             ReignOfNether.LOGGER.info("[Skirmish] {} starts as {} with {} bot(s); arena {}, metal {}, spawn {}",
                 player.getName().getString(), factionName(mine), added, arena, metal, spawnDistance);
             success.set(true);

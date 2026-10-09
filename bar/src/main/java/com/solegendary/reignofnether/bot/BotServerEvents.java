@@ -96,6 +96,9 @@ public class BotServerEvents {
         return addBotImpl(caller, factionName, difficultyName, minR, maxR, colorMapId);
     }
 
+    /** The name of the bot created by the most recent addBot call (the lobby uses it to form teams). */
+    public static String lastBotName = null;
+
     static int addBot(ServerPlayer caller, String factionName, String difficultyName) {
         boolean far = difficultyName.equalsIgnoreCase("far");
         return addBotImpl(caller, factionName, difficultyName, far ? 300 : 180, far ? 420 : 260, 0);
@@ -118,6 +121,7 @@ public class BotServerEvents {
             default -> BotPlayer.Difficulty.MEDIUM;   // "medium" and "far" both land here
         };
         String name = "Bot" + botNumber++ + " (" + difficulty.name().toLowerCase() + ")";
+        lastBotName = name;
         Vec3 pos = findBotStart(caller, minR, maxR);
         PlayerServerEvents.startRTSBot(name, pos, faction, colorMapId);
         brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));

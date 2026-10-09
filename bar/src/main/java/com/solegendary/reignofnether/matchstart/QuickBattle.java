@@ -105,10 +105,10 @@ public class QuickBattle {
             case 2 -> {   // hand the lobby choices to the server: it starts us, lays the capitol, calls in the bots
                 if (waitTicks > 20 && pending != null) {
                     List<SkirmishServerboundPacket.BotSpec> bots = new ArrayList<>();
-                    for (int i = 0; i < pending.botCount; i++)
-                        bots.add(new SkirmishServerboundPacket.BotSpec(pending.botFaction[i], pending.botDifficulty[i],
-                                pending.botColorMapId(i)));
-                    SkirmishServerboundPacket.send(pending.faction, pending.colorMapId(), bots,
+                    for (SkirmishSetupScreen.Bot b : pending.bots)
+                        bots.add(new SkirmishServerboundPacket.BotSpec(b.faction, b.difficulty,
+                                pending.botColorMapId(b), b.team));
+                    SkirmishServerboundPacket.send(pending.faction, pending.colorMapId(), pending.team, bots,
                             pending.arena, pending.metal, pending.spawnDistance);
                     phase = 3;
                     waitTicks = 0;
