@@ -45,7 +45,7 @@ public class UnitDressServerEvents {
     static final UUID LIVERY_UUID = UUID.fromString("6f1c2a9e-4b7d-4e2a-9c51-3a8d0f7e2b44");
 
     static final int KINGDOM_BLUE = 0x2B4FA8, KINGDOM_ACCENT = 0xE8E2D0;
-    static final int FALLEN_DUSK = 0x3B2D4F, FALLEN_ACCENT = 0x6E8F5A;
+    static final int FALLEN_DUSK = 0x7A58B8, FALLEN_ACCENT = 0x9CE06A;   // readable violet: the old dusk purple vanished on zombie villagers at night
     static final int LEGION_GOLD = 0xC9961A, LEGION_ACCENT = 0x9C2A1E;
 
     @SubscribeEvent
@@ -100,8 +100,9 @@ public class UnitDressServerEvents {
         }
 
         equip(mob, EquipmentSlot.FEET, Items.LEATHER_BOOTS, colour);
+        // workers wear the faction tunic too (zero armour value) - bare zombie villagers were unreadable at night
+        equip(mob, EquipmentSlot.CHEST, Items.LEATHER_CHESTPLATE, colour);
         if (!(unit instanceof WorkerUnit)) {
-            equip(mob, EquipmentSlot.CHEST, Items.LEATHER_CHESTPLATE, colour);
             if (unit instanceof RangedAttackerUnit)
                 equip(mob, EquipmentSlot.HEAD, Items.LEATHER_HELMET, accent);
             else
