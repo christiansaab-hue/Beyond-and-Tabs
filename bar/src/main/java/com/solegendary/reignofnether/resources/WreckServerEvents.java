@@ -53,6 +53,7 @@ public class WreckServerEvents {
     public static final float RECLAIM_PER_POWER = 5f;   // metal per second per point of build power
     public static final int LIFETIME_TICKS = 20 * 60 * 5;
     public static final int MAX_WRECKS = 150;
+    public static final double CHAIN_RANGE = 10.0;
 
     private static final List<Entity> wrecks = new ArrayList<>();
 
@@ -179,9 +180,35 @@ public class WreckServerEvents {
             float left = metalOf(nearest) - got;
             nearest.getPersistentData().putFloat(KEY_METAL, left);
             level.sendParticles(ParticleTypes.CRIT, nearest.getX(), nearest.getY() + 0.3, nearest.getZ(), 3, 0.3, 0.1, 0.3, 0.05);
-            if (left <= 0.01f)
+            if (left <= 0.01f) {
                 remove(level, nearest, true);
+                chainToNextWreck(nearest, le, u);
+            }
         }
+    }
+
+    /**
+     * BAR's area-reclaim habit, without a new order: a worker that empties a wreck walks on to the next wreck within
+     * {@link #CHAIN_RANGE} blocks of it, so parking a worker in a field of wrecks clears the whole field. Only an
+     * idle worker chains, so it never overrides an order its owner gave meanwhile.
+     */
+    static void chainToNextWreck(Entity emptied, LivingEntity worker, Unit unit) {
+        if (!unit.isIdle())
+            return;
+        Entity next = null;
+        double best = CHAIN_RANGE * CHAIN_RANGE;
+        for (Entity w : wrecks) {
+            if (w.isRemoved())
+                continue;
+            double d = w.distanceToSqr(emptied);
+            if (d < best) {
+                best = d;
+                next = w;
+            }
+        }
+        if (next != null)
+            UnitServerEvents.addActionItem(unit.getOwnerName(), com.solegendary.reignofnether.unit.UnitAction.MOVE, -1,
+                new int[] { worker.getId() }, next.blockPosition(), next.blockPosition());
     }
 
     static void remove(ServerLevel level, Entity w, boolean reclaimed) {
