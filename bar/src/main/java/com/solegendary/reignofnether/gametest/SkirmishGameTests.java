@@ -96,6 +96,44 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /**
+     * A placed extractor or windmill must survive its first ticks as a construction site. Both name no starting
+     * block types, so RoN used to queue nothing, see zero blocks placed and destroy the site at once (the windmill
+     * that exploded the moment it was placed). Places one of each for real and checks they are still standing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void placed_extractor_and_windmill_survive_as_sites(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 210;
+        int cx = base.getX() + 40, cz = base.getZ() + 40;   // away from the other platform test
+        for (int dx = -10; dx <= 10; dx++)
+            for (int dz = -10; dz <= 10; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        MetalPatches.forgetAll();
+        MetalPatches.stamp(level, cx, cz);
+        String owner = "gametest_owner";
+        var mex = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
+            Buildings.METAL_EXTRACTOR_VILLAGERS, new BlockPos(cx - 2, y, cz - 2), Rotation.NONE, owner, new int[0],
+            false, false, true, true);
+        var wind = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
+            Buildings.WIND_GENERATOR_VILLAGERS, new BlockPos(cx + 5, y, cz + 5), Rotation.NONE, owner, new int[0],
+            false, false, true, true);
+        if (mex == null || wind == null)
+            helper.fail("placeBuilding returned null (mex " + mex + ", wind " + wind + ")");
+        helper.runAfterDelay(40, () -> {
+            for (var placement : List.of(mex, wind)) {
+                if (placement.isDestroyedServerside
+                        || !com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().contains(placement))
+                    helper.fail(placement.getBuilding().structureName + " was destroyed right after being placed");
+            }
+            MetalPatches.forgetAll();
+            helper.succeed();
+        });
+    }
+
     /** The colour palette is what the lobby, packets and saves agree on: ids unique, nonzero, textures named. */
     @GameTest(template = ARENA)
     public static void colour_palette_is_consistent(GameTestHelper helper) {

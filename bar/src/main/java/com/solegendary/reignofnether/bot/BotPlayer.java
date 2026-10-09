@@ -61,6 +61,7 @@ public class BotPlayer {
     public final Faction faction;
     public final Difficulty difficulty;
     final Kit kit;
+    int capitolFailures = 0;
     final Random rng = new Random();
     BlockPos home;
     long lastAttackAt = 0;
@@ -106,10 +107,30 @@ public class BotPlayer {
         if (capitol != null)
             home = capitol.originPos;
 
-        // 1) a capitol above all else
+        // 1) a capitol above all else. A player's readied start lays its capitol regardless of terrain; a bot gets
+        // the same treatment if the ground round its home refuses every site (hills, trees, water), instead of
+        // idling for the whole match
         if (capitol == null) {
-            if (!workers.isEmpty())
-                placeNear(level, kit.capitol(), home, workers, 3);
+            if (!workers.isEmpty() && !placeNear(level, kit.capitol(), home, workers, 3)) {
+                capitolFailures++;
+                if (capitolFailures == 1 || capitolFailures % 20 == 0) {
+                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, home);
+                    String why = BuildingValidators.getPlacementValidityError(level, kit.capitol(), surface, name,
+                        Rotation.NONE, false, false, true);
+                    com.solegendary.reignofnether.ReignOfNether.LOGGER.warn("[Bot] {} cannot place its capitol near {}: {}",
+                        name, home, why);
+                }
+                if (capitolFailures >= 3) {
+                    BlockPos surface = MiscUtil.getHighestNonAirBlock(level, home);
+                    int take = Math.min(3, workers.size());
+                    int[] ids = new int[take];
+                    for (int i = 0; i < take; i++)
+                        ids[i] = workers.get(i).getId();
+                    BuildingServerEvents.placeBuilding(kit.capitol(), surface, Rotation.NONE, name, ids,
+                        false, false, true, true);
+                    com.solegendary.reignofnether.ReignOfNether.LOGGER.info("[Bot] {} laid its capitol by decree at {}", name, surface);
+                }
+            }
             return;
         }
 
