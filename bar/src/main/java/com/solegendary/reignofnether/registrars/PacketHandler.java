@@ -330,6 +330,12 @@ public final class PacketHandler {
                 .consumerMainThread(UnitSyncMobEffectsClientboundPacket::handle)
                 .add();
 
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket.class,
+                        index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket::handle)
+                .add();
         INSTANCE.messageBuilder(MapMarkerServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(MapMarkerServerboundPacket::encode)
                 .decoder(MapMarkerServerboundPacket::new)

@@ -80,6 +80,11 @@ public class BattlefieldWall {
 
     /** Plans the ring and starts the per-tick build. Safe to call once per match. */
     public static void build(ServerLevel level, List<BlockPos> positions) {
+        build(level, positions, -1);
+    }
+
+    /** radiusOverride > 0 pins the ring radius (lobby arena size); otherwise it is rolled. */
+    public static void build(ServerLevel level, List<BlockPos> positions, int radiusOverride) {
         if (level == null || positions.isEmpty())
             return;
         double cx = 0, cz = 0;
@@ -96,6 +101,8 @@ public class BattlefieldWall {
         int margin = 130 + random.nextInt(140);        // 130-270 beyond the farthest base
         int minRadius = 200 + random.nextInt(120);     // 200-320 even for close spawns
         radius = Math.min(MAX_RADIUS, Math.max(minRadius, radius + margin));
+        if (radiusOverride > 0)   // the lobby asked for a size; never tighter than the bases need
+            radius = Math.min(MAX_RADIUS + 200, Math.max(radius - margin + 60, radiusOverride));
         towerEvery = 36 + random.nextInt(29);          // 36-64 columns between watchtowers
         mossPct = 5 + random.nextInt(21);              // 5-25% weathered blocks
         crackedPct = 4 + random.nextInt(10);

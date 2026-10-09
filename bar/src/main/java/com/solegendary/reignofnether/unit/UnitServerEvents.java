@@ -493,10 +493,16 @@ public class UnitServerEvents {
             //forcedUnitChunks.removeIf(p -> p.getFirst() == entity.getId());
         }
 
-        // if a player has no more units, then they are defeated
+        // if a player has no more units, then they are defeated - but only when the unit actually died or was
+        // removed, never when it merely left with an unloading chunk (that is how a freshly spawned far-away bot
+        // was being declared dead within seconds)
+        Entity.RemovalReason reason = evt.getEntity().getRemovalReason();
+        boolean unloaded = reason == Entity.RemovalReason.UNLOADED_TO_CHUNK
+                || reason == Entity.RemovalReason.UNLOADED_WITH_PLAYER
+                || reason == Entity.RemovalReason.CHANGED_DIMENSION;
         synchronized (allUnits) {
             try {
-                if (evt.getEntity() instanceof Unit unit) {
+                if (evt.getEntity() instanceof Unit unit && !unloaded) {
                     // only "does the owner have any unit left" matters, so stop at the first one found
                     var unitsOwned = 0;
                     for (LivingEntity u : allUnits) {

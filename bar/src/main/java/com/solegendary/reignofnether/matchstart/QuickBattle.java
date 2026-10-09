@@ -1,13 +1,8 @@
 package com.solegendary.reignofnether.matchstart;
 
 import com.solegendary.reignofnether.ReignOfNether;
-import com.solegendary.reignofnether.faction.Faction;
-import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
-import com.solegendary.reignofnether.player.PlayerServerboundPacket;
-import com.solegendary.reignofnether.registrars.GameRuleRegistrar;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -24,21 +19,24 @@ import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * One click from the title screen to a skirmish: "Quick Battle" opens a tiny faction picker, creates (or reopens) a
- * dedicated peaceful world, drops you straight into the RTS camera with your faction started where you stand, and
- * calls in a bot opponent on the far side. The long way round (make a world, press F12, pick a faction, place your
- * base, /bot add ...) still works and is what multiplayer uses.
+ * Skirmish from the title screen (Beyond and Tabs). One button opens the skirmish lobby ({@link SkirmishSetupScreen}:
+ * your faction and colour, the opponents, arena size, metal richness, spawn distance). Start Battle makes a FRESH
+ * world every time - so an old, finished match can never bleed into a new one - enters the RTS camera, and sends the
+ * lobby choices to the server, which lays your capitol, seats your commander and calls in the bots. The long way
+ * round (make a world, press F12, pick a faction, place your base, /bot add ...) still works and is what multiplayer
+ * uses.
  */
 public class QuickBattle {
 
-    static final String WORLD_NAME = "Beyond and Tabs - Quick Battle";
-    static final String WORLD_DIR = "beyondandtabs_quick_battle";
+    static final String WORLD_DIR_PREFIX = "beyondandtabs_skirmish_";
+    static final String WORLD_NAME_PREFIX = "Beyond and Tabs - Skirmish ";
 
-    // what the pending quick battle should set up once the world is running (client-local; integrated server only)
-    static Faction pendingFaction = null;
-    static String pendingBotFaction = null;
-    static int phase = 0;   // 0 idle, 1 waiting for world, 2 waiting to start rts, 3 waiting for rts to begin, 4 add bot
+    static SkirmishSetupScreen.Settings pending = null;
+    static int phase = 0;   // 0 idle, 1 waiting for world, 2 send the lobby choices, 3 waiting for the rts start
     static int waitTicks = 0;
 
     @SubscribeEvent
@@ -47,54 +45,26 @@ public class QuickBattle {
             return;
         int w = 200, x = title.width / 2 - w / 2, y = title.height / 4 + 48 - 26;
         evt.addListener(Button.builder(Component.translatable("quickbattle.reignofnether.button"),
-                b -> Minecraft.getInstance().setScreen(new FactionPickScreen(title))).bounds(x, y, w, 20).build());
+                b -> Minecraft.getInstance().setScreen(new SkirmishSetupScreen(title))).bounds(x, y, w, 20).build());
     }
 
-    /** Minimal picker: your faction (bots can only play villagers/monsters, so the bot plays the other one). */
-    static class FactionPickScreen extends Screen {
-        final Screen parent;
-
-        FactionPickScreen(Screen parent) {
-            super(Component.translatable("quickbattle.reignofnether.title"));
-            this.parent = parent;
-        }
-
-        @Override
-        protected void init() {
-            int w = 180, x = width / 2 - w / 2, y = height / 2 - 40;
-            addRenderableWidget(Button.builder(Component.translatable("quickbattle.reignofnether.villagers"),
-                    b -> start(Factions.VILLAGERS, "monsters")).bounds(x, y, w, 20).build());
-            addRenderableWidget(Button.builder(Component.translatable("quickbattle.reignofnether.monsters"),
-                    b -> start(Factions.MONSTERS, "villagers")).bounds(x, y + 24, w, 20).build());
-            addRenderableWidget(Button.builder(Component.translatable("gui.cancel"),
-                    b -> Minecraft.getInstance().setScreen(parent)).bounds(x, y + 56, w, 20).build());
-        }
-
-        @Override
-        public void render(net.minecraft.client.gui.GuiGraphics gg, int mx, int my, float pt) {
-            renderBackground(gg);
-            gg.drawCenteredString(font, title, width / 2, height / 2 - 60, 0xFFFFFF);
-            super.render(gg, mx, my, pt);
-        }
-
-        void start(Faction faction, String botFaction) {
-            pendingFaction = faction;
-            pendingBotFaction = botFaction;
-            phase = 1;
-            waitTicks = 0;
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.getLevelSource().levelExists(WORLD_DIR)) {
-                mc.createWorldOpenFlows().loadLevel(this, WORLD_DIR);
-                return;
-            }
-            GameRules rules = new GameRules();
-            rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
-            rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(true, null);
-            LevelSettings settings = new LevelSettings(WORLD_NAME, GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
-                    rules, WorldDataConfiguration.DEFAULT);
-            mc.createWorldOpenFlows().createFreshLevel(WORLD_DIR, settings,
-                    new WorldOptions(WorldOptions.randomSeed(), true, false), QuickBattle::battlefieldDimensions);
-        }
+    /** Called by the lobby's Start Battle: make a fresh world and queue the start. */
+    static void launch(Screen from, SkirmishSetupScreen.Settings settings) {
+        pending = settings;
+        phase = 1;
+        waitTicks = 0;
+        Minecraft mc = Minecraft.getInstance();
+        // a fresh world per skirmish; number them so the Singleplayer list stays readable
+        int n = 1;
+        while (mc.getLevelSource().levelExists(WORLD_DIR_PREFIX + n))
+            n++;
+        GameRules rules = new GameRules();
+        rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
+        rules.getRule(GameRules.RULE_WEATHER_CYCLE).set(true, null);
+        LevelSettings levelSettings = new LevelSettings(WORLD_NAME_PREFIX + n, GameType.CREATIVE, false,
+                Difficulty.PEACEFUL, true, rules, WorldDataConfiguration.DEFAULT);
+        mc.createWorldOpenFlows().createFreshLevel(WORLD_DIR_PREFIX + n, levelSettings,
+                new WorldOptions(WorldOptions.randomSeed(), true, false), QuickBattle::battlefieldDimensions);
     }
 
     /** The Battlefield world preset (gentle rolling grassland built for matches); vanilla terrain as the fallback. */
@@ -132,21 +102,20 @@ public class QuickBattle {
                     waitTicks = 0;
                 }
             }
-            case 2 -> {   // start our faction where we stand
-                if (waitTicks > 20) {
-                    PlayerServerboundPacket.startRTS(pendingFaction, mc.player.getX(), mc.player.getY(), mc.player.getZ());
+            case 2 -> {   // hand the lobby choices to the server: it starts us, lays the capitol, calls in the bots
+                if (waitTicks > 20 && pending != null) {
+                    List<SkirmishServerboundPacket.BotSpec> bots = new ArrayList<>();
+                    for (int i = 0; i < pending.botCount; i++)
+                        bots.add(new SkirmishServerboundPacket.BotSpec(pending.botFaction[i], pending.botDifficulty[i]));
+                    SkirmishServerboundPacket.send(pending.faction, pending.colorMapId(), bots,
+                            pending.arena, pending.metal, pending.spawnDistance);
                     phase = 3;
                     waitTicks = 0;
                 }
             }
-            case 3 -> {   // once the server has us as an RTS player, call in the opponent
-                if (PlayerClientEvents.isRTSPlayer(mc.player.getName().getString())) {
-                    if (pendingBotFaction != null && mc.player.connection != null)
-                        mc.player.connection.sendCommand("bot add " + pendingBotFaction);
+            case 3 -> {   // once the server has us as an RTS player we're done
+                if (PlayerClientEvents.isRTSPlayer(mc.player.getName().getString()) || waitTicks > 300)
                     phase = 0;
-                } else if (waitTicks > 200) {
-                    phase = 0;   // didn't start (locked server, etc) - give up quietly
-                }
             }
             default -> phase = 0;
         }

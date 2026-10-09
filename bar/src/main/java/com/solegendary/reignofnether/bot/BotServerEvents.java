@@ -86,7 +86,17 @@ public class BotServerEvents {
             .then(Commands.literal("remove").executes(c -> removeBots(c.getSource().getPlayerOrException()))));
     }
 
+    /** Skirmish lobby entry point: faction/difficulty by name, spawn ring in blocks from the caller. */
+    public static int addBot(ServerPlayer caller, String factionName, String difficultyName, int minR, int maxR) {
+        return addBotImpl(caller, factionName, difficultyName, minR, maxR);
+    }
+
     static int addBot(ServerPlayer caller, String factionName, String difficultyName) {
+        boolean far = difficultyName.equalsIgnoreCase("far");
+        return addBotImpl(caller, factionName, difficultyName, far ? 300 : 180, far ? 420 : 260);
+    }
+
+    static int addBotImpl(ServerPlayer caller, String factionName, String difficultyName, int minR, int maxR) {
         Faction faction = switch (factionName.toLowerCase()) {
             case "monsters", "monster" -> Factions.MONSTERS;
             case "villagers", "villager" -> Factions.VILLAGERS;
@@ -102,9 +112,8 @@ public class BotServerEvents {
             case "hard" -> BotPlayer.Difficulty.HARD;
             default -> BotPlayer.Difficulty.MEDIUM;   // "medium" and "far" both land here
         };
-        String name = "Bot" + botNumber++ + " (" + difficultyName.toLowerCase() + ")";
-        boolean far = difficultyName.equalsIgnoreCase("far");
-        Vec3 pos = far ? findBotStart(caller, 300, 420) : findBotStart(caller);
+        String name = "Bot" + botNumber++ + " (" + difficulty.name().toLowerCase() + ")";
+        Vec3 pos = findBotStart(caller, minR, maxR);
         PlayerServerEvents.startRTSBot(name, pos, faction);
         brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
         caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "

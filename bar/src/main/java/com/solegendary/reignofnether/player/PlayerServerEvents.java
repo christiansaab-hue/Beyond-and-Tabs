@@ -38,6 +38,7 @@ import com.solegendary.reignofnether.survival.SurvivalServerEvents;
 import com.solegendary.reignofnether.time.TimeServerEvents;
 import com.solegendary.reignofnether.time.TimeUtils;
 import com.solegendary.reignofnether.tutorial.TutorialServerEvents;
+import com.solegendary.reignofnether.unit.UnitChunkLoader;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
@@ -471,8 +472,9 @@ public class PlayerServerEvents {
                     itemDropSeed
             ));
             FogOfWarServerEvents.invalidateRtsCache();
-            // direct starts (Quick Battle, commands) form the battlefield here; readied starts already did
-            if (!readiedStart && serverPlayer.level() instanceof ServerLevel sl)
+            // every start forms the battlefield here, except the readied countdown which already formed its own
+            if (!com.solegendary.reignofnether.startpos.StartPosServerEvents.isStartingGame()
+                    && serverPlayer.level() instanceof ServerLevel sl)
                 com.solegendary.reignofnether.startpos.BattlefieldSetup.onStart(sl,
                     BlockPos.containing(pos.x, pos.y, pos.z));
             String playerName = serverPlayer.getName().getString();
@@ -604,6 +606,9 @@ public class PlayerServerEvents {
             }
 
             EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(faction.workerEntityType);
+            // the bot starts far from every player: load and hold its chunks first, or its workers spawn into
+            // chunks that unload moments later and the bot is 'defeated' before it has built anything
+            UnitChunkLoader.holdArea(level, BlockPos.containing(pos.x, pos.y, pos.z));
             RTSPlayer bot = RTSPlayer.getNewBot(name, faction);
             rtsPlayers.add(bot);
             FogOfWarServerEvents.invalidateRtsCache();

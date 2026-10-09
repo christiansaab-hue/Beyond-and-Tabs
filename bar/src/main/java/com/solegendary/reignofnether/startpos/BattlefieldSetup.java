@@ -25,6 +25,10 @@ public class BattlefieldSetup {
     static final int SETTLE_TICKS = 160;   // 8 seconds
 
     static final List<BlockPos> pending = new ArrayList<>();
+
+    /** Lobby overrides for the next battlefield: < 0 means roll it. Consumed when the battlefield forms. */
+    public static float richnessOverride = -1f;
+    public static int arenaRadiusOverride = -1;
     static int settleTicksLeft = -1;
 
     public static synchronized void onStart(ServerLevel level, BlockPos pos) {
@@ -70,11 +74,14 @@ public class BattlefieldSetup {
             return;
         ServerLevel level = evt.getServer().overworld();
         // roll this match's metal richness: lean maps make every patch a war, rich maps let armies balloon
-        StartAreaClearing.mexRichness = 0.6f + new java.util.Random().nextFloat();
+        StartAreaClearing.mexRichness = richnessOverride >= 0 ? richnessOverride : 0.6f + new java.util.Random().nextFloat();
+        int radiusOverride = arenaRadiusOverride;
+        richnessOverride = -1f;
+        arenaRadiusOverride = -1;
         ReignOfNether.LOGGER.info("[BattlefieldSetup] forming the battlefield for {} bases (mex richness {})",
             positions.size(), String.format("%.2f", StartAreaClearing.mexRichness));
         StartAreaClearing.clearStartAreas(level, positions);
         MetalPatches.syncToClients(level);
-        BattlefieldWall.build(level, positions);
+        BattlefieldWall.build(level, positions, radiusOverride);
     }
 }

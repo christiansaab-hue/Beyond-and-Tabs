@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
@@ -98,6 +99,27 @@ public final class UnitChunkLoader {
             if (!chunks.isEmpty())
                 RELOADED_CHUNKS.computeIfAbsent(level.dimension(), k -> new LongOpenHashSet()).addAll(chunks);
         });
+    }
+
+    /**
+     * Loads and holds the 5x5 chunks around a position right now, through the same tickets the per-second update
+     * uses, so units spawned there (a bot's starting workers, far from any player) land in loaded, entity-ticking
+     * chunks instead of being unloaded - and "leaving the level" - before the next update picks them up.
+     */
+    public static void holdArea(ServerLevel level, BlockPos pos) {
+        LevelState state = STATES.computeIfAbsent(level.dimension(), k -> new LevelState());
+        ServerChunkCache cache = level.getChunkSource();
+        long now = level.getGameTime();
+        int cx = pos.getX() >> 4, cz = pos.getZ() >> 4;
+        for (int dx = -RADIUS; dx <= RADIUS; dx++)
+            for (int dz = -RADIUS; dz <= RADIUS; dz++) {
+                long chunk = ChunkPos.asLong(cx + dx, cz + dz);
+                ChunkPos cp = new ChunkPos(chunk);
+                if (!state.regionChunks.containsKey(chunk))
+                    cache.addRegionTicket(UNIT_TICKET, cp, TICKET_DISTANCE, cp);
+                state.regionChunks.put(chunk, now);
+                level.getChunk(cp.x, cp.z);   // synchronous load/generate so the terrain exists before spawning
+            }
     }
 
     public static void update(MinecraftServer server, Collection<LivingEntity> units) {
