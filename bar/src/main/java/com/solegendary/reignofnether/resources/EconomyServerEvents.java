@@ -75,6 +75,25 @@ public class EconomyServerEvents {
         return economies.computeIfAbsent(ownerName, PlayerEconomy::new);
     }
 
+    /**
+     * Metal from reclaim (wrecks) goes straight into the pool, capped by storage like income.
+     * @return how much was actually accepted (0 if the owner has no pool or storage is full)
+     */
+    public static float addReclaimedMetal(String ownerName, float amount) {
+        if (amount <= 0)
+            return 0;
+        for (Resources res : ResourcesServerEvents.resourcesList) {
+            if (!res.ownerName.equals(ownerName))
+                continue;
+            float room = getEconomy(ownerName).metalStorage - res.getMetal();
+            float got = Math.max(0, Math.min(amount, room));
+            if (got > 0)
+                res.addMetal(got);
+            return got;
+        }
+        return 0;
+    }
+
     public static float getStall(String ownerName) {
         PlayerEconomy eco = economies.get(ownerName);
         return eco == null ? 1f : eco.stall;

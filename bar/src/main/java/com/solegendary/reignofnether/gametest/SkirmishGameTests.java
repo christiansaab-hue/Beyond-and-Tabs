@@ -213,6 +213,59 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** BAR reclaim: a fallen unit leaves a wreck, and a worker standing at it strips metal into its owner's pool. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void wrecks_drop_and_workers_reclaim_metal(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_reclaimer";
+        com.solegendary.reignofnether.resources.Resources pool = null;
+        for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+            if (r.ownerName.equals(owner))
+                pool = r;
+        if (pool == null) {
+            pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        }
+        pool.ore = 0;
+        pool.oreFrac = 0;
+        final var res = pool;
+
+        var soldier = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (soldier == null || worker == null) {
+            helper.fail("could not create units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 12));
+        soldier.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        soldier.setOwnerName("gametest_fallen");
+        worker.moveTo(at.getX() + 1.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        worker.setOwnerName(owner);
+        level.addFreshEntity(soldier);
+        level.addFreshEntity(worker);
+        helper.runAfterDelay(5, () -> soldier.kill());
+        helper.runAfterDelay(15, () -> {
+            var near = com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks().stream()
+                .filter(w -> !w.isRemoved() && w.distanceToSqr(worker) < 16).toList();
+            if (near.isEmpty()) {
+                helper.fail("the fallen vindicator left no wreck");
+                return;
+            }
+            float before = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(near.get(0));
+            com.solegendary.reignofnether.resources.WreckServerEvents.tickReclaim(level, 2f);
+            float after = near.get(0).isRemoved() ? 0
+                : com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(near.get(0));
+            if (res.getMetal() <= 0)
+                helper.fail("worker at the wreck reclaimed no metal (wreck " + before + " -> " + after + ")");
+            if (after >= before)
+                helper.fail("wreck did not lose metal: " + before + " -> " + after);
+            near.forEach(net.minecraft.world.entity.Entity::discard);
+            worker.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(res);
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
