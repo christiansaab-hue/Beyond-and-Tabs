@@ -93,6 +93,8 @@ class Structure:
 #   ""        Sunforged Kingdom (villagers): white quartz and diorite, gold-capped, spruce sails
 #   "_dark"   Gravebound (monsters): deepslate, dark oak, chains, soul fire
 #   "_nether" Ironhide Horde (piglins): mud brick, rust-red terracotta, bone and dark timber
+# accent/lamp are Chipped blocks. They are decoration only (a frieze, hanging lamps): if Chipped is absent they
+# load as air and the building still stands and works. Structural and foundation blocks stay vanilla.
 PALETTES = {
     "": dict(
         pad="polished_diorite", pad_corner="gravel", ring="quartz_bricks",
@@ -100,6 +102,7 @@ PALETTES = {
         metal="iron_block", body="white_terracotta", cap="spruce_planks",
         cap_stair="spruce_stairs", cap_slab="spruce_slab", hub="stripped_spruce_log",
         furnace="blast_furnace", bars="iron_bars",
+        accent="chipped:decorated_white_terracotta", lamp="chipped:wrought_iron_lantern",
     ),
     "_dark": dict(
         pad="polished_deepslate", pad_corner="soul_soil", ring="deepslate_bricks",
@@ -107,6 +110,7 @@ PALETTES = {
         metal="iron_block", body="deepslate_tiles", cap="dark_oak_planks",
         cap_stair="dark_oak_stairs", cap_slab="dark_oak_slab", hub="stripped_dark_oak_log",
         furnace="blast_furnace", bars="chain",
+        accent="chipped:checkered_deepslate_tiles", lamp="chipped:iron_bowl_soul_lantern",
     ),
     "_nether": dict(
         pad="packed_mud", pad_corner="coarse_dirt", ring="mud_bricks",
@@ -114,6 +118,7 @@ PALETTES = {
         metal="iron_block", body="red_terracotta", cap="dark_oak_planks",
         cap_stair="dark_oak_stairs", cap_slab="dark_oak_slab", hub="bone_block",
         furnace="blast_furnace", bars="chain",
+        accent="chipped:decorated_red_terracotta", lamp="chipped:burning_coal_lantern",
     ),
 }
 
@@ -151,7 +156,9 @@ def metal_extractor(P):
     # a furnace shed corner so it reads "industry" (front faces outward, -z)
     s.set(1, 1, 0, P["furnace"], facing="north")
     s.set(3, 1, 0, P["ring"])
-    s.set(3, 2, 0, P["slab"], type="bottom")
+    # faction lamp standing on the shed post. Standing, not hanging: the build order only reaches this spot
+    # once the full block under it exists, so it is always supported (a hanging lamp could pop off mid-build)
+    s.set(3, 2, 0, P["lamp"], hanging="false", waterlogged="false")
     return s
 
 
@@ -195,7 +202,9 @@ def metal_extractor_t2(P):
     # furnace shed carried over from T1 (front faces outward, -z)
     s.set(1, 1, 0, P["furnace"], facing="north")
     s.set(3, 1, 0, P["ring"])
-    s.set(3, 2, 0, P["slab"], type="bottom")
+    # faction lamp standing on the shed post. Standing, not hanging: the build order only reaches this spot
+    # once the full block under it exists, so it is always supported (a hanging lamp could pop off mid-build)
+    s.set(3, 2, 0, P["lamp"], hanging="false", waterlogged="false")
     return s
 
 
@@ -213,7 +222,7 @@ def wind_generator(P):
     arms = [(1, 1), (1, 0), (1, 2), (0, 1), (2, 1)]
     for y in range(1, 5):
         for (x, z) in arms:
-            s.set(x, y, z, P["body"])
+            s.set(x, y, z, P["body"] if (y != 4 or (x, z) == (1, 1)) else P["accent"])   # carved frieze under the cap
     # spruce trim band + doorway shadow at the foot
     s.set(1, 1, 0, P["cap"])
     s.set(1, 3, 0, "glass_pane", north="false", south="false", east="false", west="false")
