@@ -79,6 +79,14 @@ public class UnitDressServerEvents {
 
     static void dress(Mob mob, Unit unit, boolean commander) {
         Faction faction = Factions.getFaction(unit);
+        // the biome a villager spawns in picks its robe (swamp/jungle = dark olive, near-invisible on grass);
+        // the Kingdom always wears plains cloth so its units read at a glance
+        if (mob instanceof net.minecraft.world.entity.npc.Villager v
+                && v.getVillagerData().getType() != net.minecraft.world.entity.npc.VillagerType.PLAINS)
+            v.setVillagerData(v.getVillagerData().setType(net.minecraft.world.entity.npc.VillagerType.PLAINS));
+        if (mob instanceof net.minecraft.world.entity.monster.ZombieVillager zv
+                && zv.getVillagerData().getType() != net.minecraft.world.entity.npc.VillagerType.PLAINS)
+            zv.setVillagerData(zv.getVillagerData().setType(net.minecraft.world.entity.npc.VillagerType.PLAINS));
         int colour, accent;
         if (faction != null && faction.equals(Factions.MONSTERS)) {
             colour = FALLEN_DUSK;

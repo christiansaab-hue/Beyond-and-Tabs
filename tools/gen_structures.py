@@ -11,7 +11,10 @@ Design notes:
 """
 import gzip, struct, io, os
 
+# Structures must exist in BOTH trees: the client reads buildings through its resource manager (assets/) and the
+# integrated/dedicated server through its data-pack manager (data/). Missing from data/ = the server can't place it.
 OUT = "bar/src/main/resources/assets/reignofnether/structures"
+OUT_DATA = "bar/src/main/resources/data/reignofnether/structures"
 DATA_VERSION = 3465
 
 
@@ -355,9 +358,11 @@ def fallen_house():
 
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
-    for variant, P in PALETTES.items():
-        metal_extractor(P).write(f"{OUT}/metal_extractor{variant}.nbt")
-        metal_extractor_t2(P).write(f"{OUT}/metal_extractor_t2{variant}.nbt")
-        wind_generator(P).write(f"{OUT}/wind_generator{variant}.nbt")
-    kingdom_house().write(f"{OUT}/villager_house.nbt")
-    fallen_house().write(f"{OUT}/haunted_house.nbt")
+    os.makedirs(OUT_DATA, exist_ok=True)
+    for out in (OUT, OUT_DATA):
+        for variant, P in PALETTES.items():
+            metal_extractor(P).write(f"{out}/metal_extractor{variant}.nbt")
+            metal_extractor_t2(P).write(f"{out}/metal_extractor_t2{variant}.nbt")
+            wind_generator(P).write(f"{out}/wind_generator{variant}.nbt")
+        kingdom_house().write(f"{out}/villager_house.nbt")
+        fallen_house().write(f"{out}/haunted_house.nbt")

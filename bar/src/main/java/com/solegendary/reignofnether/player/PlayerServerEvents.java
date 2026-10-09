@@ -410,6 +410,17 @@ public class PlayerServerEvents {
     // - places the capitol foundations automatically
     // - spawns workers outside the foundations
     // - no start messages are sent other than the one from the countdown
+    /** Server tick at which each side started; a side is never "defeated" for having no units in its first seconds. */
+    public static final java.util.Map<String, Long> startedAtTick = new java.util.concurrent.ConcurrentHashMap<>();
+    public static final int START_GRACE_TICKS = 20 * 15;
+
+    public static boolean inStartGrace(String playerName) {
+        Long t = startedAtTick.get(playerName);
+        if (t == null || serverLevel == null)
+            return false;
+        return serverLevel.getGameTime() - t < START_GRACE_TICKS;
+    }
+
     public static void startRTS(int playerId, Vec3 pos, Faction faction, int startPosColorId) {
         if (faction == Factions.RANDOM) 
             faction = MiscUtil.getRandomItem(List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS));
@@ -479,6 +490,8 @@ public class PlayerServerEvents {
                     BlockPos.containing(pos.x, pos.y, pos.z));
             String playerName = serverPlayer.getName().getString();
             ResourcesServerEvents.assignResources(playerName);
+            if (serverLevel != null)
+                startedAtTick.put(playerName, serverLevel.getGameTime());
             PlayerClientboundPacket.addRTSPlayer(playerName, faction, (long) serverPlayer.getId(), startPosColorId, isDogPerson);
 
             ServerLevel level = (ServerLevel) serverPlayer.level();
@@ -633,6 +646,7 @@ public class PlayerServerEvents {
                     || !com.solegendary.reignofnether.player.PlayerPalette.isPaletteColor(colorMapId))
                 colorMapId = com.solegendary.reignofnether.player.PlayerPalette.firstFree(taken);
             bot.startPosColorId = colorMapId;
+            startedAtTick.put(bot.name, level.getGameTime());
             rtsPlayers.add(bot);
             PlayerClientboundPacket.addRTSPlayer(bot.name, bot.faction, (long) bot.id, bot.startPosColorId, bot.isDogPerson);
             FogOfWarServerEvents.invalidateRtsCache();

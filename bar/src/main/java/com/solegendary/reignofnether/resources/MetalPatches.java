@@ -22,6 +22,15 @@ public final class MetalPatches {
     private static final java.util.Map<String, java.util.List<BlockPos>> STAMPED = new java.util.concurrent.ConcurrentHashMap<>();
     private static final java.util.Set<String> LOADED_DIMS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
+    /**
+     * A new world (every skirmish makes one) shares the dimension key with the last, so the in-memory patch list
+     * must be dropped when a server stops or the next match starts as a "late base" with no wall and stale patches.
+     */
+    public static void forgetAll() {
+        STAMPED.clear();
+        LOADED_DIMS.clear();
+    }
+
     public static java.util.List<BlockPos> getPatches(ServerLevel level) {
         ensureLoaded(level);
         return STAMPED.getOrDefault(level.dimension().location().toString(), java.util.List.of());

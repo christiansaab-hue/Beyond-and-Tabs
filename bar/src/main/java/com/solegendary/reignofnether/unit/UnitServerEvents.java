@@ -514,7 +514,14 @@ public class UnitServerEvents {
                     if (!SandboxServer.isSandboxPlayer(unit.getOwnerName()) &&
                             unitsOwned == 0 && isRTSPlayer(unit.getOwnerName())
                             && BuildingUtils.getTotalCompletedBuildingsOwned(false, unit.getOwnerName()) == 0) {
-                        PlayerServerEvents.defeat(unit.getOwnerName(), Component.translatable("server.reignofnether.lost_all").getString());
+                        if (PlayerServerEvents.inStartGrace(unit.getOwnerName())) {
+                            ReignOfNether.LOGGER.warn("[Defeat] ignored during start grace: {} lost {} (reason {})",
+                                unit.getOwnerName(), evt.getEntity().getType(), reason);
+                        } else {
+                            ReignOfNether.LOGGER.info("[Defeat] {} lost their last unit {} (removal reason {})",
+                                unit.getOwnerName(), evt.getEntity().getType(), reason);
+                            PlayerServerEvents.defeat(unit.getOwnerName(), Component.translatable("server.reignofnether.lost_all").getString());
+                        }
                     }
                 }
             } catch (ConcurrentModificationException e) {
