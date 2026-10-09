@@ -22,7 +22,7 @@ import java.util.List;
 public class BattlefieldSetup {
 
     /** Ticks to wait after the last arrival before forming the battlefield (lets Quick Battle's bot join too). */
-    static final int SETTLE_TICKS = 160;   // 8 seconds
+    static final int SETTLE_TICKS = 60;    // 3 seconds (the lobby adds everyone in the same tick; late joiners are slotted in anyway)
 
     static final List<BlockPos> pending = new ArrayList<>();
 
