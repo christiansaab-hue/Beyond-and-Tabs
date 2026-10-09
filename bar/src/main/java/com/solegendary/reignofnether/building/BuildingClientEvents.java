@@ -200,6 +200,9 @@ public class BuildingClientEvents {
         }
     }
 
+    public static Rotation getBuildingRotation() { return buildingRotation; }
+    public static Vec3i getBuildingDimensions() { return buildingDimensions; }
+
     public static Building getBuildingToPlace() {
         return buildingToPlace;
     }
