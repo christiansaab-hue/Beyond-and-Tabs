@@ -145,6 +145,8 @@ public class HudClientEvents {
     private final static int frameBgColour = 0xA0000000;
 
     private static final ArrayList<RectZone> hudZones = new ArrayList<>();
+    /** Where the BAR-style top economy bar was drawn this frame (null when not shown). */
+    public static EconomyBarRenderer.Layout economyBar = null;
 
     private static boolean showPreselectedBlockInfo = true;
 
@@ -1203,184 +1205,16 @@ public class HudClientEvents {
             blitY += 20;
         }
 
-        int resourceBlitYStart = blitY;
-        int resourcePanelBottomY = blitY;
+        // the top-left row is kept for control groups; the production queue starts under it
+        int resourcePanelBottomY = blitY + iconFrameSize;
 
-        // BAR-style resource bar: Metal and Energy as "current / storage", a fill bar and +income / -expense per
-        // second, plus a "Build speed NN%" warning while the player is stalling. Food/wood/ore are no longer shown.
-        String[] resourceNames;
-        if (ItemClientEvents.ENABLED) {
-            resourceNames = new String[] { "metal", "energy", "emerald", "pop" };
-        } else {
-            resourceNames = new String[] { "metal", "energy", "pop" };
-        }
-
+        // BAR-style top bar (metal | population | energy), centred at the top of the screen
         if (resources != null && MC.player != null) {
             EconomyClientEvents.ClientEconomy eco = EconomyClientEvents.getEconomy(selPlayerName);
-            final int ecoPanelWidth = 150;
-
-            for (String resourceName : resourceNames) {
-                if (resourceName.equals("metal") || resourceName.equals("energy")) {
-                    boolean isMetal = resourceName.equals("metal");
-                    int amount = isMetal ? resources.ore : resources.wood;
-                    float storage = isMetal ? eco.metalStorage : eco.energyStorage;
-                    float income = isMetal ? eco.metalIncome : eco.energyIncome;
-                    float expense = isMetal ? eco.metalExpense : eco.energyExpense;
-                    ResourceLocation ecoRl = ResourceLocation.fromNamespaceAndPath("minecraft",
-                        isMetal ? "textures/item/iron_ingot.png" : "textures/item/redstone.png");
-
-                    hudZones.add(MyRenderer.renderFrameWithBg(evt.getGuiGraphics(),
-                        blitX + iconFrameSize - 1,
-                        blitY,
-                        ecoPanelWidth,
-                        iconFrameSize,
-                        frameBgColour
-                    ));
-                    hudZones.add(MyRenderer.renderIconFrameWithBg(evt.getGuiGraphics(),
-                        ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame.png"),
-                        blitX,
-                        blitY,
-                        iconFrameSize,
-                        iconBgColour
-                    ));
-                    MyRenderer.renderIcon(evt.getGuiGraphics(), ecoRl, blitX + 4, blitY + 4, iconSize);
-
-                    int textX = blitX + iconFrameSize + 3;
-                    int rightX = blitX + iconFrameSize - 1 + ecoPanelWidth - 4;
-                    evt.getGuiGraphics().drawString(MC.font, amount + " / " + Math.round(storage),
-                        textX, blitY + 3, isMetal ? 0xFFFFFF : 0xFFF4C0);
-
-                    String expenseStr = "-" + formatEcoRate(expense);
-                    String incomeStr = "+" + formatEcoRate(income);
-                    int expenseX = rightX - MC.font.width(expenseStr);
-                    int incomeX = expenseX - 4 - MC.font.width(incomeStr);
-                    evt.getGuiGraphics().drawString(MC.font, incomeStr, incomeX, blitY + 3, 0x55FF55);
-                    evt.getGuiGraphics().drawString(MC.font, expenseStr, expenseX, blitY + 3, 0xFF5555);
-
-                    // storage fill bar
-                    int barX = textX;
-                    int barY = blitY + 14;
-                    int barW = rightX - textX;
-                    int barH = 4;
-                    float fill = storage > 0 ? Math.max(0, Math.min(1, amount / storage)) : 0;
-                    evt.getGuiGraphics().fill(barX, barY, barX + barW, barY + barH, 0xFF1E1E1E);
-                    evt.getGuiGraphics().fill(barX, barY, barX + Math.round(barW * fill), barY + barH,
-                        isMetal ? 0xFFB4BEC8 : 0xFFF0C83C);
-
-                    blitY += iconFrameSize - 1;
-                    continue;
-                }
-
-                // emerald and population rows keep the original Reign of Nether style
-                ResourceLocation rl;
-                String resValueStr;
-                boolean isPop = resourceName.equals("pop");
-                if (isPop) {
-                    rl = PlayerColors.getPlayerColorBedIcon(selPlayerName);
-                    resValueStr = UnitClientEvents.getCurrentPopulation(selPlayerName) + "/"
-                        + BuildingClientEvents.getTotalPopulationSupply(selPlayerName);
-                } else {
-                    rl = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/icons/items/emerald.png");
-                    resValueStr = String.valueOf(resources.emerald);
-                }
-                hudZones.add(MyRenderer.renderFrameWithBg(evt.getGuiGraphics(),
-                    blitX + iconFrameSize - 1,
-                    blitY,
-                    49,
-                    iconFrameSize,
-                    frameBgColour
-                ));
-                hudZones.add(MyRenderer.renderIconFrameWithBg(evt.getGuiGraphics(),
-                    ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame.png"),
-                    blitX,
-                    blitY,
-                    iconFrameSize,
-                    iconBgColour
-                ));
-                MyRenderer.renderIcon(evt.getGuiGraphics(), rl, blitX + 4, blitY + 4, iconSize);
-                evt.getGuiGraphics().drawCenteredString(
-                    MC.font,
-                    resValueStr,
-                    blitX + (iconFrameSize) + 24,
-                    blitY + (iconSize / 2) + 1,
-                    0xFFFFFF
-                );
-                if (isPop) {
-                    // total worker count (workers no longer gather, so there is no per-resource assignment)
-                    String finalSelPlayerName = selPlayerName;
-                    int numWorkers = UnitClientEvents.getAllUnits()
-                        .stream()
-                        .filter(u -> u instanceof WorkerUnit && ((Unit) u).getOwnerName().equals(finalSelPlayerName))
-                        .toList()
-                        .size();
-                    hudZones.add(MyRenderer.renderIconFrameWithBg(evt.getGuiGraphics(),
-                        ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/icon_frame.png"),
-                        blitX + 69,
-                        blitY,
-                        iconFrameSize,
-                        iconBgColour
-                    ));
-                    evt.getGuiGraphics().drawCenteredString(
-                        MC.font,
-                        String.valueOf(numWorkers),
-                        blitX + 69 + (iconFrameSize / 2),
-                        blitY + (iconSize / 2) + 1,
-                        0xFFFFFF
-                    );
-                }
-                blitY += iconFrameSize - 1;
-            }
-
-            // BAR stall warning: construction and production slow down when demand exceeds metal/energy
-            if (eco.stall < 0.99f) {
-                String stallStr = "Build speed " + Math.round(eco.stall * 100) + "%";
-                hudZones.add(MyRenderer.renderFrameWithBg(evt.getGuiGraphics(),
-                    blitX,
-                    blitY,
-                    MC.font.width(stallStr) + 8,
-                    13,
-                    frameBgColour
-                ));
-                evt.getGuiGraphics().drawString(MC.font, stallStr, blitX + 4, blitY + 3,
-                    eco.stall < 0.5f ? 0xFF5555 : 0xFFD24A);
-                blitY += 13;
-            }
-            resourcePanelBottomY = blitY;
-
-            // tooltips
-            blitY = resourceBlitYStart;
-            final String finalSelPlayerName = selPlayerName;
-            for (String resourceName : resourceNames) {
-                List<FormattedCharSequence> tooltip;
-                switch (resourceName) {
-                    case "metal" -> tooltip = List.of(FormattedCharSequence.forward(
-                        "Metal: spent while units, buildings and research are in progress", Style.EMPTY));
-                    case "energy" -> tooltip = List.of(FormattedCharSequence.forward(
-                        "Energy: spent while units, buildings and research are in progress", Style.EMPTY));
-                    case "pop" -> tooltip = List.of(FormattedCharSequence.forward(I18n.get("hud.reignofnether.max_resources",
-                        I18n.get("resources.reignofnether.population"),
-                        GameruleClient.maxPopulation
-                    ), Style.EMPTY));
-                    default -> tooltip = List.of(FormattedCharSequence.forward(
-                        I18n.get("resources.reignofnether." + resourceName), Style.EMPTY));
-                }
-                if (mouseX >= blitX && mouseY >= blitY && mouseX < blitX + iconFrameSize
-                    && mouseY < blitY + iconFrameSize) {
-                    MyRenderer.renderTooltip(evt.getGuiGraphics(), tooltip, mouseX + 5, mouseY);
-                }
-                if (resourceName.equals("pop") && mouseX >= blitX + 69 && mouseY >= blitY &&
-                    mouseX < blitX + 69 + iconFrameSize && mouseY < blitY + iconFrameSize) {
-                    int numWorkers = UnitClientEvents.getAllUnits()
-                        .stream()
-                        .filter(u -> u instanceof WorkerUnit && ((Unit) u).getOwnerName().equals(finalSelPlayerName))
-                        .toList()
-                        .size();
-                    MyRenderer.renderTooltip(evt.getGuiGraphics(),
-                        List.of(FormattedCharSequence.forward(I18n.get("hud.reignofnether.total_workers", numWorkers), Style.EMPTY)),
-                        mouseX + 5, mouseY);
-                }
-                blitY += iconFrameSize - 1;
-            }
+            economyBar = EconomyBarRenderer.render(evt.getGuiGraphics(), resources, eco, selPlayerName,
+                screenWidth, mouseX, mouseY, hudZones);
+        } else {
+            economyBar = null;
         }
 
         // global production queue - visible to yourself, observers, sandbox players and allies
@@ -1423,7 +1257,7 @@ public class HudClientEvents {
         // ---------------------
         // Control group buttons
         // ---------------------
-        blitX = 100;
+        blitX = 0;
         // clean up untracked entities/buildings from control groups
         for (ControlGroup controlGroup : controlGroups) {
             controlGroup.clean();
@@ -1945,11 +1779,6 @@ public class HudClientEvents {
     }
 
     // BAR resource bar: income/expense per second, with one decimal below 10 (eg. "2.5") and whole numbers above
-    private static String formatEcoRate(float perSecond) {
-        if (perSecond < 10f)
-            return String.valueOf(Math.round(perSecond * 10f) / 10f);
-        return String.valueOf(Math.round(perSecond));
-    }
 
     public static boolean isMouseOverAnyButtonOrHud() {
         for (RectZone hudZone : hudZones)
