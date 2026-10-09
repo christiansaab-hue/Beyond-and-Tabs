@@ -2248,5 +2248,13 @@
   "hud.reignofnether.repeat_queue": "Repeat",
   "hud.reignofnether.repeat_queue.tooltip": "Repeat queue: each trained unit re-queues itself at the back, BAR-style",
   "hud.reignofnether.metal_per_s": "metal/s",
-  "hud.reignofnether.energy_per_s": "energy/s"
+  "hud.reignofnether.energy_per_s": "energy/s",
+  "color.reignofnether.teal": "Teal",
+  "color.reignofnether.gold": "Gold",
+  "color.reignofnether.crimson": "Crimson",
+  "color.reignofnether.navy": "Navy",
+  "color.reignofnether.emerald": "Emerald",
+  "color.reignofnether.lavender": "Lavender",
+  "color.reignofnether.coral": "Coral",
+  "color.reignofnether.ice": "Ice"
 }

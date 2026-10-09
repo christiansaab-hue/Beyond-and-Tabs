@@ -88,15 +88,20 @@ public class BotServerEvents {
 
     /** Skirmish lobby entry point: faction/difficulty by name, spawn ring in blocks from the caller. */
     public static int addBot(ServerPlayer caller, String factionName, String difficultyName, int minR, int maxR) {
-        return addBotImpl(caller, factionName, difficultyName, minR, maxR);
+        return addBotImpl(caller, factionName, difficultyName, minR, maxR, 0);
+    }
+
+    /** As above with a team colour (PlayerPalette map colour id; 0 = first free colour). */
+    public static int addBot(ServerPlayer caller, String factionName, String difficultyName, int minR, int maxR, int colorMapId) {
+        return addBotImpl(caller, factionName, difficultyName, minR, maxR, colorMapId);
     }
 
     static int addBot(ServerPlayer caller, String factionName, String difficultyName) {
         boolean far = difficultyName.equalsIgnoreCase("far");
-        return addBotImpl(caller, factionName, difficultyName, far ? 300 : 180, far ? 420 : 260);
+        return addBotImpl(caller, factionName, difficultyName, far ? 300 : 180, far ? 420 : 260, 0);
     }
 
-    static int addBotImpl(ServerPlayer caller, String factionName, String difficultyName, int minR, int maxR) {
+    static int addBotImpl(ServerPlayer caller, String factionName, String difficultyName, int minR, int maxR, int colorMapId) {
         Faction faction = switch (factionName.toLowerCase()) {
             case "monsters", "monster" -> Factions.MONSTERS;
             case "villagers", "villager" -> Factions.VILLAGERS;
@@ -114,7 +119,7 @@ public class BotServerEvents {
         };
         String name = "Bot" + botNumber++ + " (" + difficulty.name().toLowerCase() + ")";
         Vec3 pos = findBotStart(caller, minR, maxR);
-        PlayerServerEvents.startRTSBot(name, pos, faction);
+        PlayerServerEvents.startRTSBot(name, pos, faction, colorMapId);
         brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
         caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "
                 + (int) pos.distanceTo(caller.position()) + " blocks away - scout it before it scouts you."));

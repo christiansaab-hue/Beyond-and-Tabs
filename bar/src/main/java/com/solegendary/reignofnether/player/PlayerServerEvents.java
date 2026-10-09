@@ -597,6 +597,24 @@ public class PlayerServerEvents {
     }
 
     public static void startRTSBot(String name, Vec3 pos, Faction faction) {
+        startRTSBot(name, pos, faction, 0);
+    }
+
+    /** Map colour ids already taken by RTS players (humans and bots), so a new side can pick a free one. */
+    public static java.util.Set<Integer> takenColorIds() {
+        java.util.Set<Integer> taken = new java.util.HashSet<>();
+        synchronized (rtsPlayers) {
+            for (RTSPlayer r : rtsPlayers)
+                taken.add(r.startPosColorId);
+        }
+        return taken;
+    }
+
+    /**
+     * @param colorMapId the bot's team colour (a PlayerPalette map colour id); 0 picks the first colour nobody
+     *                   else is using. Sides sharing a colour are allies, so a clash with a human is refused.
+     */
+    public static void startRTSBot(String name, Vec3 pos, Faction faction, int colorMapId) {
         synchronized (rtsPlayers) {
             ServerLevel level;
             if (players.isEmpty()) {
@@ -610,7 +628,13 @@ public class PlayerServerEvents {
             // chunks that unload moments later and the bot is 'defeated' before it has built anything
             UnitChunkLoader.holdArea(level, BlockPos.containing(pos.x, pos.y, pos.z));
             RTSPlayer bot = RTSPlayer.getNewBot(name, faction);
+            java.util.Set<Integer> taken = takenColorIds();
+            if (colorMapId == 0 || taken.contains(colorMapId)
+                    || !com.solegendary.reignofnether.player.PlayerPalette.isPaletteColor(colorMapId))
+                colorMapId = com.solegendary.reignofnether.player.PlayerPalette.firstFree(taken);
+            bot.startPosColorId = colorMapId;
             rtsPlayers.add(bot);
+            PlayerClientboundPacket.addRTSPlayer(bot.name, bot.faction, (long) bot.id, bot.startPosColorId, bot.isDogPerson);
             FogOfWarServerEvents.invalidateRtsCache();
             ResourcesServerEvents.assignResources(bot.name);
             com.solegendary.reignofnether.startpos.BattlefieldSetup.onStart(level,

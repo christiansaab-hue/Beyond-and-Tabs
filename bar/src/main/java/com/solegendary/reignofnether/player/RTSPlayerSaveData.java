@@ -79,11 +79,13 @@ public class RTSPlayerSaveData extends SavedData {
                 int itemsDropped = ptag.contains("itemsDropped") ? ptag.getInt("itemsDropped") : 0;
                 Long itemSeed = ptag.contains("itemSeed") ? ptag.getLong("itemSeed") : new Random().nextLong();
 
-                data.rtsPlayers.add(RTSPlayer.getFromSave(
+                RTSPlayer loaded = RTSPlayer.getFromSave(
                         name, id, ticksWithoutCapitol, faction,
                         beaconOwnerTicks, scores, scenarioRoleIndex,
                         tradeRates, creepScore, itemsDropped, itemSeed
-                ));
+                );
+                loaded.startPosColorId = ptag.contains("startPosColorId") ? ptag.getInt("startPosColorId") : 0;
+                data.rtsPlayers.add(loaded);
 
                 ReignOfNether.LOGGER.info("RTSPlayerSaveData.load: " + name + "|" + id + "|" + faction);
             }
@@ -105,6 +107,7 @@ public class RTSPlayerSaveData extends SavedData {
             cTag.putString("faction", p.faction.key.toString());
             cTag.putIntArray("scores", p.scores.getScoreListAsArray());
             cTag.putInt("scenarioRoleIndex", p.scenarioRoleIndex);
+            cTag.putInt("startPosColorId", p.startPosColorId);
             cTag.putInt("foodEmeraldRate", p.tradeRates.get(TradeAction.FOOD_FOR_EMERALD));
             cTag.putInt("emeraldFoodRate", p.tradeRates.get(TradeAction.EMERALD_FOR_FOOD));
             cTag.putInt("woodEmeraldRate", p.tradeRates.get(TradeAction.WOOD_FOR_EMERALD));

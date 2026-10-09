@@ -106,7 +106,8 @@ public class QuickBattle {
                 if (waitTicks > 20 && pending != null) {
                     List<SkirmishServerboundPacket.BotSpec> bots = new ArrayList<>();
                     for (int i = 0; i < pending.botCount; i++)
-                        bots.add(new SkirmishServerboundPacket.BotSpec(pending.botFaction[i], pending.botDifficulty[i]));
+                        bots.add(new SkirmishServerboundPacket.BotSpec(pending.botFaction[i], pending.botDifficulty[i],
+                                pending.botColorMapId(i)));
                     SkirmishServerboundPacket.send(pending.faction, pending.colorMapId(), bots,
                             pending.arena, pending.metal, pending.spawnDistance);
                     phase = 3;

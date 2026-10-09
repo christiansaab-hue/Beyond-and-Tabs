@@ -968,41 +968,20 @@ public class MiscUtil {
         return I18n.get(String.format("hud.faction.reignofnether.%s", faction.getName()));
     }
 
-    private record ColorEntry(int mapColorId, int hex, String englishName) {}
-
-    private static final ColorEntry[] COLOR_ENTRIES = {
-        // default
-        new ColorEntry(MapColor.SNOW.id,                0xE9ECEC, "white"),
-
-        new ColorEntry(MapColor.COLOR_BLACK.id,         0x141519, "black"),
-        new ColorEntry(MapColor.COLOR_BLUE.id,          0x35399D, "blue"),
-        new ColorEntry(MapColor.COLOR_BROWN.id,         0x724728, "brown"),
-        new ColorEntry(MapColor.COLOR_CYAN.id,          0x158991, "cyan"),
-        new ColorEntry(MapColor.COLOR_GRAY.id,          0x3E4447, "gray"),
-        new ColorEntry(MapColor.COLOR_GREEN.id,         0x546D1B, "green"),
-        new ColorEntry(MapColor.COLOR_LIGHT_BLUE.id,    0x3AAFD9, "light_blue"),
-        new ColorEntry(MapColor.COLOR_LIGHT_GRAY.id,    0x8E8E86, "light_gray"),
-        new ColorEntry(MapColor.COLOR_LIGHT_GREEN.id,   0x70B919, "lime"),
-        new ColorEntry(MapColor.COLOR_MAGENTA.id,       0xBD44B3, "magenta"),
-        new ColorEntry(MapColor.COLOR_ORANGE.id,        0xF07613, "orange"),
-        new ColorEntry(MapColor.COLOR_PINK.id,          0xED8DAC, "pink"),
-        new ColorEntry(MapColor.COLOR_PURPLE.id,        0x792AAC, "purple"),
-        new ColorEntry(MapColor.COLOR_RED.id,           0xA12722, "red"),
-        new ColorEntry(MapColor.COLOR_YELLOW.id,        0xF8C627, "yellow"),
-    };
-
-    private static final Map<Integer, ColorEntry> COLOR_MAP = new HashMap<>() {};
+    private static final Map<Integer, com.solegendary.reignofnether.player.PlayerPalette.Entry> COLOR_MAP = new HashMap<>();
 
     static {
-        for (ColorEntry e : COLOR_ENTRIES) {
-            COLOR_MAP.put(e.mapColorId, e);
-            COLOR_MAP.put(e.hex, e);
+        for (com.solegendary.reignofnether.player.PlayerPalette.Entry e : com.solegendary.reignofnether.player.PlayerPalette.ENTRIES) {
+            COLOR_MAP.put(e.mapColorId(), e);
+            COLOR_MAP.put(e.hex(), e);
         }
     }
 
     public static String getColorName(int colorIdOrHex, boolean english) {
-        ColorEntry entry = COLOR_MAP.getOrDefault(colorIdOrHex, COLOR_ENTRIES[0]);
-        return english ? entry.englishName : I18n.get(String.format("color.reignofnether.%s", entry.englishName));
+        com.solegendary.reignofnether.player.PlayerPalette.Entry entry = COLOR_MAP.get(colorIdOrHex);
+        if (entry == null)
+            entry = com.solegendary.reignofnether.player.PlayerPalette.byMapColorId(MapColor.SNOW.id);
+        return english ? entry.name() : I18n.get(String.format("color.reignofnether.%s", entry.name()));
     }
 
     public static boolean isMagicDamage(DamageSource source) {

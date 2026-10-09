@@ -25,12 +25,21 @@ public class SkirmishSetupScreen extends Screen {
         public int botCount = 1;
         public int[] botFaction = {3, 3, 3};
         public int[] botDifficulty = {1, 1, 1};
+        public int[] botColour = {-1, -1, -1};   // palette index, or -1 auto (first colour nobody has)
         public int arena = 4;            // 0 small .. 3 huge, 4 random
         public int metal = 3;            // 0 lean, 1 normal, 2 rich, 3 random
         public int spawnDistance = 1;    // 0 close, 1 normal, 2 far
 
         public int colorMapId() {
             int idx = colour >= 0 ? colour : (int) (Math.random() * PlayerColors.PLAYER_COLOR_COUNT);
+            return PlayerColors.colors[idx % PlayerColors.PLAYER_COLOR_COUNT].mapColorId;
+        }
+
+        /** A bot's requested colour as a map colour id, 0 for auto; a bot never shares the player's colour. */
+        public int botColorMapId(int i) {
+            int idx = botColour[i];
+            if (idx < 0 || idx == colour)
+                return 0;
             return PlayerColors.colors[idx % PlayerColors.PLAYER_COLOR_COUNT].mapColorId;
         }
     }
@@ -44,7 +53,8 @@ public class SkirmishSetupScreen extends Screen {
     static final List<String> DISTANCES = List.of("Close", "Normal", "Far");
 
     final Screen parent;
-    int colourSwatchX, colourSwatchY;
+    static final int SWATCH = 15, GAP = 2, PER_ROW = 12;
+    int paletteX, paletteY;
 
     public SkirmishSetupScreen(Screen parent) {
         super(Component.translatable("quickbattle.reignofnether.title"));
@@ -73,14 +83,12 @@ public class SkirmishSetupScreen extends Screen {
                 .withValues(range(4)).withInitialValue(settings.faction)
                 .create(x, y, w, 20, Component.literal("Your faction"), (b, v) -> settings.faction = v));
         y += step;
-        List<Integer> colours = new java.util.ArrayList<>(range(PlayerColors.PLAYER_COLOR_COUNT));
-        colours.add(-1);
-        colourSwatchX = x + w + 6;
-        colourSwatchY = y + 4;
-        addRenderableWidget(CycleButton.<Integer>builder(SkirmishSetupScreen::colourName)
-                .withValues(colours).withInitialValue(settings.colour)
-                .create(x, y, w, 20, Component.literal("Your colour"), (b, v) -> settings.colour = v));
-        y += step;
+        // your colour: a palette of swatches (click one), plus a Random button
+        paletteX = x;
+        paletteY = y + 12;
+        addRenderableWidget(Button.builder(Component.literal("Random"), b -> settings.colour = -1)
+                .bounds(x + w - 50, paletteY, 50, SWATCH * 2 + GAP).build());
+        y = paletteY + SWATCH * 2 + GAP + 8;
 
         // --- opponents ---
         addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(String.valueOf(i)))
@@ -89,12 +97,19 @@ public class SkirmishSetupScreen extends Screen {
         y += step;
         for (int i = 0; i < settings.botCount; i++) {
             final int idx = i;
+            int third = (w - 8) / 3;
             addRenderableWidget(CycleButton.<Integer>builder(f -> Component.literal(FACTIONS.get(f)))
                     .withValues(range(4)).withInitialValue(settings.botFaction[i])
-                    .create(x, y, half, 20, Component.literal("Bot " + (i + 1)), (b, v) -> settings.botFaction[idx] = v));
+                    .create(x, y, third + 20, 20, Component.literal("Bot " + (i + 1)), (b, v) -> settings.botFaction[idx] = v));
             addRenderableWidget(CycleButton.<Integer>builder(d -> Component.literal(DIFFICULTIES.get(d)))
                     .withValues(range(3)).withInitialValue(settings.botDifficulty[i])
-                    .create(x + w - half, y, half, 20, Component.literal("Skill"), (b, v) -> settings.botDifficulty[idx] = v));
+                    .create(x + third + 24, y, third - 14, 20, Component.literal("Skill"), (b, v) -> settings.botDifficulty[idx] = v));
+            List<Integer> botColours = new java.util.ArrayList<>();
+            botColours.add(-1);
+            botColours.addAll(range(PlayerColors.PLAYER_COLOR_COUNT));
+            addRenderableWidget(CycleButton.<Integer>builder(c -> c < 0 ? Component.literal("Auto") : colourName(c))
+                    .withValues(botColours).withInitialValue(settings.botColour[i])
+                    .create(x + w - third + 2, y, third - 2, 20, Component.literal("Colour"), (b, v) -> settings.botColour[idx] = v));
             y += step;
         }
 
@@ -119,6 +134,21 @@ public class SkirmishSetupScreen extends Screen {
                 b -> Minecraft.getInstance().setScreen(parent)).bounds(x + w - half, y, half, 20).build());
     }
 
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (button == 0) {
+            for (int i = 0; i < PlayerColors.PLAYER_COLOR_COUNT; i++) {
+                int sx = paletteX + (i % PER_ROW) * (SWATCH + GAP);
+                int sy = paletteY + (i / PER_ROW) * (SWATCH + GAP);
+                if (mx >= sx && mx < sx + SWATCH && my >= sy && my < sy + SWATCH) {
+                    settings.colour = i;
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mx, my, button);
+    }
+
     void rebuild() {
         clearWidgets();
         init();
@@ -130,12 +160,17 @@ public class SkirmishSetupScreen extends Screen {
         int top = Math.max(28, height / 2 - 120);
         gg.drawCenteredString(font, "SKIRMISH", width / 2, top - 20, 0xFFD27A);
         super.render(gg, mx, my, pt);
-        // live colour swatch beside the colour button
-        if (settings.colour >= 0) {
-            int hex = PlayerColors.colors[settings.colour].hexCode;
-            gg.fill(colourSwatchX - 1, colourSwatchY - 1, colourSwatchX + 13, colourSwatchY + 13, 0xFF000000);
-            gg.fill(colourSwatchX, colourSwatchY, colourSwatchX + 12, colourSwatchY + 12, 0xFF000000 | hex);
+        // your colour: the palette grid, selected swatch framed in white, hovered one framed in grey
+        for (int i = 0; i < PlayerColors.PLAYER_COLOR_COUNT; i++) {
+            int sx = paletteX + (i % PER_ROW) * (SWATCH + GAP);
+            int sy = paletteY + (i / PER_ROW) * (SWATCH + GAP);
+            boolean hover = mx >= sx && mx < sx + SWATCH && my >= sy && my < sy + SWATCH;
+            int frame = i == settings.colour ? 0xFFFFFFFF : hover ? 0xFFAAAAAA : 0xFF000000;
+            gg.fill(sx - 1, sy - 1, sx + SWATCH + 1, sy + SWATCH + 1, frame);
+            gg.fill(sx, sy, sx + SWATCH, sy + SWATCH, 0xFF000000 | PlayerColors.colors[i].hexCode);
         }
+        String picked = settings.colour >= 0 ? colourName(settings.colour).getString() : "Random";
+        gg.drawString(font, "Your colour: " + picked, paletteX, paletteY - 11, 0xE0E0E0);
         gg.drawCenteredString(font, "A fresh arena every battle: lanes, metal patches and the boundary wall form in the first seconds.",
                 width / 2, height - 24, 0x9A9A9A);
     }

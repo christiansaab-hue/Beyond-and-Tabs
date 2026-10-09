@@ -53,8 +53,7 @@ public class PlayerColors {
             this.hexCode = hexCode;
             this.blockTexture = blockTexture;
             this.bedIcon = bedIcon;
-            System.out.println("Created color '" + this.name + "' with index " + this.id);
-            if (this.mapColorId != -1) {
+                        if (this.mapColorId != -1) {
                 mappedColors.put(mapColorId, this);
             }
         }
@@ -69,25 +68,34 @@ public class PlayerColors {
         }
     }
 
-    // colors available for players to choose - they all have an associated startBlock
-    public static final PlayerColor COLOR_RED = PlayerColor.fromName(MapColor.COLOR_RED.id, 0xA12722, "red");
-    public static final PlayerColor COLOR_BLUE = PlayerColor.fromName(MapColor.COLOR_BLUE.id, 0x35399D, "blue");
-    public static final PlayerColor COLOR_CYAN = PlayerColor.fromName(MapColor.COLOR_CYAN.id, 0x158991, "cyan");
-    public static final PlayerColor COLOR_PURPLE = PlayerColor.fromName(MapColor.COLOR_PURPLE.id, 0x792AAC, "purple");
-    public static final PlayerColor COLOR_YELLOW = PlayerColor.fromName(MapColor.COLOR_YELLOW.id, 0xF8C627, "yellow");
-    public static final PlayerColor COLOR_ORANGE = PlayerColor.fromName(MapColor.COLOR_ORANGE.id, 0xF07613, "orange");
-    public static final PlayerColor COLOR_LIME = PlayerColor.fromName(MapColor.COLOR_LIGHT_GREEN.id, 0x70B919, "lime");
-    public static final PlayerColor COLOR_PINK = PlayerColor.fromName(MapColor.COLOR_PINK.id, 0xED8DAC, "pink");
-    public static final PlayerColor COLOR_MAGENTA = PlayerColor.fromName(MapColor.COLOR_MAGENTA.id, 0xBD44B3, "magenta");
-    public static final PlayerColor COLOR_LIGHT_BLUE = PlayerColor.fromName(MapColor.COLOR_LIGHT_BLUE.id, 0x3AAFD9, "light_blue");
-    public static final PlayerColor COLOR_GREEN = PlayerColor.fromName(MapColor.COLOR_GREEN.id, 0x546D1B, "green");
-    public static final PlayerColor COLOR_BROWN = PlayerColor.fromName(MapColor.COLOR_BROWN.id, 0x724728, "brown");
-    public static final int PLAYER_COLOR_COUNT = PlayerColor.colourCount;
+    // colors available for players to choose - the palette lives in PlayerPalette (server-safe); each entry here
+    // gets its start-block texture and bed icon. Index == PlayerColor.id == position in PlayerPalette.ENTRIES.
+    private static final PlayerColor[] PALETTE = buildPalette();
 
-    public static final PlayerColor COLOR_LIGHT_GREY = PlayerColor.fromName(MapColor.COLOR_LIGHT_GRAY.id, 0x8E8E86, "light_gray");
-    public static final PlayerColor COLOR_GRAY = PlayerColor.fromName(MapColor.COLOR_GRAY.id, 0x3E4447, "gray");
-    public static final PlayerColor COLOR_BLACK = PlayerColor.fromName(MapColor.COLOR_BLACK.id, 0x141519, "black");
-    public static final PlayerColor COLOR_WHITE = PlayerColor.fromName(MapColor.SNOW.id, 0xE9ECEC, "white");
+    private static PlayerColor[] buildPalette() {
+        PlayerColor[] out = new PlayerColor[PlayerPalette.COUNT];
+        for (int i = 0; i < PlayerPalette.COUNT; i++) {
+            PlayerPalette.Entry e = PlayerPalette.ENTRIES.get(i);
+            out[i] = PlayerColor.fromName(e.mapColorId(), e.hex(), e.name());
+        }
+        return out;
+    }
+
+    private static PlayerColor named(String name) {
+        for (PlayerColor c : PALETTE)
+            if (c.name.equals(name))
+                return c;
+        return PALETTE[0];
+    }
+
+    public static final PlayerColor COLOR_RED = named("red");
+    public static final PlayerColor COLOR_BLUE = named("blue");
+    public static final PlayerColor COLOR_YELLOW = named("yellow");
+    public static final PlayerColor COLOR_LIME = named("lime");
+    public static final PlayerColor COLOR_GRAY = named("gray");
+    public static final PlayerColor COLOR_BLACK = named("black");
+    public static final PlayerColor COLOR_WHITE = named("white");
+    public static final int PLAYER_COLOR_COUNT = PlayerColor.colourCount;
 
     public static final PlayerColor COLOR_OWNED = new PlayerColor(-1, 0x33FF33, "owned", ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/lime_wool.png"), COLOR_LIME.bedIcon);
     public static final PlayerColor COLOR_FRIENDLY = new PlayerColor(-1, 0x3333FF, "friendly", ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/blue_wool.png"), COLOR_BLUE.bedIcon);
@@ -95,30 +103,22 @@ public class PlayerColors {
     public static final PlayerColor COLOR_HOSTILE = new PlayerColor(-1, 0xFF3333, "hostile", ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/red_wool.png"), COLOR_RED.bedIcon);
     public static final int PLAYER_COLOR_TOTAL_COUNT = PlayerColor.colourCount;
 
-    public static final PlayerColor[] colors = new PlayerColor[]{
-            COLOR_RED,
-            COLOR_BLUE,
-            COLOR_CYAN,
-            COLOR_PURPLE,
-            COLOR_YELLOW,
-            COLOR_ORANGE,
-            COLOR_LIME,
-            COLOR_PINK,
-            COLOR_MAGENTA,
-            COLOR_LIGHT_BLUE,
-            COLOR_GREEN,
-            COLOR_BROWN,
+    public static final PlayerColor[] colors = buildAll();
 
-            COLOR_LIGHT_GREY,
-            COLOR_GRAY,
-            COLOR_BLACK,
-            COLOR_WHITE,
+    private static PlayerColor[] buildAll() {
+        PlayerColor[] out = new PlayerColor[PLAYER_COLOR_TOTAL_COUNT];
+        System.arraycopy(PALETTE, 0, out, 0, PALETTE.length);
+        out[PALETTE.length] = COLOR_OWNED;
+        out[PALETTE.length + 1] = COLOR_FRIENDLY;
+        out[PALETTE.length + 2] = COLOR_NEUTRAL;
+        out[PALETTE.length + 3] = COLOR_HOSTILE;
+        return out;
+    }
 
-            COLOR_OWNED,
-            COLOR_FRIENDLY,
-            COLOR_NEUTRAL,
-            COLOR_HOSTILE,
-    };
+    /** The palette colour for a map colour id, or null if it is not a player colour. */
+    public static PlayerColor byMapColorId(int mapColorId) {
+        return mappedColors.get(mapColorId);
+    }
 
     private static HashMap<String, Integer> playerColorId = new HashMap<>();
     public static int getPlayerColorId(String playerName) {

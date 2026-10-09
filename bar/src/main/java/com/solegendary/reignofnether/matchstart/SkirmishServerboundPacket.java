@@ -31,7 +31,8 @@ import java.util.function.Supplier;
  */
 public class SkirmishServerboundPacket {
 
-    public record BotSpec(int faction, int difficulty) { }
+    /** @param colorMapId PlayerPalette map colour id, or 0 for "first free colour" */
+    public record BotSpec(int faction, int difficulty, int colorMapId) { }
 
     private final int faction;
     private final int colorMapId;
@@ -59,7 +60,7 @@ public class SkirmishServerboundPacket {
         int n = buf.readByte();
         bots = new ArrayList<>(n);
         for (int i = 0; i < n; i++)
-            bots.add(new BotSpec(buf.readByte(), buf.readByte()));
+            bots.add(new BotSpec(buf.readByte(), buf.readByte(), buf.readInt()));
         arena = buf.readByte();
         metal = buf.readByte();
         spawnDistance = buf.readByte();
@@ -72,6 +73,7 @@ public class SkirmishServerboundPacket {
         for (BotSpec b : bots) {
             buf.writeByte(b.faction());
             buf.writeByte(b.difficulty());
+            buf.writeInt(b.colorMapId());
         }
         buf.writeByte(arena);
         buf.writeByte(metal);
@@ -129,7 +131,7 @@ public class SkirmishServerboundPacket {
             int added = 0;
             for (BotSpec b : bots) {
                 String diff = switch (b.difficulty()) { case 0 -> "easy"; case 2 -> "hard"; default -> "medium"; };
-                added += BotServerEvents.addBot(player, factionName(factionOf(b.faction(), rng)), diff, minR, maxR);
+                added += BotServerEvents.addBot(player, factionName(factionOf(b.faction(), rng)), diff, minR, maxR, b.colorMapId());
             }
             ReignOfNether.LOGGER.info("[Skirmish] {} starts as {} with {} bot(s); arena {}, metal {}, spawn {}",
                 player.getName().getString(), factionName(mine), added, arena, metal, spawnDistance);
