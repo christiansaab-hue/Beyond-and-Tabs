@@ -14,3 +14,4 @@ mod/.gradle/
 # Reign of Nether fork assets (textures, icons) and agent worktrees
 !bar/src/main/resources/**/*.png
 .claude/
+javac.*.args

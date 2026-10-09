@@ -40,11 +40,6 @@ public class StartPosServerEvents {
     private static int ticksToStart = TICKS_TO_START_MAX;
     private static boolean startingGame = false;
 
-    /** True while the readied start-position countdown is handing out starts (it forms its own battlefield). */
-    public static boolean isStartingGame() {
-        return startingGame;
-    }
-
     private static int cullTicksMax = 100;
     private static int cullTicks = 0;
 
