@@ -68,8 +68,8 @@ public class MetalPatchMarkerClientEvents {
                 patch.getY() + 1.9 + bob - cam.getY(),
                 patch.getZ() + 0.5 - cam.getZ());
             matrix.mulPose(com.mojang.math.Axis.YP.rotation(time * 0.03f + phase));
-            matrix.mulPose(com.mojang.math.Axis.XP.rotation(Mth.QUARTER_PI));
-            matrix.mulPose(com.mojang.math.Axis.ZP.rotation(Mth.QUARTER_PI));
+            matrix.mulPose(com.mojang.math.Axis.XP.rotation((Mth.HALF_PI / 2)));
+            matrix.mulPose(com.mojang.math.Axis.ZP.rotation((Mth.HALF_PI / 2)));
             matrix.translate(-size / 2, -size / 2, -size / 2);
             matrix.scale(size, size, size);
             renderer.renderSingleBlock(gem, matrix, MC.renderBuffers().bufferSource(),
