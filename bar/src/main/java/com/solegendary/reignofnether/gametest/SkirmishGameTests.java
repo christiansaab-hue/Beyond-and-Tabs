@@ -323,6 +323,42 @@ public class SkirmishGameTests {
         });
     }
 
+    /** Horde Momentum: a straight charge builds the damage bonus, and stopping drops it. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void horde_momentum_builds_on_a_straight_charge(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var grunt = com.solegendary.reignofnether.registrars.EntityRegistrar.BRUTE_UNIT.get().create(level);
+        if (grunt == null) {
+            helper.fail("could not create a brute unit");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(1, 2, 8));
+        grunt.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        grunt.setOwnerName("gametest_horde_charge");
+        level.addFreshEntity(grunt);
+        var dmgAttr = net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE;
+        helper.runAfterDelay(2, () -> {
+            double base = grunt.getAttributeValue(dmgAttr);
+            com.solegendary.reignofnether.unit.MomentumServerEvents.sampleAll(level);
+            for (int i = 1; i <= 6; i++) {
+                grunt.teleportTo(grunt.getX() + 1.0, grunt.getY(), grunt.getZ());
+                com.solegendary.reignofnether.unit.MomentumServerEvents.sampleAll(level);
+            }
+            float m = com.solegendary.reignofnether.unit.MomentumServerEvents.getMomentum(grunt);
+            if (m < 0.99f)
+                helper.fail("six straight steps built only " + m + " momentum");
+            if (grunt.getAttributeValue(dmgAttr) <= base + 0.001)
+                helper.fail("full momentum gave no damage bonus (" + base + ")");
+            com.solegendary.reignofnether.unit.MomentumServerEvents.sampleAll(level);   // standing still
+            if (com.solegendary.reignofnether.unit.MomentumServerEvents.getMomentum(grunt) > 0)
+                helper.fail("momentum did not drop when the grunt stopped");
+            if (Math.abs(grunt.getAttributeValue(dmgAttr) - base) > 0.001)
+                helper.fail("damage bonus stuck after stopping");
+            grunt.discard();
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
