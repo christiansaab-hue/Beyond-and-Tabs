@@ -781,7 +781,10 @@ public class BuildingPlacement {
         if (!this.level.isClientSide() && isRTSPlayer(this.ownerName)) {
             if (BuildingUtils.getTotalCompletedBuildingsOwned(false, this.ownerName) == 0 &&
                 !SandboxServer.isSandboxPlayer(this.ownerName)) {
-                PlayerServerEvents.defeat(this.ownerName, Component.translatable("server.reignofnether.lost_buildings").getString());
+                if (PlayerServerEvents.inStartGrace(this.ownerName))
+                    ReignOfNether.LOGGER.warn("[Defeat] ignored during start grace: {} lost building {}", this.ownerName, this.getBuilding().structureName);
+                else
+                    PlayerServerEvents.defeat(this.ownerName, Component.translatable("server.reignofnether.lost_buildings").getString());
             } else if (this.isCapitol) {
                 var flag = false;
                 for (BuildingPlacement placement : BuildingServerEvents.getBuildings()) {

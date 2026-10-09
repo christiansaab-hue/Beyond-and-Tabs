@@ -106,6 +106,8 @@ public final class MetalPatches {
             for (int dx = -3; dx <= 3; dx++)
                 for (int dz = -3; dz <= 3; dz++) {
                     int bx = x + dx, bz = z + dz;
+                    if (com.solegendary.reignofnether.startpos.StartAreaClearing.isProtected(bx, padY, bz))
+                        continue;   // never carve a pad through a standing building
                     if (!level.getBlockState(p.set(bx, padY, bz)).getFluidState().isEmpty()
                             || !level.getBlockState(p.set(bx, padY + 1, bz)).getFluidState().isEmpty())
                         continue;   // leave rivers and lakes alone

@@ -43,6 +43,7 @@ public final class StartAreaClearing {
         if (level == null || positions.isEmpty() || !isEnabled(level))
             return;
         try {
+            refreshProtected();
             float cx = 0, cz = 0;
             for (BlockPos p : positions) {
                 cx += p.getX() + 0.5f;
@@ -146,6 +147,7 @@ public final class StartAreaClearing {
         if (level == null || !isEnabled(level))
             return;
         try {
+            refreshProtected();
             float x0 = p.getX() + 0.5f, z0 = p.getZ() + 0.5f;
             disc(level, x0, z0, BASE_RADIUS);
             float dx = cx - x0, dz = cz - z0;
@@ -180,6 +182,33 @@ public final class StartAreaClearing {
         return s.canBeReplaced(); // grass, ferns, tall grass, snow layers...
     }
 
+    /**
+     * Buildings standing when the battlefield forms (capitol foundations laid by a readied start) must survive the
+     * clearing: their roofs are logs and leaves to the clutter test, and losing them destroyed the capitol -
+     * "lost all their buildings" five seconds into the match. Bounding boxes, one block of margin, refreshed
+     * whenever a clearing pass starts.
+     */
+    private static final java.util.List<net.minecraft.world.level.levelgen.structure.BoundingBox> PROTECTED = new java.util.ArrayList<>();
+
+    static void refreshProtected() {
+        PROTECTED.clear();
+        for (com.solegendary.reignofnether.building.BuildingPlacement b
+                : new java.util.ArrayList<>(com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings())) {
+            if (b.minCorner == null || b.maxCorner == null)
+                continue;
+            PROTECTED.add(new net.minecraft.world.level.levelgen.structure.BoundingBox(
+                b.minCorner.getX() - 1, b.minCorner.getY() - 2, b.minCorner.getZ() - 1,
+                b.maxCorner.getX() + 1, b.maxCorner.getY() + 1, b.maxCorner.getZ() + 1));
+        }
+    }
+
+    public static boolean isProtected(int x, int y, int z) {
+        for (net.minecraft.world.level.levelgen.structure.BoundingBox box : PROTECTED)
+            if (box.isInside(x, y, z))
+                return true;
+        return false;
+    }
+
     /** Clears one column from the top down to the ground. */
     static void column(ServerLevel level, BlockPos.MutableBlockPos p, int x, int z) {
         int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
@@ -190,6 +219,8 @@ public final class StartAreaClearing {
                 continue;
             if (!clutter(s))
                 break; // reached the ground (or a building, water, etc.)
+            if (isProtected(x, y, z))
+                continue;   // part of a standing building (logs/leaves in a roof are not clutter)
             level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
         }
     }
