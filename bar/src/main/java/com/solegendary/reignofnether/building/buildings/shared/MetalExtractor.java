@@ -80,8 +80,9 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
                 () -> true,
                 List.of(
                         Component.translatable("buildings.reignofnether.metal_extractor").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
-                        Component.translatable("buildings.reignofnether.metal_extractor.tooltip1").withStyle(MyRenderer.iconStyle).getVisualOrderText(),
+                        ResourceCosts.getFormattedCost(cost),
                         FormattedCharSequence.forward("", Style.EMPTY),
+                        Component.translatable("buildings.reignofnether.metal_extractor.tooltip1").getVisualOrderText(),
                         Component.translatable("buildings.reignofnether.metal_extractor.tooltip2").getVisualOrderText(),
                         Component.translatable("buildings.reignofnether.metal_extractor.tooltip3").getVisualOrderText()
                 ),

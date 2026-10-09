@@ -56,8 +56,9 @@ public class WindGenerator extends Building {
                 () -> true,
                 List.of(
                         Component.translatable("buildings.reignofnether.wind_generator").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
-                        Component.translatable("buildings.reignofnether.wind_generator.tooltip1").withStyle(MyRenderer.iconStyle).getVisualOrderText(),
+                        ResourceCosts.getFormattedCost(cost),
                         FormattedCharSequence.forward("", Style.EMPTY),
+                        Component.translatable("buildings.reignofnether.wind_generator.tooltip1").getVisualOrderText(),
                         Component.translatable("buildings.reignofnether.wind_generator.tooltip2").getVisualOrderText()
                 ),
                 this

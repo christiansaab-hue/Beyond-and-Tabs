@@ -2256,5 +2256,6 @@
   "color.reignofnether.emerald": "Emerald",
   "color.reignofnether.lavender": "Lavender",
   "color.reignofnether.coral": "Coral",
-  "color.reignofnether.ice": "Ice"
+  "color.reignofnether.ice": "Ice",
+  "buildings.reignofnether.mausoleum.tooltip3": "or a %d block radius for additional mausoleums."
 }

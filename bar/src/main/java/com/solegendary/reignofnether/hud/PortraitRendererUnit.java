@@ -690,7 +690,14 @@ public class PortraitRendererUnit<T extends LivingEntity, M extends EntityModel<
         RenderSystem.runAsFancy(() -> {
             try {
                 MultiBufferSource.BufferSource immediate = Minecraft.getInstance().renderBuffers().bufferSource();
-                entityrenderdispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, poseStack, immediate, 15728880);
+                // hide the floating name tag (e.g. "Commander") inside the portrait - the HUD already prints the name
+                boolean nameVisible = entity.isCustomNameVisible();
+                entity.setCustomNameVisible(false);
+                try {
+                    entityrenderdispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, poseStack, immediate, 15728880);
+                } finally {
+                    entity.setCustomNameVisible(nameVisible);
+                }
                 immediate.endBatch();
             } catch (ReportedException e) {
                 //System.out.println("Caught reportedException: " + e);
