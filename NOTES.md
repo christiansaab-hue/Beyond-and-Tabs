@@ -34,6 +34,10 @@ This file is the session-proof status log: what's shipped, how to install, what'
 - Windmills + extractors now faction-skinned (Kingdom plaster/spruce, Fallen deepslate/dark oak + grey rag sails, Gilded Legion blackstone/gold + gold sails); spinning sails client-rendered; producing buildings
   puff chimney smoke.
 
+- BAR wrecks + reclaim (WreckServerEvents): units worth >=30 metal leave a faction-styled wreck (block display)
+  holding half their metal; workers within 3 blocks reclaim it (5 metal/s x build power). 5 min decay, cap 150.
+  Bots send an idle worker to wrecks near home. Chipped lamps/friezes on economy buildings.
+
 ## Decor mods (installed in lovish's instance; structures may reference them)
 Macaw's Roofs 2.3.2, Macaw's Windows 2.4.2, Macaw's Fences & Walls 1.2.1, Supplementaries 1.20-3.1.43,
 Moonlight Lib 1.20-2.16.35 (SHA-512 verified vs Modrinth). Modded blocks in a structure load as AIR if the mod
