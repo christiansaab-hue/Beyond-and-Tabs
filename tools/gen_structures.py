@@ -225,9 +225,136 @@ def wind_generator(P):
     return s
 
 
+# ---- faction houses (7 wide x 5 deep footprint, same as Reign of Nether's) ----
+# y=0 must contain the class's startingBlockTypes (placed instantly as the foundation).
+
+def fill_air(s):
+    sx, sy, sz = s.size
+    for x in range(sx):
+        for y in range(sy):
+            for z in range(sz):
+                if (x, y, z) not in s.blocks:
+                    s.set(x, y, z, "air")
+
+
+def kingdom_house():
+    """Half-timbered Tudor cottage: cobble plinth, white plaster between oak beams, steep spruce gable,
+    brick chimney with a live hearth. Front faces -z."""
+    s = Structure(7, 9, 5)
+    W, D = 7, 5
+    # y0: oak-log corner posts on a plank floor, cobble sill along the front and back
+    for x in range(W):
+        for z in range(D):
+            s.set(x, 0, z, "oak_planks")
+    for x in range(W):
+        s.set(x, 0, 0, "cobblestone"); s.set(x, 0, D - 1, "cobblestone")
+    for (x, z) in [(0, 0), (W - 1, 0), (0, D - 1), (W - 1, D - 1)]:
+        s.set(x, 0, z, "oak_log", axis="y")
+    s.set(3, 0, 0, "oak_planks")   # threshold
+    # y1-3: timber frame - log posts at corners and mid-front, plaster panels, a beam band at y3
+    for y in (1, 2, 3):
+        for x in range(W):
+            for z in range(D):
+                edge = x in (0, W - 1) or z in (0, D - 1)
+                if not edge:
+                    continue
+                post = (x in (0, W - 1) and z in (0, D - 1)) or (z in (0, D - 1) and x == 3 and y > 2)
+                if post:
+                    s.set(x, y, z, "oak_log", axis="y")
+                elif y == 3:
+                    s.set(x, y, z, "stripped_oak_log", axis="x" if z in (0, D - 1) else "z")
+                else:
+                    s.set(x, y, z, "white_terracotta")
+    # doorway (open, shaded) with a little spruce awning, and leaded windows either side
+    s.set(3, 1, 0, "air"); s.set(3, 2, 0, "air")
+    s.set(3, 3, 0, "spruce_trapdoor", facing="north", half="top", open="false")
+    for x in (1, 5):
+        s.set(x, 2, 0, "glass_pane"); s.set(x, 2, D - 1, "glass_pane")
+        s.set(x, 1, 0, "spruce_trapdoor", facing="north", half="top", open="true")   # flower-box shutter
+    for z in (2,):
+        s.set(0, 2, z, "glass_pane"); s.set(W - 1, 2, z, "glass_pane")
+    # y4-6: steep gable roof along x (ridge over z=2); gable ends plastered with a beam
+    for x in range(W):
+        s.set(x, 4, 0, "spruce_stairs", facing="south", half="bottom")
+        s.set(x, 4, D - 1, "spruce_stairs", facing="north", half="bottom")
+        s.set(x, 5, 1, "spruce_stairs", facing="south", half="bottom")
+        s.set(x, 5, D - 2, "spruce_stairs", facing="north", half="bottom")
+        s.set(x, 6, 2, "spruce_slab", type="bottom")
+    for x in (0, W - 1):
+        for z in (1, 2, 3):
+            s.set(x, 4, z, "white_terracotta")
+        s.set(x, 5, 2, "oak_log", axis="y")
+    s.set(0, 4, 2, "stripped_oak_log", axis="x"); s.set(W - 1, 4, 2, "stripped_oak_log", axis="x")
+    # brick chimney up the back-right, a lit hearth on top (real smoke)
+    for y in range(4, 8):
+        s.set(5, y, 3, "bricks")
+    s.set(5, 8, 3, "campfire", lit="true", signal_fire="false", facing="north")
+    # hanging lantern by the door
+    s.set(4, 3, 0, "oak_log", axis="y")
+    fill_air(s)
+    return s
+
+
+def fallen_house():
+    """Crooked gothic manor: deepslate plinth, dark-oak frame over tuff-grey walls, a steep slate roof and a
+    narrow bell spire lit by a soul lantern; cobwebs in the eaves. Front faces -z."""
+    s = Structure(7, 11, 5)
+    W, D = 7, 5
+    for x in range(W):
+        for z in range(D):
+            s.set(x, 0, z, "spruce_planks")
+    for (x, z) in [(0, 0), (W - 1, 0), (0, D - 1), (W - 1, D - 1)]:
+        s.set(x, 0, z, "dark_oak_log", axis="y")
+    for x in range(1, W - 1):
+        s.set(x, 0, 0, "polished_deepslate"); s.set(x, 0, D - 1, "polished_deepslate")
+    s.set(3, 0, 0, "spruce_planks")
+    # y1-4: tall walls - dark oak posts, deepslate tile panels, a tall pointed window either side of the door
+    for y in (1, 2, 3, 4):
+        for x in range(W):
+            for z in range(D):
+                if not (x in (0, W - 1) or z in (0, D - 1)):
+                    continue
+                if x in (0, W - 1) and z in (0, D - 1):
+                    s.set(x, y, z, "dark_oak_log", axis="y")
+                elif y == 4:
+                    s.set(x, y, z, "dark_oak_planks")
+                else:
+                    s.set(x, y, z, "deepslate_tiles")
+    s.set(3, 1, 0, "air"); s.set(3, 2, 0, "air")
+    s.set(3, 3, 0, "deepslate_tile_stairs", facing="north", half="top")   # pointed arch over the door
+    for x in (1, 5):
+        s.set(x, 2, 0, "iron_bars"); s.set(x, 3, 0, "iron_bars")
+        s.set(x, 2, D - 1, "iron_bars")
+    s.set(0, 2, 2, "iron_bars"); s.set(W - 1, 2, 2, "iron_bars")
+    # crooked buttress leaning on the left side
+    s.set(0, 1, 1, "cobbled_deepslate_wall"); s.set(0, 1, 3, "cobbled_deepslate_wall")
+    # y5-8: very steep slate roof - two courses per inward step
+    for x in range(W):
+        for (y, z, f) in [(5, 0, "south"), (6, 1, "south"), (5, D - 1, "north"), (6, D - 2, "north")]:
+            s.set(x, y, z, "deepslate_tile_stairs", facing=f, half="bottom")
+        s.set(x, 6, 0, "deepslate_tile_slab", type="bottom") if x in (0, W - 1) else None
+        s.set(x, 7, 2, "deepslate_tiles")
+        s.set(x, 8, 2, "deepslate_tile_slab", type="bottom")
+    for x in (0, W - 1):
+        for (y, z) in [(5, 1), (5, 2), (5, 3), (6, 2)]:
+            s.set(x, y, z, "dark_oak_planks")
+    # the bell spire over the front-right, topped by a soul lantern
+    for y in range(7, 10):
+        s.set(5, y, 1, "deepslate_brick_wall")
+    s.set(5, 10, 1, "soul_lantern", hanging="false")
+    # cobwebs in the eaves, a soul lantern hanging by the door
+    for (x, y, z) in [(1, 4, 1), (5, 4, 3), (1, 5, 2)]:
+        s.set(x, y, z, "cobweb")
+    s.set(4, 3, 0, "dark_oak_log", axis="y")
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     for variant, P in PALETTES.items():
         metal_extractor(P).write(f"{OUT}/metal_extractor{variant}.nbt")
         metal_extractor_t2(P).write(f"{OUT}/metal_extractor_t2{variant}.nbt")
         wind_generator(P).write(f"{OUT}/wind_generator{variant}.nbt")
+    kingdom_house().write(f"{OUT}/villager_house.nbt")
+    fallen_house().write(f"{OUT}/haunted_house.nbt")
