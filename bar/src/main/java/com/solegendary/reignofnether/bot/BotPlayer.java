@@ -301,6 +301,44 @@ public class BotPlayer {
                 if (enemies >= 3)
                     a.use(level, u, le.blockPosition());
             }
+            fireDGun(level, le, u);
+        }
+    }
+
+    /**
+     * The D-gun at the nearest enemy within 12 blocks, aimed through it - but only with an energy reserve left
+     * over (300+), so a bot never stalls its own economy to shoot. Hard bots save less, easy bots never shoot.
+     */
+    void fireDGun(ServerLevel level, LivingEntity commander, Unit u) {
+        if (difficulty == Difficulty.EASY)
+            return;
+        for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+            if (!(a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun) || !a.isOffCooldown(u))
+                continue;
+            float reserve = difficulty == Difficulty.HARD ? 150 : 300;
+            boolean canPay = false;
+            for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+                if (r.ownerName.equals(name))
+                    canPay = r.getEnergy() >= com.solegendary.reignofnether.ability.abilities.CommanderDGun.ENERGY_COST + reserve;
+            if (!canPay)
+                return;
+            LivingEntity target = null;
+            double best = 12 * 12;
+            for (LivingEntity other : UnitServerEvents.getAllUnits()) {
+                if (!(other instanceof Unit ou) || !other.isAlive())
+                    continue;
+                String o = ou.getOwnerName();
+                if (o == null || o.equals(name) || AlliancesServerEvents.isAllied(name, o))
+                    continue;
+                double d = other.distanceToSqr(commander);
+                if (d < best) {
+                    best = d;
+                    target = other;
+                }
+            }
+            if (target != null)
+                a.use(level, u, target.blockPosition());
+            return;
         }
     }
 
