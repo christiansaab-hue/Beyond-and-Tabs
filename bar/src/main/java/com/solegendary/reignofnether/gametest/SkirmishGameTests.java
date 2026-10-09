@@ -173,6 +173,31 @@ public class SkirmishGameTests {
         });
     }
 
+    /** Liveries are visual only: a dressed unit wears its faction kit but gains no armour (balance pillar). */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void liveries_give_zero_armour(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var soldier = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (soldier == null) {
+            helper.fail("could not create a vindicator unit");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(9, 2, 9));
+        soldier.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        soldier.setOwnerName("gametest_kingdom");
+        double baseArmour = soldier.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
+        level.addFreshEntity(soldier);
+        helper.runAfterDelay(90, () -> {
+            if (soldier.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).isEmpty())
+                helper.fail("unit was never dressed");
+            double armour = soldier.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR);
+            if (armour > baseArmour + 0.001)
+                helper.fail("livery added armour: " + baseArmour + " -> " + armour);
+            soldier.discard();
+            helper.succeed();
+        });
+    }
+
     /** The colour palette is what the lobby, packets and saves agree on: ids unique, nonzero, textures named. */
     @GameTest(template = ARENA)
     public static void colour_palette_is_consistent(GameTestHelper helper) {

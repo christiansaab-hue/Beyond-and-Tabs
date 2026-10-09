@@ -38,7 +38,7 @@ import java.util.UUID;
 public class UnitDressServerEvents {
 
     /** bumped from "bt_dressed": units dressed by the first version (with real armour) get re-dressed. */
-    static final String DRESSED_TAG = "bt_dressed3";
+    static final String DRESSED_TAG = "bt_dressed4";
     static final String OLD_DRESSED_TAG = "bt_dressed";
     static final String LIVERY_NBT = "bt_livery";
 
@@ -65,7 +65,8 @@ public class UnitDressServerEvents {
             // commanders are promoted after spawning; they pick up the crown on a later pass (once only: a head
             // slot holding real gear or the crown already is left alone)
             ItemStack head = mob.getItemBySlot(EquipmentSlot.HEAD);
-            boolean needsCrown = commander && !head.is(Items.GOLDEN_HELMET) && (head.isEmpty() || isLivery(head));
+            boolean needsCrown = commander && !head.is(commanderHelm(Factions.getFaction(unit)))
+                && (head.isEmpty() || isLivery(head));
             if (le.getTags().contains(DRESSED_TAG) && !needsCrown)
                 continue;
             if (le.getTags().contains(OLD_DRESSED_TAG)) {
@@ -99,20 +100,61 @@ public class UnitDressServerEvents {
             accent = KINGDOM_ACCENT;
         }
 
+        // the faction colour stays on the legs and boots (dyed leather, or a dyeable gambeson) so a unit's side
+        // reads at a glance; the helmet and chest carry the faction's armour style from Epic Knights when that
+        // mod is installed (plain leather/vanilla otherwise). Every piece keeps the zero-armour modifier.
+        Kit kit = kitFor(faction, unit, commander);
         equip(mob, EquipmentSlot.FEET, Items.LEATHER_BOOTS, colour);
-        // workers wear the faction tunic too (zero armour value) - bare zombie villagers were unreadable at night
-        equip(mob, EquipmentSlot.CHEST, Items.LEATHER_CHESTPLATE, colour);
-        if (!(unit instanceof WorkerUnit)) {
-            if (unit instanceof RangedAttackerUnit)
-                equip(mob, EquipmentSlot.HEAD, Items.LEATHER_HELMET, accent);
-            else
-                equip(mob, EquipmentSlot.LEGS, Items.LEATHER_LEGGINGS, colour);
+        equip(mob, EquipmentSlot.CHEST, kit.chest, colour);
+        if (kit.legs != null)
+            equip(mob, EquipmentSlot.LEGS, kit.legs, colour);
+        if (kit.head != null)
+            equip(mob, EquipmentSlot.HEAD, kit.head, accent);
+    }
+
+    /** What a unit wears on head, chest and legs (feet are always the faction-coloured boots). */
+    record Kit(Item head, Item chest, Item legs) { }
+
+    /** An item from Epic Knights ("magistuarmory") if the mod is loaded, else the vanilla fallback. */
+    static Item ek(String id, Item fallback) {
+        Item item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("magistuarmory", id));
+        return item == null || item == Items.AIR ? fallback : item;
+    }
+
+    /** The commander's head piece for its faction (Sunforged: a plumed ceremonial armet; others a war helm). */
+    static Item commanderHelm(Faction faction) {
+        if (faction != null && faction.equals(Factions.MONSTERS))
+            return ek("rustedgreathelm", Items.GOLDEN_HELMET);
+        if (faction != null && faction.equals(Factions.PIGLINS))
+            return ek("greathelm", Items.GOLDEN_HELMET);
+        return ek("ceremonialarmet_with_plume", Items.GOLDEN_HELMET);
+    }
+
+    static Kit kitFor(Faction faction, Unit unit, boolean commander) {
+        boolean worker = unit instanceof WorkerUnit, ranged = unit instanceof RangedAttackerUnit;
+        if (faction != null && faction.equals(Factions.MONSTERS)) {          // Gravebound: rusted relics
+            if (commander) return new Kit(commanderHelm(faction), ek("rustedcrusader_chestplate", Items.LEATHER_CHESTPLATE), Items.LEATHER_LEGGINGS);
+            if (worker) return new Kit(null, Items.LEATHER_CHESTPLATE, null);
+            if (ranged) return new Kit(ek("rustedkettlehat", Items.LEATHER_HELMET), ek("rustedchainmail_chestplate", Items.LEATHER_CHESTPLATE), null);
+            return new Kit(ek("rustednorman_helmet", null), ek("rustedhalfarmor_chestplate", Items.LEATHER_CHESTPLATE), Items.LEATHER_LEGGINGS);
         }
-        if (commander)
-            equip(mob, EquipmentSlot.HEAD, Items.GOLDEN_HELMET, -1);
+        if (faction != null && faction.equals(Factions.PIGLINS)) {           // Ironhide Horde: lamellar and iron
+            if (commander) return new Kit(commanderHelm(faction), ek("lamellar_chestplate", Items.LEATHER_CHESTPLATE), Items.LEATHER_LEGGINGS);
+            if (worker) return new Kit(null, Items.LEATHER_CHESTPLATE, null);
+            if (ranged) return new Kit(null, ek("lamellar_chestplate", Items.LEATHER_CHESTPLATE), null);
+            return new Kit(ek("barbute", null), ek("brigandine_chestplate", Items.LEATHER_CHESTPLATE), Items.LEATHER_LEGGINGS);
+        }
+        // Sunforged Kingdom: knights in white and gold
+        if (commander) return new Kit(commanderHelm(faction), ek("maximilian_chestplate", Items.LEATHER_CHESTPLATE), Items.LEATHER_LEGGINGS);
+        if (worker) return new Kit(null, ek("gambeson_chestplate", Items.LEATHER_CHESTPLATE), null);
+        if (ranged) return new Kit(ek("kettlehat", Items.LEATHER_HELMET), ek("gambeson_chestplate", Items.LEATHER_CHESTPLATE), null);
+        return new Kit(ek("sallet", null), ek("knight_chestplate", Items.LEATHER_CHESTPLATE), Items.LEATHER_LEGGINGS);
     }
 
     static void equip(Mob mob, EquipmentSlot slot, Item item, int colour) {
+        if (item == null)
+            return;
         ItemStack current = mob.getItemBySlot(slot);
         // never override real gear; a livery piece may be swapped (e.g. a hood for a commander's crown)
         if (!current.isEmpty() && !isLivery(current))
