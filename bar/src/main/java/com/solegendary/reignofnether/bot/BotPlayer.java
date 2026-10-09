@@ -140,6 +140,9 @@ public class BotPlayer {
         // 3) build sites need builders: any unbuilt or damaged building gets the nearest idle worker
         assignBuilders(level, buildings, workers);
 
+        // 3b) reclaim: one idle worker walks to the nearest wreck in our territory (BAR players do this by habit)
+        sendReclaimer(workers);
+
         // 4) expand the economy (one site at a time so the flow economy isn't buried in stall)
         long minutes = (gameTime - startedAt) / (20 * 60);
         if (unbuilt <= 1) {
@@ -328,6 +331,35 @@ public class BotPlayer {
             if (bp.getBuilding() == b)
                 n++;
         return n;
+    }
+
+    void sendReclaimer(List<LivingEntity> workers) {
+        if (home == null)
+            return;
+        net.minecraft.world.entity.Entity wreck = null;
+        double best = 40 * 40;
+        for (var w : com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks()) {
+            if (w.isRemoved())
+                continue;
+            double d = w.blockPosition().distSqr(home);
+            if (d < best) {
+                best = d;
+                wreck = w;
+            }
+        }
+        if (wreck == null)
+            return;
+        for (LivingEntity le : workers) {
+            if (le.distanceToSqr(wreck) < 9)
+                return;   // someone is already on it
+        }
+        for (LivingEntity le : workers) {
+            if (le instanceof Unit u && u.isIdle()
+                    && !com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)) {
+                order(List.of(le), UnitAction.MOVE, wreck.blockPosition());
+                return;
+            }
+        }
     }
 
     void order(List<LivingEntity> units, UnitAction action, BlockPos target) {
