@@ -38,7 +38,7 @@ public class WindmillRenderClientEvents {
         for (BuildingBlock bb : placement.getBlocks()) {
             BlockState bs = bb.getBlockState();
             if ((bs.is(Blocks.STRIPPED_SPRUCE_LOG) || bs.is(Blocks.STRIPPED_DARK_OAK_LOG)
-                    || bs.is(Blocks.STRIPPED_CRIMSON_STEM))
+                    || bs.is(Blocks.STRIPPED_CRIMSON_STEM) || bs.is(Blocks.BONE_BLOCK))
                     && bs.hasProperty(BlockStateProperties.AXIS)
                     && bs.getValue(BlockStateProperties.AXIS) != Direction.Axis.Y)
                 return bb;
@@ -75,11 +75,14 @@ public class WindmillRenderClientEvents {
 
             Direction.Axis axis = hubBlock.getBlockState().getValue(BlockStateProperties.AXIS);
 
-            // each faction flies its own sails: Kingdom white canvas on spruce, the Fallen grey rags on
-            // dark oak, the Gilded Legion gold cloth on crimson spars
+            // each faction flies its own sails: Sunforged white canvas on spruce, Gravebound grey rags on
+            // dark oak, the Ironhide Horde rust-red hides on dark timber round a bone hub
             BlockState bladeCloth;
             BlockState bladeArm;
-            if (hubBlock.getBlockState().is(Blocks.STRIPPED_DARK_OAK_LOG)) {
+            if (hubBlock.getBlockState().is(Blocks.BONE_BLOCK)) {
+                bladeCloth = Blocks.RED_WOOL.defaultBlockState();
+                bladeArm = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+            } else if (hubBlock.getBlockState().is(Blocks.STRIPPED_DARK_OAK_LOG)) {
                 bladeCloth = Blocks.GRAY_WOOL.defaultBlockState();
                 bladeArm = Blocks.DARK_OAK_PLANKS.defaultBlockState();
             } else if (hubBlock.getBlockState().is(Blocks.STRIPPED_CRIMSON_STEM)) {
