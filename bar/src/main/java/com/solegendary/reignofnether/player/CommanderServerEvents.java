@@ -36,6 +36,7 @@ public class CommanderServerEvents {
         if (!(entity instanceof LivingEntity le))
             return;
         entity.addTag(TAG);
+        ensureAbility(entity);
         entity.setCustomName(Component.translatable("unit.reignofnether.commander"));
         entity.setCustomNameVisible(true);
         AttributeInstance hp = le.getAttribute(Attributes.MAX_HEALTH);
@@ -46,6 +47,31 @@ public class CommanderServerEvents {
         AttributeInstance dmg = le.getAttribute(Attributes.ATTACK_DAMAGE);
         if (dmg != null && dmg.getModifier(DMG_MOD) == null)
             dmg.addPermanentModifier(new AttributeModifier(DMG_MOD, "commander_dmg", 6.0, AttributeModifier.Operation.ADDITION));
+    }
+
+    /** Gives a commander its faction's signature ability once (both sides: the client needs it for the button). */
+    public static void ensureAbility(Entity entity) {
+        if (!(entity instanceof Unit unit) || unit.getAbilities() == null)
+            return;
+        for (com.solegendary.reignofnether.ability.Ability a : unit.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility)
+                return;
+        unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
+    }
+
+    /** Client side: tags don't sync, but the commander's translated name does - that's how the client knows. */
+    public static boolean looksLikeCommander(Entity entity) {
+        return entity.getCustomName() != null
+            && entity.getCustomName().getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents tc
+            && "unit.reignofnether.commander".equals(tc.getKey());
+    }
+
+    /** Commanders reloaded from a save get their ability back. */
+    @SubscribeEvent
+    public static void onJoin(net.minecraftforge.event.entity.EntityJoinLevelEvent evt) {
+        Entity e = evt.getEntity();
+        if (evt.getLevel().isClientSide() ? looksLikeCommander(e) : isCommander(e))
+            ensureAbility(e);
     }
 
     @SubscribeEvent

@@ -155,5 +155,7 @@ public enum UnitAction {
     SET_ATTACK_COUNT, // for marauders
 
     DEBUG1,
-    DEBUG2
+    DEBUG2,
+
+    COMMANDER_ABILITY // Beyond and Tabs: each faction's commander signature ability (kept last: enums travel by ordinal)
 }

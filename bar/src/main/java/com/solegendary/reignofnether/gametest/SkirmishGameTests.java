@@ -134,6 +134,45 @@ public class SkirmishGameTests {
         });
     }
 
+    /** A commander carries its faction's signature ability, and the Horde's War Horn buffs an ally in range. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void commander_war_horn_buffs_allies(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var commander = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        var ally = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        if (commander == null || ally == null) {
+            helper.fail("could not create grunt units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(6, 2, 6));
+        commander.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        ally.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        commander.setOwnerName("gametest_horde");
+        ally.setOwnerName("gametest_horde");
+        level.addFreshEntity(commander);
+        level.addFreshEntity(ally);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(commander);
+        com.solegendary.reignofnether.ability.abilities.CommanderAbility horn = null;
+        for (var a : commander.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility ca)
+                horn = ca;
+        if (horn == null) {
+            helper.fail("commander has no CommanderAbility");
+            return;
+        }
+        final var ability = horn;
+        helper.runAfterDelay(5, () -> {
+            ability.use(level, commander, commander.blockPosition());
+            if (!ally.hasEffect(net.minecraft.world.effect.MobEffects.DAMAGE_BOOST))
+                helper.fail("War Horn did not give the ally Strength");
+            if (ability.isOffCooldown(commander))
+                helper.fail("War Horn did not go on cooldown");
+            commander.discard();
+            ally.discard();
+            helper.succeed();
+        });
+    }
+
     /** The colour palette is what the lobby, packets and saves agree on: ids unique, nonzero, textures named. */
     @GameTest(template = ARENA)
     public static void colour_palette_is_consistent(GameTestHelper helper) {
