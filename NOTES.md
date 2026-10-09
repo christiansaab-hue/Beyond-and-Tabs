@@ -24,7 +24,7 @@ This file is the session-proof status log: what's shipped, how to install, what'
   one-time controls hint; strategic zoom icons (commander star, building plates).
 - Minimap intel: metal patches as silver diamonds (synced + saved), enemy capitols always visible,
   bot base ping on `/bot add`.
-- Windmill rebuilt (plastered tower + wooden cap) with client-rendered spinning sails; producing buildings
+- Windmills + extractors now faction-skinned (Kingdom plaster/spruce, Fallen deepslate/dark oak + grey rag sails, Gilded Legion blackstone/gold + gold sails); spinning sails client-rendered; producing buildings
   puff chimney smoke.
 
 ## Known issues / watchlist

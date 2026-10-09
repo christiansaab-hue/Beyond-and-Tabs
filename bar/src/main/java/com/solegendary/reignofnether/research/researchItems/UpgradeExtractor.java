@@ -34,8 +34,8 @@ public class UpgradeExtractor extends ProductionItem {
     public UpgradeExtractor() {
         super(cost, ProdDupeRule.DISALLOW_FOR_BUILDING);
         this.onComplete = (Level level, ProductionPlacement placement) -> {
-            if (!level.isClientSide() && placement.getBuilding() instanceof MetalExtractor)
-                placement.changeStructure(MetalExtractor.upgradedStructureName);
+            if (!level.isClientSide() && placement.getBuilding() instanceof MetalExtractor extractor)
+                placement.changeStructure(extractor.getUpgradedStructureName(1));
         };
     }
 

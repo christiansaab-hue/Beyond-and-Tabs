@@ -30,8 +30,16 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
     public final static float T2_METAL_INCOME = 7.0f;
     public final static ResourceCost cost = ResourceCosts.METAL_EXTRACTOR;
 
+    /** "" (Kingdom), "_dark" (The Fallen) or "_nether" (The Gilded Legion); picks the faction's structure skin. */
+    public final String variant;
+
     public MetalExtractor() {
-        super(structureName, cost, false);
+        this("");
+    }
+
+    public MetalExtractor(String variant) {
+        super(structureName + variant, cost, false);
+        this.variant = variant;
         this.name = buildingName;
         this.portraitBlock = Blocks.RAW_IRON_BLOCK;
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/raw_iron_block.png");
@@ -57,7 +65,7 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
 
     @Override
     public String getUpgradedStructureName(int upgradeLevel) {
-        return upgradeLevel > 0 ? upgradedStructureName : structureName;
+        return (upgradeLevel > 0 ? upgradedStructureName : structureName) + variant;
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

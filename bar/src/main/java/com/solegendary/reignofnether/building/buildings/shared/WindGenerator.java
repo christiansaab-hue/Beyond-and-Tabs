@@ -28,7 +28,12 @@ public class WindGenerator extends Building {
     public final static ResourceCost cost = ResourceCosts.WIND_GENERATOR;
 
     public WindGenerator() {
-        super(structureName, cost, false);
+        this("");
+    }
+
+    /** variant: "" (Kingdom plaster mill), "_dark" (The Fallen) or "_nether" (The Gilded Legion). */
+    public WindGenerator(String variant) {
+        super(structureName + variant, cost, false);
         this.name = buildingName;
         this.portraitBlock = Blocks.IRON_BLOCK;
         this.icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/iron_block.png");

@@ -33,11 +33,13 @@ public class WindmillRenderClientEvents {
     private static final float BLADE_THICKNESS = 0.14f;
     private static final double MAX_RENDER_DIST_SQR = 220 * 220;
 
-    /** The hub of a windmill placement: its horizontal stripped spruce log, or null. */
+    /** The hub of a windmill placement: its horizontal stripped log (each faction's mill uses its own wood). */
     private static BuildingBlock findHub(BuildingPlacement placement) {
         for (BuildingBlock bb : placement.getBlocks()) {
             BlockState bs = bb.getBlockState();
-            if (bs.is(Blocks.STRIPPED_SPRUCE_LOG) && bs.hasProperty(BlockStateProperties.AXIS)
+            if ((bs.is(Blocks.STRIPPED_SPRUCE_LOG) || bs.is(Blocks.STRIPPED_DARK_OAK_LOG)
+                    || bs.is(Blocks.STRIPPED_CRIMSON_STEM))
+                    && bs.hasProperty(BlockStateProperties.AXIS)
                     && bs.getValue(BlockStateProperties.AXIS) != Direction.Axis.Y)
                 return bb;
         }
@@ -54,8 +56,6 @@ public class WindmillRenderClientEvents {
         PoseStack matrix = evt.getPoseStack();
         Entity cam = MC.cameraEntity;
         BlockRenderDispatcher renderer = MC.getBlockRenderer();
-        BlockState bladeCloth = Blocks.WHITE_WOOL.defaultBlockState();
-        BlockState bladeArm = Blocks.SPRUCE_PLANKS.defaultBlockState();
         float time = MC.level.getGameTime() + evt.getPartialTick();
         boolean renderedAny = false;
 
@@ -71,6 +71,21 @@ public class WindmillRenderClientEvents {
                 continue;
 
             Direction.Axis axis = hubBlock.getBlockState().getValue(BlockStateProperties.AXIS);
+
+            // each faction flies its own sails: Kingdom white canvas on spruce, the Fallen grey rags on
+            // dark oak, the Gilded Legion gold cloth on crimson spars
+            BlockState bladeCloth;
+            BlockState bladeArm;
+            if (hubBlock.getBlockState().is(Blocks.STRIPPED_DARK_OAK_LOG)) {
+                bladeCloth = Blocks.GRAY_WOOL.defaultBlockState();
+                bladeArm = Blocks.DARK_OAK_PLANKS.defaultBlockState();
+            } else if (hubBlock.getBlockState().is(Blocks.STRIPPED_CRIMSON_STEM)) {
+                bladeCloth = Blocks.YELLOW_WOOL.defaultBlockState();
+                bladeArm = Blocks.CRIMSON_PLANKS.defaultBlockState();
+            } else {
+                bladeCloth = Blocks.WHITE_WOOL.defaultBlockState();
+                bladeArm = Blocks.SPRUCE_PLANKS.defaultBlockState();
+            }
 
             // rotor plane sits just outside the hub's outward face (away from the tower centre)
             BlockPos centre = BuildingUtils.getCentrePos(placement.getBlocks());
