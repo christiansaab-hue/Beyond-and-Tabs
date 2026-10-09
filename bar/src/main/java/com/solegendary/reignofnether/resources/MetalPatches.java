@@ -84,19 +84,46 @@ public final class MetalPatches {
         saveData.entries.add(new MetalPatchesSaveData.Entry(dim, centre));
         saveData.setDirty();
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
-            int bx = x + d[0], bz = z + d[1];
-            int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, bx, bz) - 1;
-            p.set(bx, top, bz);
-            BlockState s = level.getBlockState(p);
-            if (!s.getFluidState().isEmpty())
-                continue;   // not in rivers or lakes
-            // the surface may be a flower or grass; walk down to something solid
-            int min = Math.max(level.getMinBuildHeight(), top - 6);
-            while (p.getY() > min && !level.getBlockState(p).isSolidRender(level, p))
-                p.move(0, -1, 0);
-            level.setBlock(p, PATCH_BLOCK.defaultBlockState(), FLAGS);
+        // level a 7x7 pad around the patch to the centre's ground height, so the 5x5 extractor always has flat
+        // ground to sit on (patches on a slope or among tree roots were silently unplaceable)
+        int padY = solidTop(level, x, z);
+        if (padY > level.getMinBuildHeight()) {
+            BlockState fill = level.getBlockState(p.set(x, padY, z));
+            if (fill.isAir() || !fill.getFluidState().isEmpty() || fill.is(PATCH_BLOCK))
+                fill = Blocks.DIRT.defaultBlockState();
+            BlockState cap = level.getBiome(p).is(net.minecraft.tags.BiomeTags.IS_NETHER)
+                ? Blocks.NETHERRACK.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState();
+            for (int dx = -3; dx <= 3; dx++)
+                for (int dz = -3; dz <= 3; dz++) {
+                    int bx = x + dx, bz = z + dz;
+                    if (!level.getBlockState(p.set(bx, padY, bz)).getFluidState().isEmpty()
+                            || !level.getBlockState(p.set(bx, padY + 1, bz)).getFluidState().isEmpty())
+                        continue;   // leave rivers and lakes alone
+                    // clear everything above the pad (grass, flowers, logs, leaves - up to 8 high for trees)
+                    for (int y = padY + 1; y <= padY + 8; y++)
+                        if (!level.getBlockState(p.set(bx, y, bz)).isAir())
+                            level.setBlock(p, Blocks.AIR.defaultBlockState(), FLAGS);
+                    // raise low ground up to the pad
+                    for (int y = padY - 4; y < padY; y++)
+                        if (!level.getBlockState(p.set(bx, y, bz)).isSolidRender(level, p))
+                            level.setBlock(p, fill, FLAGS);
+                    level.setBlock(p.set(bx, padY, bz), cap, FLAGS);
+                }
+            for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}})
+                level.setBlock(p.set(x + d[0], padY, z + d[1]), PATCH_BLOCK.defaultBlockState(), FLAGS);
         }
+    }
+
+    /** The y of the topmost solid, non-fluid block at (x, z), or min build height if there is none. */
+    static int solidTop(ServerLevel level, int x, int z) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1;
+        int min = Math.max(level.getMinBuildHeight(), top - 12);
+        p.set(x, top, z);
+        while (p.getY() > min && (!level.getBlockState(p).isSolidRender(level, p)
+                || !level.getBlockState(p).getFluidState().isEmpty()))
+            p.move(0, -1, 0);
+        return p.getY();
     }
 
     /**

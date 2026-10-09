@@ -93,11 +93,25 @@ public class PatchQuickBuildClientEvents {
         java.util.List<BlockPos> targets = com.solegendary.reignofnether.keybinds.Keybindings.shiftMod.isDown()
                 ? freePatchesNear(patch, 40) : java.util.List.of(patch);
         int queued = 0;
+        String firstError = null;
         for (BlockPos target : targets) {
             BlockPos originPos = target.offset(-2, 1, -2);   // 5x5 centred on the patch, one above the ground
+            // validate here so the player hears WHY when a patch can't take an extractor (the server rejects silently)
+            String error = BuildingValidators.getPlacementValidityError(MC.level, extractor, originPos,
+                    MC.player.getName().getString(), Rotation.NONE, false, false, true);
+            if (error != null) {
+                if (firstError == null) firstError = error;
+                continue;
+            }
             BuildingServerboundPacket.placeAndQueueBuilding(extractor, originPos, Rotation.NONE,
                     MC.player.getName().getString(), ids, queued > 0);
             queued++;
+        }
+        if (queued == 0) {
+            HudClientEvents.showTemporaryMessage(Component.translatable("hud.reignofnether.extractor_blocked",
+                    firstError != null ? Component.translatable(firstError).getString() : "").getString());
+            evt.setCanceled(true);
+            return;
         }
         HudClientEvents.showTemporaryMessage(queued > 1
                 ? Component.translatable("hud.reignofnether.building_extractors", queued).getString()
