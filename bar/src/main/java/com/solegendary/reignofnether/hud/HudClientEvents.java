@@ -353,6 +353,21 @@ public class HudClientEvents {
         int blitY = MC.getWindow().getGuiScaledHeight();
         int blitXStart = blitX;
 
+        // BAR-style command panel: one dark backing behind the orders grid, portrait, stats and the selection
+        // strip in the bottom-left, drawn first so every button sits on it
+        if (!selUnits.isEmpty() || !selBuildings.isEmpty()) {
+            int panelRight = hudStartingXPos + portraitRendererUnit.frameWidth + portraitRendererUnit.statsWidth + 10;
+            if (selUnits.size() > 1 || selBuildings.size() > 1)
+                panelRight = Math.max(panelRight, hudStartingXPos + portraitRendererUnit.frameWidth
+                    + portraitRendererUnit.statsWidth + iconFrameSize * buttonsPerRow + 24);
+            int panelH = Math.max(portraitRendererUnit.frameHeight, iconFrameSize * 4 + 6) + 8;
+            int panelTop = screenHeight - panelH;
+            evt.getGuiGraphics().fill(0, panelTop, panelRight, screenHeight, EconomyBarRenderer.BG);
+            evt.getGuiGraphics().fill(0, panelTop - 1, panelRight, panelTop, 0xFF3A3F46);
+            evt.getGuiGraphics().fill(panelRight, panelTop - 1, panelRight + 1, screenHeight, 0xFF3A3F46);
+            hudZones.add(RectZone.getZoneByLW(0, panelTop - 1, panelRight + 1, panelH + 1));
+        }
+
         // assign hudSelectedBuilding like hudSelectedUnit in onRenderLiving
         if (selBuildings.size() <= 0) {
             hudSelectedPlacement = null;
