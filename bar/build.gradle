@@ -93,6 +93,18 @@ minecraft {
             }
         }
 
+        // headless smoke tests (gametest/SkirmishGameTests): `./gradlew runGameTestServer` - CI runs this on every push
+        gameTestServer {
+            workingDirectory project.file('run-gametest')
+            property 'forge.logging.console.level', 'info'
+            property 'forge.enabledGameTestNamespaces', 'reignofnether'
+            mods {
+                reignofnether {
+                    source sourceSets.main
+                }
+            }
+        }
+
         data {
             workingDirectory project.file('run')
 

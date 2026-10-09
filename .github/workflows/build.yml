@@ -90,6 +90,15 @@ jobs:
             grep -E "FAILURE|What went wrong|> " build.log | head -20 | sed 's/^/::warning::/'
             exit 1
           }
+      - name: Headless smoke tests on a real server (gametest/SkirmishGameTests)
+        working-directory: bar
+        run: |
+          set -o pipefail
+          ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error" || true
+          if ! grep -qE "All [0-9]+ required tests passed" gametest.log; then
+            grep -E "FAILED|failed|Exception" gametest.log | head -30 | sed 's/^/::error::/'
+            echo "::error::game tests did not report success"; exit 1
+          fi
       - name: Remove the previous BAR build
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env: { GH_TOKEN: "${{ github.token }}" }
