@@ -87,6 +87,9 @@ COLOURS = {
     "gray": (70, 75, 80), "light_gray": (150, 150, 145), "brown": (110, 75, 45), "orange": (230, 120, 30),
     "cyan": (30, 130, 145), "lime": (110, 185, 30), "pink": (225, 130, 160), "magenta": (180, 70, 170),
     "light_blue": (60, 170, 215),
+    # modded decor (Macaw's etc.)
+    "thatch_steep_roof": (196, 168, 86), "thatch": (196, 168, 86), "_window": (165, 200, 215), "_gothic": (120, 150, 170),
+    "steep_roof": (100, 100, 100), "concrete": (220, 220, 220),
 }
 SKIP = ("air", "structure_void", "barrier", "light")
 
