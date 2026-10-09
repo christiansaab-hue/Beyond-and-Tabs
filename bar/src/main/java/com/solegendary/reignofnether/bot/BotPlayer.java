@@ -193,6 +193,9 @@ public class BotPlayer {
                     }
         }
 
+        // 4c) the commander's signature ability when a fight is on near it (same rules as a player: cooldown)
+        useCommanderAbility(level, mine);
+
         // 5) train fighters: the repeat queue keeps army buildings running once seeded
         for (BuildingPlacement bp : buildings)
             if (bp.isBuilt && bp.getBuilding() == kit.armyBuilding() && bp instanceof ProductionPlacement pp) {
@@ -274,6 +277,28 @@ public class BotPlayer {
             }
         }
         return best;
+    }
+
+    /** Fires the commander's ability once three or more enemy units are within its reach. */
+    void useCommanderAbility(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le) || !(le instanceof Unit u))
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility) || !a.isOffCooldown(u))
+                    continue;
+                int enemies = 0;
+                for (LivingEntity other : UnitServerEvents.getAllUnits()) {
+                    if (!(other instanceof Unit ou) || !other.isAlive() || other.distanceToSqr(le) > 14 * 14)
+                        continue;
+                    String o = ou.getOwnerName();
+                    if (o != null && !o.equals(name) && !AlliancesServerEvents.isAllied(name, o))
+                        enemies++;
+                }
+                if (enemies >= 3)
+                    a.use(level, u, le.blockPosition());
+            }
+        }
     }
 
     /** Tries to place a building near the wanted position, spiralling outward over valid ground. */
