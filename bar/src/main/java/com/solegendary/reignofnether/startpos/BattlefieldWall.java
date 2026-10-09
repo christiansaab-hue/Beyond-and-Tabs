@@ -37,9 +37,42 @@ public class BattlefieldWall {
     static int towerEvery = 48;
     static int mossPct = 10;
     static int crackedPct = 8;
+    static int gatehouseEvery = 5;   // every Nth tower is a gatehouse (purely visual; still impassable)
+    static Material material;
+
+    /**
+     * A wall material set: main body, two weathered variants, crenellation and walkway. Each match rolls one,
+     * so one game is fought inside grey ramparts, the next inside desert sandstone or blackstone.
+     */
+    record Material(String name, BlockState body, BlockState weathered, BlockState cracked,
+                    BlockState crenel, BlockState walk, BlockState accent) { }
+
+    static final Material[] MATERIALS = {
+        new Material("stone brick", Blocks.STONE_BRICKS.defaultBlockState(),
+            Blocks.MOSSY_STONE_BRICKS.defaultBlockState(), Blocks.CRACKED_STONE_BRICKS.defaultBlockState(),
+            Blocks.STONE_BRICK_WALL.defaultBlockState(), Blocks.STONE_BRICK_SLAB.defaultBlockState(),
+            Blocks.CHISELED_STONE_BRICKS.defaultBlockState()),
+        new Material("sandstone", Blocks.CUT_SANDSTONE.defaultBlockState(),
+            Blocks.SANDSTONE.defaultBlockState(), Blocks.SMOOTH_SANDSTONE.defaultBlockState(),
+            Blocks.SANDSTONE_WALL.defaultBlockState(), Blocks.CUT_SANDSTONE_SLAB.defaultBlockState(),
+            Blocks.CHISELED_SANDSTONE.defaultBlockState()),
+        new Material("deepslate", Blocks.DEEPSLATE_BRICKS.defaultBlockState(),
+            Blocks.DEEPSLATE_TILES.defaultBlockState(), Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState(),
+            Blocks.DEEPSLATE_BRICK_WALL.defaultBlockState(), Blocks.DEEPSLATE_BRICK_SLAB.defaultBlockState(),
+            Blocks.CHISELED_DEEPSLATE.defaultBlockState()),
+        new Material("blackstone", Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState(),
+            Blocks.BLACKSTONE.defaultBlockState(), Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState(),
+            Blocks.POLISHED_BLACKSTONE_BRICK_WALL.defaultBlockState(),
+            Blocks.POLISHED_BLACKSTONE_BRICK_SLAB.defaultBlockState(),
+            Blocks.GILDED_BLACKSTONE.defaultBlockState()),
+        new Material("mud brick", Blocks.MUD_BRICKS.defaultBlockState(),
+            Blocks.PACKED_MUD.defaultBlockState(), Blocks.MUD_BRICKS.defaultBlockState(),
+            Blocks.MUD_BRICK_WALL.defaultBlockState(), Blocks.MUD_BRICK_SLAB.defaultBlockState(),
+            Blocks.STRIPPED_SPRUCE_WOOD.defaultBlockState()),
+    };
 
     /** One column of wall still to be built. */
-    record Column(int x, int z, double angle, boolean tower, boolean crenel) { }
+    record Column(int x, int z, double angle, boolean tower, boolean crenel, boolean gatehouse) { }
 
     static final ArrayDeque<Column> queue = new ArrayDeque<>();
     static ServerLevel buildLevel = null;
@@ -66,22 +99,28 @@ public class BattlefieldWall {
         towerEvery = 36 + random.nextInt(29);          // 36-64 columns between watchtowers
         mossPct = 5 + random.nextInt(21);              // 5-25% weathered blocks
         crackedPct = 4 + random.nextInt(10);
+        // stone brick stays the most common; the others make some matches look like a different world
+        material = random.nextInt(100) < 40 ? MATERIALS[0] : MATERIALS[1 + random.nextInt(MATERIALS.length - 1)];
+        gatehouseEvery = 4 + random.nextInt(4);
 
         int steps = (int) Math.ceil(Math.PI * 2 * radius);
         Set<Long> seen = new HashSet<>();
         int col = 0;
+        int towers = 0;
         for (int i = 0; i < steps; i++) {
             double a = Math.PI * 2 * i / steps;
             int x = (int) Math.round(cx + Math.cos(a) * radius);
             int z = (int) Math.round(cz + Math.sin(a) * radius);
             if (!seen.add(((long) x << 32) ^ (z & 0xffffffffL)))
                 continue;
-            queue.add(new Column(x, z, a, col % towerEvery == 0, col % 2 == 0));
+            boolean tower = col % towerEvery == 0;
+            boolean gatehouse = tower && towers++ % gatehouseEvery == gatehouseEvery - 1;
+            queue.add(new Column(x, z, a, tower, col % 2 == 0, gatehouse));
             col++;
         }
         buildLevel = level;
-        ReignOfNether.LOGGER.info("[BattlefieldWall] raising a ring wall: centre [{}, {}], radius {}, {} columns",
-            (int) cx, (int) cz, (int) radius, col);
+        ReignOfNether.LOGGER.info("[BattlefieldWall] raising a {} ring wall: centre [{}, {}], radius {}, {} columns",
+            material.name(), (int) cx, (int) cz, (int) radius, col);
     }
 
     public static boolean isBuilding() {
@@ -105,10 +144,15 @@ public class BattlefieldWall {
     }
 
     static BlockState body() {
+        Material m = material != null ? material : MATERIALS[0];
         int r = random.nextInt(100);
-        if (r < mossPct) return Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
-        if (r < mossPct + crackedPct) return Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
-        return Blocks.STONE_BRICKS.defaultBlockState();
+        if (r < mossPct) return m.weathered();
+        if (r < mossPct + crackedPct) return m.cracked();
+        return m.body();
+    }
+
+    static Material mat() {
+        return material != null ? material : MATERIALS[0];
     }
 
     static void buildColumn(ServerLevel level, Column c) {
@@ -116,6 +160,10 @@ public class BattlefieldWall {
         int ix = (int) Math.round(c.x() - Math.cos(c.angle()));
         int iz = (int) Math.round(c.z() - Math.sin(c.angle()));
 
+        if (c.gatehouse()) {
+            buildGatehouse(level, c.x(), c.z(), c.angle());
+            return;
+        }
         if (c.tower()) {
             buildTower(level, c.x(), c.z());
             return;
@@ -127,14 +175,12 @@ public class BattlefieldWall {
         // outer face: body + crenellation on alternating columns
         fillColumn(level, c.x(), c.z(), outerBase - 2, top);
         if (c.crenel())
-            level.setBlock(new BlockPos(c.x(), top + 1, c.z()),
-                Blocks.STONE_BRICK_WALL.defaultBlockState(), FLAGS);
+            level.setBlock(new BlockPos(c.x(), top + 1, c.z()), mat().crenel(), FLAGS);
 
         // inner face: body + walkway slab
         if (ix != c.x() || iz != c.z()) {
             fillColumn(level, ix, iz, innerBase - 2, top);
-            level.setBlock(new BlockPos(ix, top + 1, iz),
-                Blocks.STONE_BRICK_SLAB.defaultBlockState(), FLAGS);
+            level.setBlock(new BlockPos(ix, top + 1, iz), mat().walk(), FLAGS);
         }
     }
 
@@ -147,10 +193,45 @@ public class BattlefieldWall {
                 fillColumn(level, x, z, base - 2, top);
                 // corner crenellations and a lit beacon so towers read at night
                 if (edge && (x != tx && z != tz))
-                    level.setBlock(new BlockPos(x, top + 1, z),
-                        Blocks.STONE_BRICK_WALL.defaultBlockState(), FLAGS);
+                    level.setBlock(new BlockPos(x, top + 1, z), mat().crenel(), FLAGS);
             }
         level.setBlock(new BlockPos(tx, top + 1, tz), Blocks.CAMPFIRE.defaultBlockState(), FLAGS);
+    }
+
+    /**
+     * A gatehouse: a wide twin-towered block with a sealed portcullis arch on its inner face - it reads as a
+     * gate from the battlefield but stays solid, so the arena boundary is never breached.
+     */
+    static void buildGatehouse(ServerLevel level, int gx, int gz, double angle) {
+        int base = groundY(level, gx, gz);
+        int top = base + WALL_HEIGHT + 3;
+        for (int x = gx - 2; x <= gx + 2; x++)
+            for (int z = gz - 2; z <= gz + 2; z++) {
+                int b = groundY(level, x, z);
+                fillColumn(level, x, z, Math.min(b, base) - 2, top);
+            }
+        // twin turrets on the two ends along the wall line, with accent bands and crenellations
+        double tx = -Math.sin(angle), tz = Math.cos(angle);   // tangent to the ring
+        for (int side = -1; side <= 1; side += 2) {
+            int cx = (int) Math.round(gx + tx * 2 * side);
+            int cz = (int) Math.round(gz + tz * 2 * side);
+            for (int y = top + 1; y <= top + 3; y++)
+                level.setBlock(new BlockPos(cx, y, cz), body(), FLAGS);
+            level.setBlock(new BlockPos(cx, top + 2, cz), mat().accent(), FLAGS);
+            level.setBlock(new BlockPos(cx, top + 4, cz), mat().crenel(), FLAGS);
+        }
+        // the sealed portcullis on the inner face: iron bars set into a dark recess, an accent keystone above
+        double inX = -Math.cos(angle), inZ = -Math.sin(angle);   // towards the ring centre
+        for (int w = -1; w <= 1; w++) {
+            int fx = (int) Math.round(gx + inX * 2 + tx * w);
+            int fz = (int) Math.round(gz + inZ * 2 + tz * w);
+            int fb = groundY(level, fx, fz);
+            for (int y = fb + 1; y <= fb + 4; y++)
+                level.setBlock(new BlockPos(fx, y, fz), Blocks.IRON_BARS.defaultBlockState(), FLAGS);
+            level.setBlock(new BlockPos(fx, fb + 5, fz), mat().accent(), FLAGS);
+        }
+        // a lantern-lit banner of flame atop the gate
+        level.setBlock(new BlockPos(gx, top + 1, gz), Blocks.CAMPFIRE.defaultBlockState(), FLAGS);
     }
 
     static void fillColumn(ServerLevel level, int x, int z, int from, int to) {
