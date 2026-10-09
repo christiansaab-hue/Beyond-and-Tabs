@@ -34,7 +34,16 @@ This file is the session-proof status log: what's shipped, how to install, what'
 - Windmills + extractors now faction-skinned (Kingdom plaster/spruce, Fallen deepslate/dark oak + grey rag sails, Gilded Legion blackstone/gold + gold sails); spinning sails client-rendered; producing buildings
   puff chimney smoke.
 
+## Decor mods (installed in lovish's instance; structures may reference them)
+Macaw's Roofs 2.3.2, Macaw's Windows 2.4.2, Macaw's Fences & Walls 1.2.1, Supplementaries 1.20-3.1.43,
+Moonlight Lib 1.20-2.16.35 (SHA-512 verified vs Modrinth). Modded blocks in a structure load as AIR if the mod
+is missing - never a crash. Before pushing structures that use them: stage the jars from his mods folder and run
+`python3 tools/validate_modded_structures.py <jar-dir>` (catches typos/invalid states, e.g. Macaw's windows
+only accept facing=north|east). Houses (villager_house, haunted_house) now use them.
+
 ## Known issues / watchlist
+- Upstream Reign of Nether bug: central_portal.nbt references `reignofnether:decayable_netherwart_block`
+  (registered name is `decayable_nether_wart_block`) - 1 of 1584 blocks loads as air. Cosmetic; left alone.
 - Awaiting playtest of: wall materials/gatehouses, banners, liveries, bot sweeps, round-3 fixes.
 - (fixed) /rts-reset now digs out patches, clears the registry/save and empties every minimap.
 - Faction-distinct versions of RoN's core buildings not started (tools/preview_structure.py renders NBTs
