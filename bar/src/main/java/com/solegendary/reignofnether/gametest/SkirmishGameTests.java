@@ -15,6 +15,7 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -53,30 +54,29 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
-    /** Stamping a patch must leave ground an extractor can sit on, for every faction's extractor and windmill. */
+    /**
+     * Stamping a patch must leave ground an extractor can sit on, for every faction's extractor and windmill.
+     * The game-test arena is carved out of generated terrain, so the test builds its own grass platform high
+     * above the terrain (y=200) where the heightmaps and the real ground agree, just like an open field.
+     */
     @GameTest(template = ARENA)
     public static void extractor_and_windmill_fit_on_a_stamped_patch(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8));   // on the grass layer of the arena
-        MetalPatches.forgetAll();
-        MetalPatches.stamp(level, centre.getX(), centre.getZ());
-        if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK)) {
-            // stamp() reads the surface heightmap; whichever y it chose, the patch block must be there
-            boolean found = false;
-            for (int y = centre.getY() - 3; y <= centre.getY() + 3 && !found; y++)
-                found = level.getBlockState(new BlockPos(centre.getX(), y, centre.getZ())).is(MetalPatches.PATCH_BLOCK);
-            if (!found) {
-                int surface = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, centre.getX(), centre.getZ());
-                int motion = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, centre.getX(), centre.getZ());
-                StringBuilder column = new StringBuilder();
-                for (int y = centre.getY() + 2; y >= centre.getY() - 3; y--)
-                    column.append(y).append('=').append(level.getBlockState(new BlockPos(centre.getX(), y, centre.getZ())).getBlock()).append(' ');
-                helper.fail("stamp() did not leave a patch block at " + centre + " (WORLD_SURFACE " + surface
-                    + ", MOTION_BLOCKING " + motion + ", minBuild " + level.getMinBuildHeight() + "; column: " + column + ")");
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 200;
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
             }
-        }
-        int patchY = patchY(level, centre);
-        BlockPos origin = new BlockPos(centre.getX() - 2, patchY + 1, centre.getZ() - 2);
+        MetalPatches.forgetAll();
+        MetalPatches.stamp(level, cx, cz);
+        BlockPos centre = new BlockPos(cx, y, cz);
+        if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK))
+            helper.fail("stamp() did not leave a patch block at " + centre + " (solidTop says "
+                + MetalPatches.solidTop(level, cx, cz) + ")");
+        BlockPos origin = new BlockPos(cx - 2, y + 1, cz - 2);
         for (Building extractor : List.of(Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.METAL_EXTRACTOR_MONSTERS,
                 Buildings.METAL_EXTRACTOR_PIGLINS)) {
             String err = BuildingValidators.getPlacementValidityError(level, extractor, origin, "tester",
@@ -84,7 +84,7 @@ public class SkirmishGameTests {
             if (err != null && !err.equals("building.reignofnether.must_be_nether"))
                 helper.fail(extractor.structureName + " refused on a fresh patch: " + err);
         }
-        BlockPos windOrigin = helper.absolutePos(new BlockPos(2, 2, 2));
+        BlockPos windOrigin = new BlockPos(cx + 5, y + 1, cz + 5);
         for (Building wind : List.of(Buildings.WIND_GENERATOR_VILLAGERS, Buildings.WIND_GENERATOR_MONSTERS)) {
             String err = BuildingValidators.getPlacementValidityError(level, wind, windOrigin, "tester",
                 Rotation.NONE, false, false, true);
@@ -108,13 +108,6 @@ public class SkirmishGameTests {
         if (PlayerPalette.firstFree(ids) == 0)
             helper.fail("firstFree returned 0 with a full palette");
         helper.succeed();
-    }
-
-    static int patchY(ServerLevel level, BlockPos centre) {
-        for (int y = centre.getY() + 3; y >= centre.getY() - 3; y--)
-            if (level.getBlockState(new BlockPos(centre.getX(), y, centre.getZ())).is(MetalPatches.PATCH_BLOCK))
-                return y;
-        return centre.getY();
     }
 
     static ResourceLocation rl(String path) {
