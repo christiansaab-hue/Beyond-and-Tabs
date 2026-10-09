@@ -49,14 +49,21 @@ public class CommanderServerEvents {
             dmg.addPermanentModifier(new AttributeModifier(DMG_MOD, "commander_dmg", 6.0, AttributeModifier.Operation.ADDITION));
     }
 
-    /** Gives a commander its faction's signature ability once (both sides: the client needs it for the button). */
+    /** Gives a commander its faction's signature ability and D-gun once (both sides: the client needs it for the button). */
     public static void ensureAbility(Entity entity) {
         if (!(entity instanceof Unit unit) || unit.getAbilities() == null)
             return;
-        for (com.solegendary.reignofnether.ability.Ability a : unit.getAbilities().get())
+        boolean hasSignature = false, hasDGun = false;
+        for (com.solegendary.reignofnether.ability.Ability a : unit.getAbilities().get()) {
             if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility)
-                return;
-        unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
+                hasSignature = true;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun)
+                hasDGun = true;
+        }
+        if (!hasSignature)
+            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
+        if (!hasDGun)
+            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderDGun());
     }
 
     /** Client side: tags don't sync, but the commander's translated name does - that's how the client knows. */

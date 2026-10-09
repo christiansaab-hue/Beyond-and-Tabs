@@ -157,5 +157,6 @@ public enum UnitAction {
     DEBUG1,
     DEBUG2,
 
-    COMMANDER_ABILITY // Beyond and Tabs: each faction's commander signature ability (kept last: enums travel by ordinal)
+    COMMANDER_ABILITY, // Beyond and Tabs: each faction's commander signature ability (kept last: enums travel by ordinal)
+    COMMANDER_DGUN     // Beyond and Tabs: the commander's D-gun line shot
 }

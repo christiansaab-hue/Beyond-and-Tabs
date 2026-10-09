@@ -32,7 +32,7 @@ import java.util.List;
  * BAR wrecks and reclaim. A unit worth at least {@link #MIN_COST} metal leaves a wreck where it falls holding
  * {@link #WRECK_SHARE} of its metal cost. Any player's workers standing within {@link #RECLAIM_RANGE} blocks of a
  * wreck strip it for metal at {@link #RECLAIM_PER_POWER} metal/s per point of build power (a commander, with
- * triple build power, reclaims three times as fast). Wrecks belong to nobody: reclaiming the enemy's dead is the
+ * triple build power, reclaims three times as fast; Gravebound workers reclaim x2, Horde x1.5). Wrecks belong to nobody: reclaiming the enemy's dead is the
  * point, exactly like BAR.
  *
  * A wreck is a vanilla block-display entity (no collision, no pathing impact, saved with the world) carrying its
@@ -173,7 +173,7 @@ public class WreckServerEvents {
             }
             if (nearest == null)
                 continue;
-            float want = Math.min(metalOf(nearest), worker.getBuildPower() * RECLAIM_PER_POWER * seconds);
+            float want = Math.min(metalOf(nearest), worker.getBuildPower() * RECLAIM_PER_POWER * factionReclaim(u) * seconds);
             float got = EconomyServerEvents.addReclaimedMetal(u.getOwnerName(), want);
             if (got <= 0)
                 continue;
@@ -209,6 +209,16 @@ public class WreckServerEvents {
         if (next != null)
             UnitServerEvents.addActionItem(unit.getOwnerName(), com.solegendary.reignofnether.unit.UnitAction.MOVE, -1,
                 new int[] { worker.getId() }, next.blockPosition(), next.blockPosition());
+    }
+
+    /** design-factions.md: the Gravebound Gravedigger reclaims double; the Horde's Clan Builder half again. */
+    public static float factionReclaim(Unit unit) {
+        Faction f = Factions.getFaction(unit);
+        if (f != null && f.equals(Factions.MONSTERS))
+            return 2f;
+        if (f != null && f.equals(Factions.PIGLINS))
+            return 1.5f;
+        return 1f;
     }
 
     static void remove(ServerLevel level, Entity w, boolean reclaimed) {

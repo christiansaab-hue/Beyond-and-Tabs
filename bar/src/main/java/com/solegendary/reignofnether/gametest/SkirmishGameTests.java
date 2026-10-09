@@ -266,6 +266,63 @@ public class SkirmishGameTests {
         });
     }
 
+    /** The commander D-gun: hits the enemy on the line, spares the friend beside it, charges energy, cools down. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void commander_dgun_hits_the_line_only(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_dgunner";
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        pool.addEnergy(500);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var commander = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        var enemy = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        var offline = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        if (commander == null || enemy == null || friend == null || offline == null) {
+            helper.fail("could not create grunt units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 2));
+        commander.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        enemy.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);     // on the line (+x)
+        friend.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 0.5, 0, 0);    // on the line, but ours
+        offline.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 6.5, 0, 0);   // enemy, well off the line
+        commander.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        enemy.setOwnerName("gametest_target");
+        offline.setOwnerName("gametest_target");
+        for (var e : List.of(commander, enemy, friend, offline))
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(commander);
+        com.solegendary.reignofnether.ability.abilities.CommanderDGun found = null;
+        for (var a : commander.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun d)
+                found = d;
+        if (found == null) {
+            helper.fail("commander has no D-gun");
+            return;
+        }
+        final var dgun = found;
+        helper.runAfterDelay(5, () -> {
+            float friendHp = friend.getHealth(), offHp = offline.getHealth();
+            dgun.use(level, commander, BlockPos.containing(at.getX() + 12, at.getY(), at.getZ()));
+            if (enemy.isAlive() && enemy.getHealth() >= enemy.getMaxHealth())
+                helper.fail("D-gun did not hurt the enemy on its line");
+            if (friend.getHealth() < friendHp)
+                helper.fail("D-gun hurt a friendly unit");
+            if (offline.getHealth() < offHp)
+                helper.fail("D-gun hurt a unit far off its line");
+            if (pool.getEnergy() > 500 - com.solegendary.reignofnether.ability.abilities.CommanderDGun.ENERGY_COST + 0.01)
+                helper.fail("D-gun did not charge energy: " + pool.getEnergy());
+            if (dgun.isOffCooldown(commander))
+                helper.fail("D-gun did not go on cooldown");
+            for (var e : List.of(commander, enemy, friend, offline))
+                e.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
