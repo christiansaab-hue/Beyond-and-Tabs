@@ -95,7 +95,7 @@ public class PatchQuickBuildClientEvents {
         int queued = 0;
         String firstError = null;
         for (BlockPos target : targets) {
-            BlockPos originPos = target.offset(-2, 1, -2);   // 5x5 centred on the patch, one above the ground
+            BlockPos originPos = target.offset(-2, 0, -2);   // 5x5 centred on the patch; the origin IS the ground block (blocks go at origin.y+1)
             // validate here so the player hears WHY when a patch can't take an extractor (the server rejects silently)
             String error = BuildingValidators.getPlacementValidityError(MC.level, extractor, originPos,
                     MC.player.getName().getString(), Rotation.NONE, false, false, true);

@@ -76,7 +76,7 @@ public class SkirmishGameTests {
         if (!level.getBlockState(centre).is(MetalPatches.PATCH_BLOCK))
             helper.fail("stamp() did not leave a patch block at " + centre + " (solidTop says "
                 + MetalPatches.solidTop(level, cx, cz) + ")");
-        BlockPos origin = new BlockPos(cx - 2, y + 1, cz - 2);
+        BlockPos origin = new BlockPos(cx - 2, y, cz - 2);   // origin = ground block
         for (Building extractor : List.of(Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.METAL_EXTRACTOR_MONSTERS,
                 Buildings.METAL_EXTRACTOR_PIGLINS)) {
             String err = BuildingValidators.getPlacementValidityError(level, extractor, origin, "tester",
@@ -84,7 +84,7 @@ public class SkirmishGameTests {
             if (err != null && !err.equals("building.reignofnether.must_be_nether"))
                 helper.fail(extractor.structureName + " refused on a fresh patch: " + err);
         }
-        BlockPos windOrigin = new BlockPos(cx + 5, y + 1, cz + 5);
+        BlockPos windOrigin = new BlockPos(cx + 5, y, cz + 5);
         for (Building wind : List.of(Buildings.WIND_GENERATOR_VILLAGERS, Buildings.WIND_GENERATOR_MONSTERS)) {
             String err = BuildingValidators.getPlacementValidityError(level, wind, windOrigin, "tester",
                 Rotation.NONE, false, false, true);

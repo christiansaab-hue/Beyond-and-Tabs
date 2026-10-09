@@ -124,7 +124,9 @@ public class SkirmishServerboundPacket {
             // the player: readied start (colorMapId != 0) lays the capitol foundations and seats the commander.
             // In the RTS view the player entity floats at camera height, so snap the start to the ground.
             int gx = player.getBlockX(), gz = player.getBlockZ();
-            int gy = player.serverLevel().getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, gx, gz);
+            // the start position is the GROUND block (building origins put blocks at origin.y+1, and the start
+            // block of the classic flow sits in the ground too); the surface heightmap is one above that
+            int gy = com.solegendary.reignofnether.resources.MetalPatches.solidTop(player.serverLevel(), gx, gz);
             Vec3 pos = new Vec3(gx + 0.5, gy, gz + 0.5);
             PlayerServerEvents.startRTS(player.getId(), pos, mine, colorMapId != 0 ? colorMapId : 1);
 
