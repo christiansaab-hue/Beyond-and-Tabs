@@ -128,6 +128,12 @@ public class BuildingValidators {
         if (!netherTerrainCustomBuilding && !building.getFaction().equals(Factions.PIGLINS) || building instanceof CentralPortal) {
             return true;
         }
+        // BAR's map economy is faction-neutral: the Legion's extractors and windmills go on any ground, because
+        // metal patches and open wind are out on the map, far beyond the portal's netherrack
+        if (building instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor
+                || building instanceof com.solegendary.reignofnether.building.buildings.shared.WindGenerator) {
+            return true;
+        }
         if (building instanceof PortalBasic || building instanceof PortalPocket) {
             return true;
         }

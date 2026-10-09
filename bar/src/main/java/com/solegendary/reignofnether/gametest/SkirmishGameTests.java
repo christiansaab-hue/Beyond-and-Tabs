@@ -81,11 +81,12 @@ public class SkirmishGameTests {
                 Buildings.METAL_EXTRACTOR_PIGLINS)) {
             String err = BuildingValidators.getPlacementValidityError(level, extractor, origin, "tester",
                 Rotation.NONE, false, false, true);
-            if (err != null && !err.equals("building.reignofnether.must_be_nether"))
+            if (err != null)   // the Legion's extractor is exempt from the nether-terrain rule on purpose
                 helper.fail(extractor.structureName + " refused on a fresh patch: " + err);
         }
         BlockPos windOrigin = new BlockPos(cx + 5, y, cz + 5);
-        for (Building wind : List.of(Buildings.WIND_GENERATOR_VILLAGERS, Buildings.WIND_GENERATOR_MONSTERS)) {
+        for (Building wind : List.of(Buildings.WIND_GENERATOR_VILLAGERS, Buildings.WIND_GENERATOR_MONSTERS,
+                Buildings.WIND_GENERATOR_PIGLINS)) {
             String err = BuildingValidators.getPlacementValidityError(level, wind, windOrigin, "tester",
                 Rotation.NONE, false, false, true);
             if (err != null)
