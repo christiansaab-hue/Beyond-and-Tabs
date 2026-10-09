@@ -88,29 +88,32 @@ class Structure:
 
 
 # ---- faction palettes -------------------------------------------------------
-# The Kingdom (villagers): worked stone and plaster. The Fallen (monsters): deepslate,
-# dark oak and soul fire. The Gilded Legion (piglins): blackstone, gold and crimson.
+# Variants keep their file suffixes (the building classes pick them), but the looks follow the factions in
+# claude/design-factions.md:
+#   ""        Sunforged Kingdom (villagers): white quartz and diorite, gold-capped, spruce sails
+#   "_dark"   Gravebound (monsters): deepslate, dark oak, chains, soul fire
+#   "_nether" Ironhide Horde (piglins): mud brick, rust-red terracotta, bone and dark timber
 PALETTES = {
     "": dict(
-        pad="polished_andesite", pad_corner="gravel", ring="stone_bricks",
-        stair="stone_brick_stairs", wall="stone_brick_wall", slab="smooth_stone_slab",
+        pad="polished_diorite", pad_corner="gravel", ring="quartz_bricks",
+        stair="quartz_stairs", wall="diorite_wall", slab="smooth_quartz_slab",
         metal="iron_block", body="white_terracotta", cap="spruce_planks",
         cap_stair="spruce_stairs", cap_slab="spruce_slab", hub="stripped_spruce_log",
         furnace="blast_furnace", bars="iron_bars",
     ),
     "_dark": dict(
-        pad="polished_deepslate", pad_corner="coarse_dirt", ring="deepslate_bricks",
+        pad="polished_deepslate", pad_corner="soul_soil", ring="deepslate_bricks",
         stair="deepslate_brick_stairs", wall="deepslate_brick_wall", slab="deepslate_brick_slab",
-        metal="iron_block", body="deepslate_bricks", cap="dark_oak_planks",
+        metal="iron_block", body="deepslate_tiles", cap="dark_oak_planks",
         cap_stair="dark_oak_stairs", cap_slab="dark_oak_slab", hub="stripped_dark_oak_log",
         furnace="blast_furnace", bars="chain",
     ),
     "_nether": dict(
-        pad="polished_blackstone", pad_corner="soul_soil", ring="polished_blackstone_bricks",
-        stair="polished_blackstone_brick_stairs", wall="polished_blackstone_brick_wall",
-        slab="polished_blackstone_brick_slab", metal="gilded_blackstone", body="polished_blackstone",
-        cap="crimson_planks", cap_stair="crimson_stairs", cap_slab="crimson_slab",
-        hub="stripped_crimson_stem", furnace="blast_furnace", bars="chain",
+        pad="packed_mud", pad_corner="coarse_dirt", ring="mud_bricks",
+        stair="mud_brick_stairs", wall="mud_brick_wall", slab="mud_brick_slab",
+        metal="iron_block", body="red_terracotta", cap="dark_oak_planks",
+        cap_stair="dark_oak_stairs", cap_slab="dark_oak_slab", hub="bone_block",
+        furnace="blast_furnace", bars="chain",
     ),
 }
 
