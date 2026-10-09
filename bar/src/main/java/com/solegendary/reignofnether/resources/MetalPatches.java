@@ -57,7 +57,7 @@ public final class MetalPatches {
         for (BlockPos centre : new java.util.ArrayList<>(list)) {
             for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
                 int bx = centre.getX() + d[0], bz = centre.getZ() + d[1];
-                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, bx, bz) - 1;
+                int top = solidTop(level, bx, bz);
                 for (int y = top + 1; y >= top - 6; y--) {
                     p.set(bx, y, bz);
                     if (level.getBlockState(p).is(PATCH_BLOCK))
@@ -86,7 +86,9 @@ public final class MetalPatches {
     public static void stamp(ServerLevel level, int x, int z) {
         ensureLoaded(level);
         String dim = level.dimension().location().toString();
-        BlockPos centre = new BlockPos(x, level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), z);
+        // the recorded centre is the patch block itself (real ground, not the heightmap's idea of it)
+        int padY = solidTop(level, x, z);
+        BlockPos centre = new BlockPos(x, padY, z);
         STAMPED.computeIfAbsent(dim, k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()))
                 .add(centre);
         MetalPatchesSaveData saveData = MetalPatchesSaveData.getInstance(level);
@@ -95,7 +97,6 @@ public final class MetalPatches {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         // level a 7x7 pad around the patch to the centre's ground height, so the 5x5 extractor always has flat
         // ground to sit on (patches on a slope or among tree roots were silently unplaceable)
-        int padY = solidTop(level, x, z);
         if (padY > level.getMinBuildHeight()) {
             BlockState fill = level.getBlockState(p.set(x, padY, z));
             if (fill.isAir() || !fill.getFluidState().isEmpty() || fill.is(PATCH_BLOCK))
@@ -123,11 +124,18 @@ public final class MetalPatches {
         }
     }
 
-    /** The y of the topmost solid, non-fluid block at (x, z), or min build height if there is none. */
-    static int solidTop(ServerLevel level, int x, int z) {
+    /**
+     * The y of the topmost solid, non-fluid block at (x, z), or min build height if there is none. Heightmaps are
+     * only a starting point: they can be stale after large edits (and the game-test world reports the original
+     * terrain height over a carved arena), so this walks down from the higher of two heightmaps until it meets
+     * real ground.
+     */
+    public static int solidTop(ServerLevel level, int x, int z) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) - 1;
-        int min = Math.max(level.getMinBuildHeight(), top - 12);
+        int top = Math.max(level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z),
+            level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z)) - 1;
+        top = Math.min(top, level.getMaxBuildHeight() - 1);
+        int min = level.getMinBuildHeight();
         p.set(x, top, z);
         while (p.getY() > min && (!level.getBlockState(p).isSolidRender(level, p)
                 || !level.getBlockState(p).getFluidState().isEmpty()))
