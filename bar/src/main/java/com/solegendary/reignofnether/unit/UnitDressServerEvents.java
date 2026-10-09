@@ -2,30 +2,51 @@ package com.solegendary.reignofnether.unit;
 
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.player.CommanderServerEvents;
+import com.solegendary.reignofnether.unit.interfaces.HeroUnit;
+import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
+import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.DyeableLeatherItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import java.util.UUID;
+
 /**
- * Faction liveries: every owned unit gets its faction's colours - dyed leather on the chest and feet (identical
- * pieces for every faction, so the stats stay perfectly equal; only the dye differs). The Kingdom marches in
- * royal blue, the Fallen in dusk purple, the Gilded Legion in molten gold. Heads stay bare so every mob's face
- * still reads. Pieces never drop, and a unit that already wears something keeps it.
+ * Faction liveries and role silhouettes. Every owned unit wears its faction's colours, and the cut of the outfit
+ * tells you its job at a glance:
+ *   - workers: boots only (civilians)
+ *   - melee fighters: tunic, leggings and boots (a full soldier's kit)
+ *   - ranged fighters: tunic, boots and a hood in the faction's accent colour
+ *   - commanders: a golden crown over their kit
+ * The Kingdom marches in royal blue, the Fallen in dusk purple, the Gilded Legion in molten gold.
+ *
+ * Every livery piece carries an explicit zero-armour modifier (which replaces the item's default armour), so the
+ * clothes are purely visual - no unit of any faction gains armour, toughness or knockback resistance from them.
+ * Pieces never drop, and gear a unit already wears (piglin gold, skeleton helmets...) is never replaced.
  */
 public class UnitDressServerEvents {
 
-    static final String DRESSED_TAG = "bt_dressed";
+    /** bumped from "bt_dressed": units dressed by the first version (with real armour) get re-dressed. */
+    static final String DRESSED_TAG = "bt_dressed2";
+    static final String OLD_DRESSED_TAG = "bt_dressed";
+    static final String LIVERY_NBT = "bt_livery";
 
-    static final int KINGDOM_BLUE = 0x2B4FA8;
-    static final int FALLEN_DUSK = 0x3B2D4F;
-    static final int LEGION_GOLD = 0xC9961A;
+    static final UUID LIVERY_UUID = UUID.fromString("6f1c2a9e-4b7d-4e2a-9c51-3a8d0f7e2b44");
+
+    static final int KINGDOM_BLUE = 0x2B4FA8, KINGDOM_ACCENT = 0xE8E2D0;
+    static final int FALLEN_DUSK = 0x3B2D4F, FALLEN_ACCENT = 0x6E8F5A;
+    static final int LEGION_GOLD = 0xC9961A, LEGION_ACCENT = 0x9C2A1E;
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {
@@ -38,30 +59,75 @@ public class UnitDressServerEvents {
                 continue;
             if (unit.getOwnerName() == null || unit.getOwnerName().isBlank())
                 continue;
-            if (le.getTags().contains(DRESSED_TAG))
+            if (le instanceof HeroUnit)
+                continue;   // heroes keep their bespoke looks
+            boolean commander = le.getTags().contains(CommanderServerEvents.TAG);
+            // commanders are promoted after spawning; they pick up the crown on a later pass (once only: a head
+            // slot holding real gear or the crown already is left alone)
+            ItemStack head = mob.getItemBySlot(EquipmentSlot.HEAD);
+            boolean needsCrown = commander && !head.is(Items.GOLDEN_HELMET) && (head.isEmpty() || isLivery(head));
+            if (le.getTags().contains(DRESSED_TAG) && !needsCrown)
                 continue;
+            if (le.getTags().contains(OLD_DRESSED_TAG)) {
+                stripOldLivery(mob);
+                le.removeTag(OLD_DRESSED_TAG);
+            }
             le.addTag(DRESSED_TAG);
-
-            Faction faction = Factions.getFaction(unit);
-            int colour;
-            if (faction != null && faction.equals(Factions.MONSTERS))
-                colour = FALLEN_DUSK;
-            else if (faction != null && faction.equals(Factions.PIGLINS))
-                colour = LEGION_GOLD;
-            else
-                colour = KINGDOM_BLUE;
-
-            equipDyed(mob, EquipmentSlot.CHEST, Items.LEATHER_CHESTPLATE.getDefaultInstance(), colour);
-            equipDyed(mob, EquipmentSlot.FEET, Items.LEATHER_BOOTS.getDefaultInstance(), colour);
+            dress(mob, unit, commander);
         }
     }
 
-    static void equipDyed(Mob mob, EquipmentSlot slot, ItemStack stack, int colour) {
-        if (!mob.getItemBySlot(slot).isEmpty())
-            return;   // never override gear a unit already wears
-        if (stack.getItem() instanceof DyeableLeatherItem dyeable)
+    static void dress(Mob mob, Unit unit, boolean commander) {
+        Faction faction = Factions.getFaction(unit);
+        int colour, accent;
+        if (faction != null && faction.equals(Factions.MONSTERS)) {
+            colour = FALLEN_DUSK;
+            accent = FALLEN_ACCENT;
+        } else if (faction != null && faction.equals(Factions.PIGLINS)) {
+            colour = LEGION_GOLD;
+            accent = LEGION_ACCENT;
+        } else {
+            colour = KINGDOM_BLUE;
+            accent = KINGDOM_ACCENT;
+        }
+
+        equip(mob, EquipmentSlot.FEET, Items.LEATHER_BOOTS, colour);
+        if (!(unit instanceof WorkerUnit)) {
+            equip(mob, EquipmentSlot.CHEST, Items.LEATHER_CHESTPLATE, colour);
+            if (unit instanceof RangedAttackerUnit)
+                equip(mob, EquipmentSlot.HEAD, Items.LEATHER_HELMET, accent);
+            else
+                equip(mob, EquipmentSlot.LEGS, Items.LEATHER_LEGGINGS, colour);
+        }
+        if (commander)
+            equip(mob, EquipmentSlot.HEAD, Items.GOLDEN_HELMET, -1);
+    }
+
+    static void equip(Mob mob, EquipmentSlot slot, Item item, int colour) {
+        ItemStack current = mob.getItemBySlot(slot);
+        // never override real gear; a livery piece may be swapped (e.g. a hood for a commander's crown)
+        if (!current.isEmpty() && !isLivery(current))
+            return;
+        ItemStack stack = new ItemStack(item);
+        if (colour >= 0 && stack.getItem() instanceof DyeableLeatherItem dyeable)
             dyeable.setColor(stack, colour);
+        // an explicit modifier list replaces the item's default armour: these clothes give no protection at all
+        stack.addAttributeModifier(Attributes.ARMOR,
+            new AttributeModifier(LIVERY_UUID, "bt_livery", 0, AttributeModifier.Operation.ADDITION), slot);
+        stack.getOrCreateTag().putBoolean(LIVERY_NBT, true);
         mob.setItemSlot(slot, stack);
         mob.setDropChance(slot, 0f);
+    }
+
+    static boolean isLivery(ItemStack stack) {
+        return !stack.isEmpty() && stack.hasTag() && stack.getTag().getBoolean(LIVERY_NBT);
+    }
+
+    /** First-version liveries were plain leather chest + boots (with real armour): take them off. */
+    static void stripOldLivery(Mob mob) {
+        if (mob.getItemBySlot(EquipmentSlot.CHEST).is(Items.LEATHER_CHESTPLATE))
+            mob.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
+        if (mob.getItemBySlot(EquipmentSlot.FEET).is(Items.LEATHER_BOOTS))
+            mob.setItemSlot(EquipmentSlot.FEET, ItemStack.EMPTY);
     }
 }
