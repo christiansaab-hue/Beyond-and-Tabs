@@ -6,7 +6,7 @@ license="GPL-2.0-or-later"
 modId="${mod_id}"
 version="${mod_version}"
 displayName="Beyond and Tabs"
-authors="christiansaab-hue"
+authors="lovish"
 description='''
 A Beyond All Reason-style RTS in Minecraft with real Totally Accurate Battle Simulator units as physics ragdolls.
 TABS content is read from your own TABS install at runtime and is never included in this mod.
