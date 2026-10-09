@@ -444,6 +444,13 @@ public final class PacketHandler {
                 .decoder(EconomyClientboundPacket::new)
                 .consumerMainThread(EconomyClientboundPacket::handle)
                 .add();
+        // metal patch centres for the minimap (sent at match start and on login)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.resources.MetalPatchesClientboundPacket.class,
+                        index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.resources.MetalPatchesClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.resources.MetalPatchesClientboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.resources.MetalPatchesClientboundPacket::handle)
+                .add();
         // batched + delta-compressed periodic unit sync (replaces the per-unit stats/resources/anchor/worker/inventory
         // packets in UnitServerEvents.onWorldTick, see UnitSyncBatcher)
         INSTANCE.messageBuilder(UnitBatchSyncClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)

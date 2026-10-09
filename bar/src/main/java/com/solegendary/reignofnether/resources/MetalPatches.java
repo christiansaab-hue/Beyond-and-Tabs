@@ -18,19 +18,46 @@ public final class MetalPatches {
     private MetalPatches() { }
 
     public static final Block PATCH_BLOCK = Blocks.RAW_IRON_BLOCK;
-    /** Patch centres stamped this session (per dimension); bots read these to know where to expand. */
+    /** Patch centres (per dimension); bots read these to know where to expand, clients get them for the minimap. */
     private static final java.util.Map<String, java.util.List<BlockPos>> STAMPED = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Set<String> LOADED_DIMS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public static java.util.List<BlockPos> getPatches(ServerLevel level) {
+        ensureLoaded(level);
         return STAMPED.getOrDefault(level.dimension().location().toString(), java.util.List.of());
+    }
+
+    /** First access after a world (re)load: pull the stamped patches back out of the save. */
+    private static void ensureLoaded(ServerLevel level) {
+        String dim = level.dimension().location().toString();
+        if (!LOADED_DIMS.add(dim))
+            return;
+        java.util.List<BlockPos> list = STAMPED.computeIfAbsent(dim,
+            k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()));
+        for (MetalPatchesSaveData.Entry entry : MetalPatchesSaveData.getInstance(level).entries)
+            if (entry.dimension().equals(dim) && !list.contains(entry.pos()))
+                list.add(entry.pos());
+    }
+
+    /** Sends the full patch list of this level to every client (minimap mex spots). */
+    public static void syncToClients(ServerLevel level) {
+        com.solegendary.reignofnether.registrars.PacketHandler.INSTANCE.send(
+            net.minecraftforge.network.PacketDistributor.ALL.noArg(),
+            new MetalPatchesClientboundPacket(new java.util.ArrayList<>(getPatches(level))));
     }
 
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     /** Stamps one plus-shaped patch flush into the terrain surface at (x, z). Skips water. */
     public static void stamp(ServerLevel level, int x, int z) {
-        STAMPED.computeIfAbsent(level.dimension().location().toString(), k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()))
-                .add(new BlockPos(x, level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), z));
+        ensureLoaded(level);
+        String dim = level.dimension().location().toString();
+        BlockPos centre = new BlockPos(x, level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), z);
+        STAMPED.computeIfAbsent(dim, k -> java.util.Collections.synchronizedList(new java.util.ArrayList<>()))
+                .add(centre);
+        MetalPatchesSaveData saveData = MetalPatchesSaveData.getInstance(level);
+        saveData.entries.add(new MetalPatchesSaveData.Entry(dim, centre));
+        saveData.setDirty();
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
             int bx = x + d[0], bz = z + d[1];

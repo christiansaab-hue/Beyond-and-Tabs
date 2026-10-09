@@ -59,6 +59,7 @@ public final class StartAreaClearing {
                 }
             }
             stampMetalPatches(level, positions, cx, cz);
+            com.solegendary.reignofnether.resources.MetalPatches.syncToClients(level);
             ReignOfNether.LOGGER.info("[StartAreaClearing] cleared {} start areas and lanes to [{}, {}]", positions.size(), cx, cz);
         } catch (Exception e) {
             ReignOfNether.LOGGER.error("[StartAreaClearing] failed to clear start areas", e);

@@ -560,15 +560,23 @@ public class OrthoviewClientEvents {
             cameraMovingByMouse = false;
         }
 
-        // ---- edge panning ----
+        // ---- edge panning (holding Shift at an edge orbits the camera instead: sides swing, top/bottom tilt) ----
         if (inRtsScreen && windowActive && !locked && !alt && !grabbing) {
-            if (desiredRight == 0) {
-                if (cursorX <= EDGE_PAN_MARGIN) desiredRight = -1;
-                else if (cursorX >= winW - EDGE_PAN_MARGIN) desiredRight = 1;
-            }
-            if (desiredFwd == 0) {
-                if (cursorY <= EDGE_PAN_MARGIN) desiredFwd = 1;
-                else if (cursorY >= winH - EDGE_PAN_MARGIN) desiredFwd = -1;
+            int edgeRight = 0;
+            int edgeFwd = 0;
+            if (cursorX <= EDGE_PAN_MARGIN) edgeRight = -1;
+            else if (cursorX >= winW - EDGE_PAN_MARGIN) edgeRight = 1;
+            if (cursorY <= EDGE_PAN_MARGIN) edgeFwd = 1;
+            else if (cursorY >= winH - EDGE_PAN_MARGIN) edgeFwd = -1;
+
+            if (shift && !ctrl) {
+                if (edgeRight != 0)
+                    targetCamRotX -= edgeRight * YAW_KEY_SPEED * dt;
+                if (edgeFwd != 0)
+                    targetCamRotY += edgeFwd * PITCH_KEY_SPEED * dt;
+            } else {
+                if (desiredRight == 0) desiredRight = edgeRight;
+                if (desiredFwd == 0) desiredFwd = edgeFwd;
             }
         }
         if (desiredRight < 0) TutorialClientEvents.pannedLeft = true;
@@ -655,6 +663,9 @@ public class OrthoviewClientEvents {
             MC.options.hideGui = false; // for some reason, when gui is hidden, shape rendering goes whack
             MC.options.setCameraType(CameraType.FIRST_PERSON);
             switchToEasyIfPeaceful();
+            if (enabledCount == 1)
+                HudClientEvents.showTemporaryMessage(
+                    I18n.get("hud.reignofnether.camera_controls_hint"), 400);
         } else {
             PlayerServerboundPacket.disableOrthoview();
             TopdownGuiServerboundPacket.closeTopdownGui(MC.player.getId());

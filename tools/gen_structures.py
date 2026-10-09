@@ -165,29 +165,35 @@ def metal_extractor_t2():
     return s
 
 
-# ---- wind generator: tapered mast with a 4-blade rotor ---------------------
+# ---- wind generator: a proper mill - plastered tower, wooden cap, hub log --
+# The sails are NOT blocks: WindmillRenderClientEvents finds the horizontal
+# stripped spruce log below and renders four spinning blades around it.
 def wind_generator():
-    s = Structure(3, 10, 3)
-    # footing
+    s = Structure(3, 8, 3)
+    # footing: full pad with a cobble flare at the corners
     s.fill(0, 0, 0, 2, 0, 2, "polished_andesite")
     s.set(1, 0, 1, "smooth_stone")
     for (x, z) in [(0, 0), (2, 0), (0, 2), (2, 2)]:
-        s.set(x, 1, z, "andesite_wall")
-    # mast
-    s.set(1, 1, 1, "smooth_stone")
-    for y in range(2, 7):
-        s.set(1, y, 1, "andesite_wall")
-    # nacelle hub
-    s.set(1, 7, 1, "iron_block")
-    # rotor: four wool blades in the x/y plane (reads from the RTS camera)
-    s.set(0, 7, 1, "white_wool")
-    s.set(2, 7, 1, "white_wool")
-    s.set(1, 8, 1, "white_wool")
-    s.set(1, 6, 0, "smooth_stone_slab", type="top")   # tail vane
-    # blade tips tapered with slabs
-    s.set(1, 9, 1, "smooth_stone_slab", type="bottom")
-    s.set(0, 6, 1, "smooth_stone_slab", type="top")
-    s.set(2, 6, 1, "smooth_stone_slab", type="top")
+        s.set(x, 1, z, "cobblestone_wall")
+    # plastered tower body: plus-shaped shaft (reads as a round mill from the RTS camera)
+    arms = [(1, 1), (1, 0), (1, 2), (0, 1), (2, 1)]
+    for y in range(1, 5):
+        for (x, z) in arms:
+            s.set(x, y, z, "white_terracotta")
+    # spruce trim band + doorway shadow at the foot
+    s.set(1, 1, 0, "spruce_planks")
+    s.set(1, 3, 0, "glass_pane", north="false", south="false", east="false", west="false")
+    # cap base: wooden ring with the rotor hub sticking out the front (-z)
+    for (x, z) in arms:
+        s.set(x, 5, z, "spruce_planks")
+    s.set(1, 5, 0, "stripped_spruce_log", axis="z")   # <- rotor hub (found by the renderer)
+    # rounded cap: stairs leaning in, slab peak
+    s.set(1, 6, 1, "spruce_planks")
+    s.set(0, 6, 1, "spruce_stairs", facing="east", half="bottom")
+    s.set(2, 6, 1, "spruce_stairs", facing="west", half="bottom")
+    s.set(1, 6, 2, "spruce_stairs", facing="north", half="bottom")
+    s.set(1, 6, 0, "spruce_stairs", facing="south", half="bottom")
+    s.set(1, 7, 1, "spruce_slab", type="bottom")
     return s
 
 
