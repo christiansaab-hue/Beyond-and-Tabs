@@ -193,8 +193,13 @@ public class BotPlayer {
             if (target != null) {
                 lastAttackAt = gameTime;
                 order(army, UnitAction.ATTACK_MOVE, target);
+                return;
             }
         }
+
+        // 8) between waves, sweep the territory (from minute 3, so early armies stay home to defend)
+        if (minutes >= 3)
+            sweepTerritory(army, buildings);
     }
 
     // ------------------------------------------------------------------ helpers
@@ -236,6 +241,10 @@ public class BotPlayer {
                     break;
                 }
             if (taken)
+                continue;
+            // don't send workers to die: skip patches deep in enemy territory (near their buildings)
+            BlockPos enemy = nearestEnemyBuildingAny(p);
+            if (enemy != null && enemy.distSqr(p) < 45 * 45 && enemy.distSqr(p) < p.distSqr(home))
                 continue;
             double d = p.distSqr(home);
             if (d < bestD) {
@@ -299,6 +308,44 @@ public class BotPlayer {
             if (bp.getBuilding().isCapitol && d < bestCapitolD) { bestCapitolD = d; bestCapitol = bp.originPos; }
         }
         return bestCapitol != null ? bestCapitol : best;
+    }
+
+    /** Nearest enemy building of any type (no capitol preference), or null. */
+    BlockPos nearestEnemyBuildingAny(BlockPos from) {
+        BlockPos best = null;
+        double bestD = Double.MAX_VALUE;
+        for (BuildingPlacement bp : BuildingServerEvents.getBuildings()) {
+            if (bp.isDestroyedServerside || bp.ownerName == null || bp.ownerName.isEmpty()
+                    || bp.ownerName.equals(name) || AlliancesServerEvents.isAllied(name, bp.ownerName))
+                continue;
+            double d = bp.originPos.distSqr(from);
+            if (d < bestD) { bestD = d; best = bp.originPos; }
+        }
+        return best;
+    }
+
+    /**
+     * Between waves the army sweeps its territory: idle fighters patrol from wherever they stand out to the
+     * bot's farthest extractor and back, so raids on expansions meet resistance. Any attack or defence order
+     * cancels the patrol; it resumes once the army is idle again.
+     */
+    void sweepTerritory(List<LivingEntity> army, List<BuildingPlacement> buildings) {
+        BlockPos farthest = null;
+        double farD = 0;
+        for (BuildingPlacement bp : buildings)
+            if (bp.isBuilt && bp.getBuilding() instanceof com.solegendary.reignofnether.building.buildings.shared.MetalExtractor) {
+                double d = bp.originPos.distSqr(home);
+                if (d > farD) { farD = d; farthest = bp.originPos; }
+            }
+        if (farthest == null || farD < 30 * 30)
+            return;   // nothing out there worth sweeping
+        List<LivingEntity> idle = new ArrayList<>();
+        for (LivingEntity le : army)
+            if (le instanceof Unit u && u.isIdle()
+                    && !com.solegendary.reignofnether.unit.PatrolServerEvents.isPatrolling(le.getId()))
+                idle.add(le);
+        if (idle.size() >= 3)
+            order(idle, UnitAction.PATROL, farthest);
     }
 
     BlockPos nearestEnemyUnit(ServerLevel level, BlockPos from, double range) {

@@ -41,6 +41,10 @@ public class PatrolServerEvents {
         routes.remove(unitId);
     }
 
+    public static boolean isPatrolling(int unitId) {
+        return routes.containsKey(unitId);
+    }
+
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         routes.clear();
