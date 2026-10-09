@@ -39,6 +39,31 @@ public final class MetalPatches {
                 list.add(entry.pos());
     }
 
+    /** Match reset: dig the patches back out of the ground, forget them, and clear every minimap. */
+    public static void clearAll(ServerLevel level) {
+        ensureLoaded(level);
+        String dim = level.dimension().location().toString();
+        java.util.List<BlockPos> list = STAMPED.getOrDefault(dim, java.util.List.of());
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (BlockPos centre : new java.util.ArrayList<>(list)) {
+            for (int[] d : new int[][]{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+                int bx = centre.getX() + d[0], bz = centre.getZ() + d[1];
+                int top = level.getHeight(Heightmap.Types.WORLD_SURFACE, bx, bz) - 1;
+                for (int y = top + 1; y >= top - 6; y--) {
+                    p.set(bx, y, bz);
+                    if (level.getBlockState(p).is(PATCH_BLOCK))
+                        level.setBlock(p, net.minecraft.world.level.block.Blocks.GRASS_BLOCK.defaultBlockState(), FLAGS);
+                }
+            }
+        }
+        STAMPED.remove(dim);
+        LOADED_DIMS.add(dim);   // stays "loaded": now deliberately empty
+        MetalPatchesSaveData saveData = MetalPatchesSaveData.getInstance(level);
+        saveData.entries.removeIf(e -> e.dimension().equals(dim));
+        saveData.setDirty();
+        syncToClients(level);
+    }
+
     /** Sends the full patch list of this level to every client (minimap mex spots). */
     public static void syncToClients(ServerLevel level) {
         com.solegendary.reignofnether.registrars.PacketHandler.INSTANCE.send(

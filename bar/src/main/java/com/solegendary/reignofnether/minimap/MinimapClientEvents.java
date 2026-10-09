@@ -804,9 +804,18 @@ public class MinimapClientEvents {
                 drawBuildingOnMap(xc, zc, rgb, buildingRadius, buildingThickness);
             }
         }
-        // draw metal patches (mex spots) - always visible, like BAR's metal map
-        for (net.minecraft.core.BlockPos patch : com.solegendary.reignofnether.resources.MetalPatchesClient.getPatches())
-            drawPatchOnMap(patch.getX(), patch.getZ());
+        // draw metal patches (mex spots) - always visible, like BAR's metal map; taken ones dim out
+        for (net.minecraft.core.BlockPos patch : com.solegendary.reignofnether.resources.MetalPatchesClient.getPatches()) {
+            boolean taken = false;
+            for (BuildingPlacement b : BuildingClientEvents.getBuildings()) {
+                if (Math.abs(b.centrePos.getX() - patch.getX()) <= 4
+                        && Math.abs(b.centrePos.getZ() - patch.getZ()) <= 4) {
+                    taken = true;
+                    break;
+                }
+            }
+            drawPatchOnMap(patch.getX(), patch.getZ(), taken);
+        }
 
         // draw starting locations
         if (MC.level != null && StartPosClientEvents.isEnabled() &&
@@ -888,14 +897,16 @@ public class MinimapClientEvents {
     }
 
     /** A metal patch: a small silver diamond with a black rim, always drawn (mex spots aren't hidden by fog). */
-    private static void drawPatchOnMap(int xc, int zc) {
+    private static void drawPatchOnMap(int xc, int zc, boolean taken) {
         final int r = 3;
         for (int x = xc - r; x <= xc + r; x++) {
             for (int z = zc - r; z <= zc + r; z++) {
                 int dist = Math.abs(x - xc) + Math.abs(z - zc);
                 if (dist > r || !isWorldXZinsideMap(x, z))
                     continue;
-                int rgb = dist == r ? 0x000000 : (dist == 0 ? 0xFFFFFF : 0xC8DCE8);
+                int rgb = taken
+                        ? (dist == r ? 0x000000 : 0x5A6670)
+                        : (dist == r ? 0x000000 : (dist == 0 ? 0xFFFFFF : 0xC8DCE8));
                 int xN = x - xc_world + (mapGuiRadius * 2);
                 int zN = z - zc_world + (mapGuiRadius * 2);
                 mapColoursOverlays[xN][zN] = MiscUtil.reverseHexRGB(rgb) | (0xFF << 24);

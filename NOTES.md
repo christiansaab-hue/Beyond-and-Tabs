@@ -29,7 +29,7 @@ This file is the session-proof status log: what's shipped, how to install, what'
 
 ## Known issues / watchlist
 - No human playtest yet of: guard, piglin bots, repeat queue, minimap patches, windmill sails.
-- Stale patch icons if a second match starts in the same world (patch save data accumulates).
+- (fixed) /rts-reset now digs out patches, clears the registry/save and empties every minimap.
 - Deeper faction theming (skins/building variants per faction) not started - awaiting user verdict.
 - Units "simplistic" per user - acceptable for now, revisit after theming pass.
 
