@@ -192,6 +192,7 @@ public class StartPosServerEvents {
                             if (startPos.enabled && !startPos.playerName.isBlank() && startPos.faction != Factions.NONE)
                                 clearPoses.add(startPos.pos);
                         StartAreaClearing.clearStartAreas(evt.getServer().getLevel(Level.OVERWORLD), clearPoses);
+                        com.solegendary.reignofnether.startpos.BattlefieldWall.build(evt.getServer().getLevel(Level.OVERWORLD), clearPoses);
                     }
                     for (ServerPlayer serverPlayer : PlayerServerEvents.players) {
                         for (StartPos startPos : startPoses) {

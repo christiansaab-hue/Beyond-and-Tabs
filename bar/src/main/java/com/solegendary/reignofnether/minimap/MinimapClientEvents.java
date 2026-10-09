@@ -787,9 +787,7 @@ public class MinimapClientEvents {
         // draw buildings
         for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
 
-            // capitols always show on the map (start-position intel, like BAR); everything else needs exploring
-            if ((!building.isExploredClientside && !building.getBuilding().isCapitol)
-                    || building.getBuilding() instanceof AbstractBridge)
+            if (!building.isExploredClientside || building.getBuilding() instanceof AbstractBridge)
                 continue;
 
             int buildingRadius = getBuildingRadius(building);

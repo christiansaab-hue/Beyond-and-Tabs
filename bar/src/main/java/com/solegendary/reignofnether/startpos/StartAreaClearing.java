@@ -72,35 +72,8 @@ public final class StartAreaClearing {
      */
     static void stampMetalPatches(ServerLevel level, List<BlockPos> positions, float cx, float cz) {
         java.util.Random rng = new java.util.Random(positions.hashCode() * 31L + positions.size());
-        for (BlockPos p : positions) {
-            float x0 = p.getX() + 0.5f, z0 = p.getZ() + 0.5f;
-            float dx = cx - x0, dz = cz - z0, len = (float) Math.hypot(dx, dz);
-            double toCentre = len < 1e-3f ? 0 : Math.atan2(dz, dx);
-            for (int k = -1; k <= 1; k++) {   // home ring, symmetric about the lane
-                double a = toCentre + Math.PI + k * (Math.PI / 2.2);   // behind and beside the base
-                com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
-                        (int) (x0 + Math.cos(a) * 17), (int) (z0 + Math.sin(a) * 17));
-            }
-            if (len > 40) {
-                // near expansion on the lane, worth walking out for
-                float k = Math.min(0.35f, 70f / Math.max(1f, len));
-                com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (x0 + dx * k), (int) (z0 + dz * k));
-                // flank expansions: off to each side, farther out, richer (2 patches) on one random side -
-                // bases that want them have to stretch, and denying them actually hurts
-                float px = -dz / len, pz = dx / len;
-                int richSide = rng.nextBoolean() ? 1 : -1;
-                for (int side = -1; side <= 1; side += 2) {
-                    float ex = x0 + dx * 0.5f + px * side * len * 0.55f;
-                    float ez = z0 + dz * 0.5f + pz * side * len * 0.55f;
-                    com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) ex, (int) ez);
-                    if (side == richSide)
-                        com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (ex + px * side * 9), (int) (ez + pz * side * 9));
-                }
-                // a far backfield patch behind the base: safe but slow to saturate
-                com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
-                        (int) (x0 - dx / len * 42), (int) (z0 - dz / len * 42));
-            }
-        }
+        for (BlockPos p : positions)
+            stampBasePatches(level, p, cx, cz, rng);
         if (positions.size() > 1) {
             for (int i = 0; i < 4; i++) {   // the contested middle
                 double a = i * Math.PI / 2 + Math.PI / 4;
@@ -117,6 +90,59 @@ public final class StartAreaClearing {
                     com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
                             (int) (cx + Math.cos(a) * ringR * 0.5f), (int) (cz + Math.sin(a) * ringR * 0.5f));
                 }
+        }
+    }
+
+    /** One base's worth of patches: home ring behind/beside it, lane expansion, flanks, backfield. */
+    static void stampBasePatches(ServerLevel level, BlockPos p, float cx, float cz, java.util.Random rng) {
+        float x0 = p.getX() + 0.5f, z0 = p.getZ() + 0.5f;
+        float dx = cx - x0, dz = cz - z0, len = (float) Math.hypot(dx, dz);
+        double toCentre = len < 1e-3f ? 0 : Math.atan2(dz, dx);
+        for (int k = -1; k <= 1; k++) {   // home ring, symmetric about the lane
+            double a = toCentre + Math.PI + k * (Math.PI / 2.2);   // behind and beside the base
+            com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
+                    (int) (x0 + Math.cos(a) * 17), (int) (z0 + Math.sin(a) * 17));
+        }
+        if (len > 40) {
+            // near expansion on the lane, worth walking out for
+            float k = Math.min(0.35f, 70f / Math.max(1f, len));
+            com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (x0 + dx * k), (int) (z0 + dz * k));
+            // flank expansions: off to each side, farther out, richer (2 patches) on one random side -
+            // bases that want them have to stretch, and denying them actually hurts
+            float px = -dz / len, pz = dx / len;
+            int richSide = rng.nextBoolean() ? 1 : -1;
+            for (int side = -1; side <= 1; side += 2) {
+                float ex = x0 + dx * 0.5f + px * side * len * 0.55f;
+                float ez = z0 + dz * 0.5f + pz * side * len * 0.55f;
+                com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) ex, (int) ez);
+                if (side == richSide)
+                    com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (ex + px * side * 9), (int) (ez + pz * side * 9));
+            }
+            // a far backfield patch behind the base: safe but slow to saturate
+            com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
+                    (int) (x0 - dx / len * 42), (int) (z0 - dz / len * 42));
+        }
+    }
+
+    /** A base joining an already-formed battlefield: clear its ground, cut its lane, stamp its patches. */
+    public static void addLateBase(ServerLevel level, BlockPos p, float cx, float cz) {
+        if (level == null || !isEnabled(level))
+            return;
+        try {
+            float x0 = p.getX() + 0.5f, z0 = p.getZ() + 0.5f;
+            disc(level, x0, z0, BASE_RADIUS);
+            float dx = cx - x0, dz = cz - z0;
+            float len = (float) Math.hypot(dx, dz);
+            if (len > MAX_LANE_LENGTH) {
+                dx *= MAX_LANE_LENGTH / len;
+                dz *= MAX_LANE_LENGTH / len;
+            }
+            if (len > 1)
+                lane(level, x0, z0, x0 + dx, z0 + dz, LANE_WIDTH);
+            stampBasePatches(level, p, cx, cz, new java.util.Random(p.asLong()));
+            com.solegendary.reignofnether.resources.MetalPatches.syncToClients(level);
+        } catch (Exception e) {
+            ReignOfNether.LOGGER.error("[StartAreaClearing] failed to add late base", e);
         }
     }
 

@@ -471,6 +471,10 @@ public class PlayerServerEvents {
                     itemDropSeed
             ));
             FogOfWarServerEvents.invalidateRtsCache();
+            // direct starts (Quick Battle, commands) form the battlefield here; readied starts already did
+            if (!readiedStart && serverPlayer.level() instanceof ServerLevel sl)
+                com.solegendary.reignofnether.startpos.BattlefieldSetup.onStart(sl,
+                    BlockPos.containing(pos.x, pos.y, pos.z));
             String playerName = serverPlayer.getName().getString();
             ResourcesServerEvents.assignResources(playerName);
             PlayerClientboundPacket.addRTSPlayer(playerName, faction, (long) serverPlayer.getId(), startPosColorId, isDogPerson);
@@ -604,6 +608,8 @@ public class PlayerServerEvents {
             rtsPlayers.add(bot);
             FogOfWarServerEvents.invalidateRtsCache();
             ResourcesServerEvents.assignResources(bot.name);
+            com.solegendary.reignofnether.startpos.BattlefieldSetup.onStart(level,
+                BlockPos.containing(pos.x, pos.y, pos.z));
 
             boolean first = true;
             for (int i = -1; i <= 1; i++) {

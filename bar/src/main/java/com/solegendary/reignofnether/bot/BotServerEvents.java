@@ -107,10 +107,6 @@ public class BotServerEvents {
         Vec3 pos = far ? findBotStart(caller, 300, 420) : findBotStart(caller);
         PlayerServerEvents.startRTSBot(name, pos, faction);
         brains.put(name, new BotPlayer(name, faction, difficulty, BlockPos.containing(pos)));
-        // ping the bot's base on everyone's minimap so the player knows which way the fight is
-        com.solegendary.reignofnether.registrars.PacketHandler.INSTANCE.send(
-            net.minecraftforge.network.PacketDistributor.ALL.noArg(),
-            new com.solegendary.reignofnether.minimap.MapMarkerClientboundPacket((int) pos.x, (int) pos.z, name));
         caller.sendSystemMessage(Component.literal(name + " joined as " + factionName + " about "
                 + (int) pos.distanceTo(caller.position()) + " blocks away - scout it before it scouts you."));
         return 1;
