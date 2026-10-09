@@ -65,8 +65,15 @@ public class SkirmishGameTests {
             boolean found = false;
             for (int y = centre.getY() - 3; y <= centre.getY() + 3 && !found; y++)
                 found = level.getBlockState(new BlockPos(centre.getX(), y, centre.getZ())).is(MetalPatches.PATCH_BLOCK);
-            if (!found)
-                helper.fail("stamp() did not leave a patch block at " + centre);
+            if (!found) {
+                int surface = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, centre.getX(), centre.getZ());
+                int motion = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, centre.getX(), centre.getZ());
+                StringBuilder column = new StringBuilder();
+                for (int y = centre.getY() + 2; y >= centre.getY() - 3; y--)
+                    column.append(y).append('=').append(level.getBlockState(new BlockPos(centre.getX(), y, centre.getZ())).getBlock()).append(' ');
+                helper.fail("stamp() did not leave a patch block at " + centre + " (WORLD_SURFACE " + surface
+                    + ", MOTION_BLOCKING " + motion + ", minBuild " + level.getMinBuildHeight() + "; column: " + column + ")");
+            }
         }
         int patchY = patchY(level, centre);
         BlockPos origin = new BlockPos(centre.getX() - 2, patchY + 1, centre.getZ() - 2);
