@@ -22,18 +22,23 @@ This file is the session-proof status log: what's shipped, how to install, what'
 - TABS-era factions: The Kingdom / The Fallen / The Gilded Legion, 25 themed unit names.
 - Camera: WASD pan + edge pan; Shift at edge or Shift+A/D swings, Shift+W/S tilts, Ctrl+wheel rotates;
   one-time controls hint; strategic zoom icons (commander star, building plates).
-- Minimap intel: metal patches as silver diamonds (synced + saved), enemy capitols always visible,
-  bot base ping on `/bot add`.
+- Minimap intel: metal patches as silver diamonds (synced + saved; taken ones dim). No enemy reveals -
+  the arena wall bounds the search instead.
+- Battlefield auto-forms for Quick Battle / bot matches (BattlefieldSetup): bases + lanes cleared, patches
+  stamped, Great-Wall ring raised. Per-match rolls: wall radius/towers/weathering, wall material (stone
+  brick/sandstone/deepslate/blackstone/mud brick), gatehouses, mex richness 0.6-1.6.
+- War banners on production buildings + capitols (client-rendered, faction colours).
+- Role-silhouette liveries (UnitDressServerEvents): workers boots, melee full kit, ranged hood, commander
+  gold crown - all ZERO armour (explicit modifier).
+- Bots: territory patrol sweeps between waves, skip patches deep in enemy territory.
 - Windmills + extractors now faction-skinned (Kingdom plaster/spruce, Fallen deepslate/dark oak + grey rag sails, Gilded Legion blackstone/gold + gold sails); spinning sails client-rendered; producing buildings
   puff chimney smoke.
 
 ## Known issues / watchlist
-- No human playtest yet of: guard, piglin bots, repeat queue, minimap patches, windmill sails.
+- Awaiting playtest of: wall materials/gatehouses, banners, liveries, bot sweeps, round-3 fixes.
 - (fixed) /rts-reset now digs out patches, clears the registry/save and empties every minimap.
-- Deeper faction theming (skins/building variants per faction) not started - awaiting user verdict.
-- Units "simplistic" per user - acceptable for now, revisit after theming pass.
+- Faction-distinct versions of RoN's core buildings not started (tools/preview_structure.py renders NBTs
+  for eyeballing before CI).
 
 ## Next steps
-1. Install latest jar to user's instance after CI green.
-2. More building character/animations if user likes the windmill direction.
-3. Possible: area reclaim, bot defense via patrol, hotkey polish.
+See project doc claude/work-orders.md for the prioritised backlog.
