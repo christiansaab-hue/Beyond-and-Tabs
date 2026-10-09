@@ -51,8 +51,10 @@ public class StrategicViewClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    public static final float STRATEGIC_ZOOM_ENTER = 100f;
-    public static final float STRATEGIC_ZOOM_EXIT = 92f; // hysteresis so it doesn't flicker at the threshold
+    // icons must take over BEFORE vanilla entity culling starts hiding far mobs, or there's a dead zoom window
+    // where units are invisible but icons haven't kicked in yet (the "units going invisible" bug)
+    public static final float STRATEGIC_ZOOM_ENTER = 70f;
+    public static final float STRATEGIC_ZOOM_EXIT = 62f; // hysteresis so it doesn't flicker at the threshold
     private static final int MAX_RANGE_RINGS = 64;
     private static final int RING_SEGMENTS = 48;
 

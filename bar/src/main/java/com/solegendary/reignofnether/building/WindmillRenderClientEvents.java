@@ -52,6 +52,9 @@ public class WindmillRenderClientEvents {
             return;
         if (MC.level == null || MC.cameraEntity == null)
             return;
+        // at strategic zoom the sails are subpixel; skip them entirely (zoom-out performance)
+        if (com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView())
+            return;
 
         PoseStack matrix = evt.getPoseStack();
         Entity cam = MC.cameraEntity;

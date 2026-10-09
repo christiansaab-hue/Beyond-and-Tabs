@@ -26,6 +26,9 @@ public class BuildingAmbienceClientEvents {
             return;
         if (MC.level.getGameTime() % 8 != 0)
             return;
+        // chimney smoke is invisible at strategic zoom; don't pay for the particles (zoom-out performance)
+        if (com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView())
+            return;
 
         for (BuildingPlacement placement : BuildingClientEvents.getBuildings()) {
             if (!placement.isBuilt || !placement.isExploredClientside)

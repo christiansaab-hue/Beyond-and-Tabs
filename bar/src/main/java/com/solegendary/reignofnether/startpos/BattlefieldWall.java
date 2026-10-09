@@ -31,11 +31,12 @@ public class BattlefieldWall {
     static final int FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
 
     static final int WALL_HEIGHT = 7;        // rampart body above ground
-    static final int TOWER_EVERY = 48;       // a watchtower every N columns
-    static final int COLUMNS_PER_TICK = 40;  // build speed (~30-60s for a full ring)
-    static final int MARGIN = 90;            // breathing room beyond the farthest base
-    static final int MIN_RADIUS = 150;
-    static final int MAX_RADIUS = 420;
+    static final int COLUMNS_PER_TICK = 40;  // build speed (~30-90s for a full ring)
+    static final int MAX_RADIUS = 520;
+    // every match rolls its own arena: breathing room, tower spacing and weathering all vary
+    static int towerEvery = 48;
+    static int mossPct = 10;
+    static int crackedPct = 8;
 
     /** One column of wall still to be built. */
     record Column(int x, int z, double angle, boolean tower, boolean crenel) { }
@@ -58,7 +59,13 @@ public class BattlefieldWall {
         double radius = 0;
         for (BlockPos p : positions)
             radius = Math.max(radius, Math.hypot(p.getX() + 0.5 - cx, p.getZ() + 0.5 - cz));
-        radius = Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, radius + MARGIN));
+        // roll this match's arena: a roomy ring (sometimes vast), with its own tower rhythm and weathering
+        int margin = 130 + random.nextInt(140);        // 130-270 beyond the farthest base
+        int minRadius = 200 + random.nextInt(120);     // 200-320 even for close spawns
+        radius = Math.min(MAX_RADIUS, Math.max(minRadius, radius + margin));
+        towerEvery = 36 + random.nextInt(29);          // 36-64 columns between watchtowers
+        mossPct = 5 + random.nextInt(21);              // 5-25% weathered blocks
+        crackedPct = 4 + random.nextInt(10);
 
         int steps = (int) Math.ceil(Math.PI * 2 * radius);
         Set<Long> seen = new HashSet<>();
@@ -69,7 +76,7 @@ public class BattlefieldWall {
             int z = (int) Math.round(cz + Math.sin(a) * radius);
             if (!seen.add(((long) x << 32) ^ (z & 0xffffffffL)))
                 continue;
-            queue.add(new Column(x, z, a, col % TOWER_EVERY == 0, col % 2 == 0));
+            queue.add(new Column(x, z, a, col % towerEvery == 0, col % 2 == 0));
             col++;
         }
         buildLevel = level;
@@ -99,8 +106,8 @@ public class BattlefieldWall {
 
     static BlockState body() {
         int r = random.nextInt(100);
-        if (r < 10) return Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
-        if (r < 18) return Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
+        if (r < mossPct) return Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
+        if (r < mossPct + crackedPct) return Blocks.CRACKED_STONE_BRICKS.defaultBlockState();
         return Blocks.STONE_BRICKS.defaultBlockState();
     }
 

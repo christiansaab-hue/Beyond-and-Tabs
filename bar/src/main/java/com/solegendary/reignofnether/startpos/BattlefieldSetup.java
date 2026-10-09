@@ -69,7 +69,10 @@ public class BattlefieldSetup {
         if (positions.isEmpty())
             return;
         ServerLevel level = evt.getServer().overworld();
-        ReignOfNether.LOGGER.info("[BattlefieldSetup] forming the battlefield for {} bases", positions.size());
+        // roll this match's metal richness: lean maps make every patch a war, rich maps let armies balloon
+        StartAreaClearing.mexRichness = 0.6f + new java.util.Random().nextFloat();
+        ReignOfNether.LOGGER.info("[BattlefieldSetup] forming the battlefield for {} bases (mex richness {})",
+            positions.size(), String.format("%.2f", StartAreaClearing.mexRichness));
         StartAreaClearing.clearStartAreas(level, positions);
         MetalPatches.syncToClients(level);
         BattlefieldWall.build(level, positions);

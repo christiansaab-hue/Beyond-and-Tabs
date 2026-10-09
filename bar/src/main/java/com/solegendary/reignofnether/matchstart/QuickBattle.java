@@ -117,7 +117,10 @@ public class QuickBattle {
         if (evt.phase != TickEvent.Phase.END || phase == 0)
             return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.screen != null)
+        if (mc.player == null || mc.level == null)
+            return;
+        // the RTS view itself is a screen (TopdownGui) - only a foreign screen (pause menu, chat...) pauses us
+        if (mc.screen != null && !(mc.screen instanceof com.solegendary.reignofnether.guiscreen.TopdownGui))
             return;
         waitTicks++;
         switch (phase) {
