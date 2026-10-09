@@ -2257,5 +2257,6 @@
   "color.reignofnether.lavender": "Lavender",
   "color.reignofnether.coral": "Coral",
   "color.reignofnether.ice": "Ice",
-  "buildings.reignofnether.mausoleum.tooltip3": "or a %d block radius for additional mausoleums."
+  "buildings.reignofnether.mausoleum.tooltip3": "or a %d block radius for additional mausoleums.",
+  "server.reignofnether.commander_fallen_team": "%s fights on without their commander - the team carries the battle."
 }

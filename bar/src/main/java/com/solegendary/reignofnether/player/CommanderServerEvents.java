@@ -17,8 +17,9 @@ import java.util.UUID;
 /**
  * BAR-style commanders. Every player (and bot) starts with one: their first worker made into a named, tough,
  * hard-hitting builder with triple build power. The tag rides in entity NBT, so a commander is still a commander
- * after a reload. With the commanderDefeat gamerule on (default), losing your commander loses you the match -
- * BAR's win condition - on top of Reign of Nether's capitol rule.
+ * after a reload. With the commanderDefeat gamerule on (default): in a 1v1 (or once you have no allies left)
+ * losing your commander loses you the match; in team games the commander goes out in BAR's commander blast
+ * and you keep playing with what you have left.
  */
 public class CommanderServerEvents {
 
@@ -60,6 +61,27 @@ public class CommanderServerEvents {
         if (owner == null || owner.isEmpty() || !PlayerServerEvents.isRTSPlayer(owner))
             return;
         PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.commander_fallen", true, owner);
+        if (hasLivingAlly(owner)) {
+            // team game: BAR's commander blast - a big explosion that wrecks whatever stood next to it - and the
+            // player fights on with the army and buildings they have left
+            if (entity.level() instanceof net.minecraft.server.level.ServerLevel level)
+                level.explode(entity, entity.getX(), entity.getY() + 0.5, entity.getZ(), 5.0f,
+                    net.minecraft.world.level.Level.ExplosionInteraction.NONE);
+            PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.commander_fallen_team", false, owner);
+            return;
+        }
+        // 1v1 (or no allies left): losing the commander loses the match
         PlayerServerEvents.defeat(owner, "server.reignofnether.defeat_commander");
+    }
+
+    /** Whether another RTS player (human or bot) still in the match is allied with this owner. */
+    static boolean hasLivingAlly(String owner) {
+        synchronized (PlayerServerEvents.rtsPlayers) {
+            for (RTSPlayer other : PlayerServerEvents.rtsPlayers)
+                if (!other.name.equals(owner)
+                        && com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(owner, other.name))
+                    return true;
+        }
+        return false;
     }
 }
