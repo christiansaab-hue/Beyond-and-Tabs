@@ -2241,5 +2241,7 @@
   "hud.actionbuttons.reignofnether.patrol.tooltip": "Fighters attack everything on the route; workers repair and finish buildings they pass",
   "key.reignofnether.patrol": "Patrol",
   "hud.reignofnether.repeat_queue": "Repeat",
-  "hud.reignofnether.repeat_queue.tooltip": "Repeat queue: each trained unit re-queues itself at the back, BAR-style"
+  "hud.reignofnether.repeat_queue.tooltip": "Repeat queue: each trained unit re-queues itself at the back, BAR-style",
+  "hud.reignofnether.metal_per_s": "metal/s",
+  "hud.reignofnether.energy_per_s": "energy/s"
 }

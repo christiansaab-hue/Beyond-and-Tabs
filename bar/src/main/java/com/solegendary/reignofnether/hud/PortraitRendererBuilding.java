@@ -66,6 +66,22 @@ public class PortraitRendererBuilding {
         if (rs != Relationship.OWNED && !building.ownerName.isBlank())
             name += " (" + building.ownerName + ")";
 
+        // BAR-style income readout for economy buildings (extractors, generators, farms, houses)
+        if (building.isBuilt) {
+            float mIn = building.getMetalIncome();
+            float eIn = building.getEnergyIncome();
+            if (mIn > 0 || eIn > 0) {
+                StringBuilder sb = new StringBuilder(" (");
+                if (mIn > 0)
+                    sb.append("+").append(trimFloat(mIn)).append(" ").append(I18n.get("hud.reignofnether.metal_per_s"));
+                if (mIn > 0 && eIn > 0)
+                    sb.append(", ");
+                if (eIn > 0)
+                    sb.append("+").append(trimFloat(eIn)).append(" ").append(I18n.get("hud.reignofnether.energy_per_s"));
+                name += sb.append(")").toString();
+            }
+        }
+
         if (building instanceof SculkCatalystPlacement sc && building.getBuilding().hasActiveAddon(NightSourceAddon.class) && building.isBuilt)
             name += " (" + I18n.get("hud.buildings.reignofnether.sculk_catalyst.range", building.getBuilding().getActiveAddon(NightSourceAddon.class).getNightRange(building), SculkCatalyst.MAX_NIGHT_RANGE) + ")";
 
@@ -97,6 +113,11 @@ public class PortraitRendererBuilding {
         );
 
         return RectZone.getZoneByLW(x, y, frameWidth, frameHeight);
+    }
+
+    /** "2.0" -> "2", "1.5" -> "1.5" */
+    private static String trimFloat(float f) {
+        return f == Math.floor(f) ? String.valueOf((int) f) : String.valueOf(f);
     }
 
     public void drawBlockOnScreen(int x, int y, Block block, float blockScale) {
