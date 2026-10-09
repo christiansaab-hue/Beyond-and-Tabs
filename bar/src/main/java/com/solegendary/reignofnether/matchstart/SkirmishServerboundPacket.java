@@ -25,7 +25,7 @@ import java.util.function.Supplier;
  * pins the arena size and metal richness for the battlefield that forms a few seconds later, and calls in each
  * configured bot at the chosen spawn distance.
  *
- * Faction codes: 0 Kingdom (villagers), 1 Fallen (monsters), 2 Gilded Legion (piglins), 3 random.
+ * Faction codes: 0 Sunforged Kingdom (villagers), 1 Gravebound (monsters), 2 Ironhide Horde (piglins), 3 random.
  * Arena: 0 small, 1 medium, 2 large, 3 huge, 4 random.  Metal: 0 lean, 1 normal, 2 rich, 3 random.
  * Spawn distance: 0 close, 1 normal, 2 far.  Difficulty: 0 easy, 1 medium, 2 hard.
  */

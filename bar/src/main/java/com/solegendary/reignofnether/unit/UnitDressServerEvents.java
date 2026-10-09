@@ -38,15 +38,15 @@ import java.util.UUID;
 public class UnitDressServerEvents {
 
     /** bumped from "bt_dressed": units dressed by the first version (with real armour) get re-dressed. */
-    static final String DRESSED_TAG = "bt_dressed2";
+    static final String DRESSED_TAG = "bt_dressed3";
     static final String OLD_DRESSED_TAG = "bt_dressed";
     static final String LIVERY_NBT = "bt_livery";
 
     static final UUID LIVERY_UUID = UUID.fromString("6f1c2a9e-4b7d-4e2a-9c51-3a8d0f7e2b44");
 
-    static final int KINGDOM_BLUE = 0x2B4FA8, KINGDOM_ACCENT = 0xE8E2D0;
-    static final int FALLEN_DUSK = 0x7A58B8, FALLEN_ACCENT = 0x9CE06A;   // readable violet: the old dusk purple vanished on zombie villagers at night
-    static final int LEGION_GOLD = 0xC9961A, LEGION_ACCENT = 0x9C2A1E;
+    static final int KINGDOM_BLUE = 0xF0ECE0, KINGDOM_ACCENT = 0xD9A41E;   // Sunforged: white plate, gold trim
+    static final int FALLEN_DUSK = 0xCFC6A8, FALLEN_ACCENT = 0x3FC6D8;   // Gravebound: bone with soul-blue (reads at night)
+    static final int LEGION_GOLD = 0x9C3A1E, LEGION_ACCENT = 0xD8D0B8;   // Ironhide Horde: rust red, bone
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent evt) {

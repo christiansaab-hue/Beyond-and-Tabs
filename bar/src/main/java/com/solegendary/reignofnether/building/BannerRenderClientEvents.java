@@ -25,8 +25,8 @@ import java.util.WeakHashMap;
 
 /**
  * War banners: every finished production building (and every capitol) flies its faction's colours from a pole on
- * its highest point, the cloth rippling in segments. The Kingdom flies royal blue, the Fallen dusk purple, the
- * Gilded Legion gold over crimson. Client-side boxes only; skipped entirely in strategic zoom.
+ * its highest point, the cloth rippling in segments. The Sunforged Kingdom flies white and gold, the Gravebound
+ * soul-blue on black, the Ironhide Horde rust red trimmed in bone. Client-side boxes only; skipped entirely in strategic zoom.
  */
 public class BannerRenderClientEvents {
 
@@ -100,15 +100,15 @@ public class BannerRenderClientEvents {
             Faction faction = placement.getBuilding().getFaction();
             BlockState cloth;
             BlockState trim;
-            if (faction != null && faction.equals(Factions.MONSTERS)) {
-                cloth = Blocks.PURPLE_WOOL.defaultBlockState();
+            if (faction != null && faction.equals(Factions.MONSTERS)) {          // Gravebound: soul-blue on black
+                cloth = Blocks.CYAN_WOOL.defaultBlockState();
                 trim = Blocks.BLACK_WOOL.defaultBlockState();
-            } else if (faction != null && faction.equals(Factions.PIGLINS)) {
-                cloth = Blocks.YELLOW_WOOL.defaultBlockState();
-                trim = Blocks.RED_WOOL.defaultBlockState();
-            } else {
-                cloth = Blocks.BLUE_WOOL.defaultBlockState();
-                trim = Blocks.WHITE_WOOL.defaultBlockState();
+            } else if (faction != null && faction.equals(Factions.PIGLINS)) {   // Ironhide Horde: rust red, bone
+                cloth = Blocks.RED_WOOL.defaultBlockState();
+                trim = Blocks.BONE_BLOCK.defaultBlockState();
+            } else {                                                             // Sunforged Kingdom: white, gold
+                cloth = Blocks.WHITE_WOOL.defaultBlockState();
+                trim = Blocks.YELLOW_WOOL.defaultBlockState();
             }
             int light = LevelRenderer.getLightColor(MC.level, mount.above(2));
             float phase = (mount.hashCode() & 255) / 255f * Mth.TWO_PI;

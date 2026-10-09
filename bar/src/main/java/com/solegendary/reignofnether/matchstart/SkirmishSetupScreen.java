@@ -22,7 +22,7 @@ import java.util.stream.IntStream;
  * session so a rematch is one click. Teams are alliances: everyone on your team is your ally in the match.
  */
 public class SkirmishSetupScreen extends Screen {
-    static final List<String> FACTIONS = List.of("Kingdom", "Fallen", "Legion", "Random");
+    static final List<String> FACTIONS = List.of("Sunforged", "Gravebound", "Ironhide", "Random");
     static final List<String> DIFFICULTIES = List.of("Easy", "Medium", "Hard");
     static final List<String> ARENAS = List.of("Small", "Medium", "Large", "Huge", "Random");
     static final List<String> METALS = List.of("Lean", "Normal", "Rich", "Random");
@@ -37,7 +37,7 @@ public class SkirmishSetupScreen extends Screen {
 
     /** Everything the lobby decides; codes match SkirmishServerboundPacket. */
     public static class Settings {
-        public int faction = 0;          // 0 Kingdom, 1 Fallen, 2 Legion, 3 random
+        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random
         public int colour = 1;           // index into PlayerColors.colors (0..PLAYER_COLOR_COUNT-1), or -1 random
         public int team = 0;             // 0 = Team 1, 1 = Team 2
         public final List<Bot> bots = new ArrayList<>();
