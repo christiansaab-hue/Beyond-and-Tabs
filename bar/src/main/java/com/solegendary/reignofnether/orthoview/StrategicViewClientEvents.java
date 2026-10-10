@@ -2,7 +2,24 @@ package com.solegendary.reignofnether.orthoview;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
+import com.solegendary.reignofnether.building.Building;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
+import com.solegendary.reignofnether.building.addon.GarrisonableBuildingAddon;
+import com.solegendary.reignofnether.building.buildings.monsters.Dungeon;
+import com.solegendary.reignofnether.building.buildings.monsters.Stronghold;
+import com.solegendary.reignofnether.building.buildings.neutral.CapturableBeacon;
+import com.solegendary.reignofnether.building.buildings.piglins.FlameSanctuary;
+import com.solegendary.reignofnether.building.buildings.piglins.Fortress;
+import com.solegendary.reignofnether.building.buildings.shared.AbstractStockpile;
+import com.solegendary.reignofnether.building.buildings.shared.EnergyConverter;
+import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
+import com.solegendary.reignofnether.building.buildings.shared.WindGenerator;
+import com.solegendary.reignofnether.building.buildings.villagers.ArcaneTower;
+import com.solegendary.reignofnether.building.buildings.villagers.Castle;
+import com.solegendary.reignofnether.building.production.IUnitProductionItem;
+import com.solegendary.reignofnether.building.production.ProductionBuilding;
+import com.solegendary.reignofnether.building.production.ProductionItem;
+import com.solegendary.reignofnether.startpos.CapturePointsClient;
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
@@ -33,6 +50,7 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -43,6 +61,9 @@ import java.util.Set;
  * (circle = worker/builder, square = melee, triangle = ranged, diamond = hero/commander) and buildings as
  * team-coloured footprint plates. Unit models (and with them their per-unit health bars, which are drawn from
  * RenderLivingEvent.Post) are skipped, which is what makes huge battles cheap to look at.
+ *
+ * Each plate also carries a small role glyph (factory, T2/T3 lab, mex with its tier, wind, converter, defence,
+ * capitol, capture site) so a base doesn't read as a sheet of identical tiles; see drawGlyph.
  *
  * Also draws, at any zoom: attack range rings for selected units, and team-coloured selection rings under
  * selected units (normal zoom only; the icons replace them in strategic zoom).
@@ -209,6 +230,43 @@ public class StrategicViewClientEvents {
                 int j = (i + 1) % 4;
                 line(bb, mat, xs[i], ys[i], xs[j], ys[j], w, outline);
             }
+            // role glyph in the middle of the plate, so a base reads as factories / eco / defences at a glance
+            Role role = roleOf(building.getBuilding());
+            if (role != Role.NONE) {
+                float plate = plateSize(xs, ys);
+                if (plate >= MIN_GLYPH_PLATE) {
+                    float gcx = (xs[0] + xs[1] + xs[2] + xs[3]) * 0.25f;
+                    float gcy = (ys[0] + ys[1] + ys[2] + ys[3]) * 0.25f;
+                    float gs = Mth.clamp(plate * 0.3f, 3f, 8f);
+                    int tier = role == Role.MEX ? mexTier(building) : 0;
+                    drawGlyph(bb, mat, role, tier, gcx, gcy, gs, true, 0);
+                    drawGlyph(bb, mat, role, tier, gcx, gcy, gs, false, rgb);
+                }
+            }
+        }
+
+        // ---- capture sites (vanilla marker entities serverside, synced as a list): owner-tinted plate + flag ----
+        for (CapturePointsClient.Site site : CapturePointsClient.getSites()) {
+            double y = site.y();
+            double x0 = site.x() - 2, z0 = site.z() - 2, x1 = site.x() + 3, z1 = site.z() + 3;
+            float ax = projX(x0, y, z0), bx = projX(x1, y, z0), cx = projX(x1, y, z1), dx = projX(x0, y, z1);
+            float ay = projY(x0, y, z0), by = projY(x1, y, z0), cy = projY(x1, y, z1), dy = projY(x0, y, z1);
+            float gcx = (ax + bx + cx + dx) * 0.25f, gcy = (ay + by + cy + dy) * 0.25f;
+            if (gcx < -20 || gcx > guiW + 20 || gcy < -20 || gcy > guiH + 20)
+                continue;
+            int rgb = site.owner().isEmpty() ? 0xB4B4B4 : PlayerColors.getPlayerDisplayColorHex(site.owner()) & 0xFFFFFF;
+            int plateCol = (0x60 << 24) | rgb;
+            tri(bb, mat, ax, ay, bx, by, cx, cy, plateCol);
+            tri(bb, mat, ax, ay, cx, cy, dx, dy, plateCol);
+            int edge = (0xD0 << 24) | darken(rgb, 0.45f);
+            line(bb, mat, ax, ay, bx, by, 1f, edge);
+            line(bb, mat, bx, by, cx, cy, 1f, edge);
+            line(bb, mat, cx, cy, dx, dy, 1f, edge);
+            line(bb, mat, dx, dy, ax, ay, 1f, edge);
+            float plate = Math.min((float) Math.hypot(bx - ax, by - ay), (float) Math.hypot(dx - ax, dy - ay));
+            float gs = Mth.clamp(plate * 0.35f, 3.5f, 8f);
+            drawGlyph(bb, mat, Role.CAPTURE, 0, gcx, gcy, gs, true, 0);
+            drawGlyph(bb, mat, Role.CAPTURE, 0, gcx, gcy, gs, false, rgb);
         }
 
         // ---- units: role icons ----
@@ -226,9 +284,12 @@ public class StrategicViewClientEvents {
 
         BufferUploader.drawWithShader(bb.end());
 
-        // building icons on top of their plates, once the plate is big enough to carry one
+        // building icons on top of their plates, once the plate is big enough to carry one - only for buildings
+        // without a role glyph (houses, farms, markets...), which would otherwise be anonymous
         for (BuildingPlacement building : BuildingClientEvents.getBuildings()) {
             if (!building.isExploredClientside || building.getBuilding() instanceof AbstractBridge)
+                continue;
+            if (roleOf(building.getBuilding()) != Role.NONE)
                 continue;
             net.minecraft.resources.ResourceLocation icon = building.getBuilding().icon;
             if (icon == null)
@@ -249,6 +310,174 @@ public class StrategicViewClientEvents {
         RenderSystem.enableDepthTest();
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
+    }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // building role glyphs
+    // ------------------------------------------------------------------------------------------------------------
+
+    private enum Role { NONE, CAPITOL, FACTORY, LAB2, LAB3, MEX, WIND, CONVERTER, DEFENCE, CAPTURE }
+
+    private static final float MIN_GLYPH_PLATE = 7f;   // px; below this the plate itself is all you can read
+    private static final int GLYPH_SHADOW = 0xC8000000;
+    private static final int GLYPH_WHITE = 0xF2FFFFFF;
+
+    // a building's role never changes, and Building objects are per-type singletons, so classify once
+    private static final IdentityHashMap<Building, Role> roleCache = new IdentityHashMap<>();
+    // a mex's tier is read from its blocks (see MetalExtractor.getUpgradeLevel), so cache it and re-read once a second
+    private static final IdentityHashMap<BuildingPlacement, Integer> mexTierCache = new IdentityHashMap<>();
+    private static long mexTierCacheTime = Long.MIN_VALUE;
+
+    private static Role roleOf(Building b) {
+        Role r = roleCache.get(b);
+        if (r == null) {
+            if (roleCache.size() > 512)   // custom buildings could in theory mint many types; keep it bounded
+                roleCache.clear();
+            r = classify(b);
+            roleCache.put(b, r);
+        }
+        return r;
+    }
+
+    private static Role classify(Building b) {
+        if (b.isCapitol)
+            return Role.CAPITOL;
+        if (b.capturable || b instanceof CapturableBeacon)
+            return Role.CAPTURE;
+        if (b instanceof MetalExtractor)
+            return Role.MEX;
+        if (b instanceof WindGenerator)
+            return Role.WIND;
+        if (b instanceof EnergyConverter)
+            return Role.CONVERTER;
+        if (b instanceof Castle || b instanceof Stronghold || b instanceof Fortress)   // T3 labs (also garrisonable)
+            return Role.LAB3;
+        if (b instanceof ArcaneTower || b instanceof Dungeon || b instanceof FlameSanctuary)
+            return Role.LAB2;
+        if (b instanceof GarrisonableBuildingAddon)   // watchtowers, bastion
+            return Role.DEFENCE;
+        if (b instanceof ProductionBuilding pb && !(b instanceof AbstractStockpile))
+            for (ProductionItem item : pb.productions.get())
+                if (item instanceof IUnitProductionItem)
+                    return Role.FACTORY;
+        return Role.NONE;
+    }
+
+    private static int mexTier(BuildingPlacement building) {
+        long now = MC.level != null ? MC.level.getGameTime() : 0;
+        if (now - mexTierCacheTime >= 20 || now < mexTierCacheTime) {
+            mexTierCache.clear();
+            mexTierCacheTime = now;
+        }
+        Integer t = mexTierCache.get(building);
+        if (t == null) {
+            t = building.getUpgradeLevel() > 0 ? 1 : 0;
+            mexTierCache.put(building, t);
+        }
+        return t;
+    }
+
+    private static float plateSize(float[] xs, float[] ys) {
+        float a = (float) Math.hypot(xs[1] - xs[0], ys[1] - ys[0]);
+        float b = (float) Math.hypot(xs[3] - xs[0], ys[3] - ys[0]);
+        return Math.min(a, b);
+    }
+
+    /**
+     * Draws one role glyph centred on (cx, cy), half-size s. Called twice per building: first as a dark shadow
+     * (fatter strokes) and then in colour, which keeps it crisp on any team tint. Plain triangles in the same batch
+     * as the plates, so 200+ buildings cost a few thousand vertices and no texture binds.
+     *   capitol   gold star                    factory   crossed swords (army)
+     *   T2/T3 lab two / three bars on a disc   mex       disc with a rim: iron (T1) or copper-gold (T2)
+     *   wind      three-blade rotor            converter lightning bolt
+     *   defence   crosshair                    capture   flag in the owner's colour
+     */
+    private static void drawGlyph(BufferBuilder bb, Matrix4f mat, Role role, int tier, float cx, float cy, float s,
+                                  boolean shadow, int ownerRgb) {
+        float grow = shadow ? 1.1f : 0f;   // shadow pass: everything a little bigger
+        float lw = Math.max(1f, s * 0.32f) + grow;
+        int white = shadow ? GLYPH_SHADOW : GLYPH_WHITE;
+        switch (role) {
+            case CAPITOL -> drawShape(bb, mat, Shape.STAR, cx, cy, s * 1.15f + grow, shadow ? GLYPH_SHADOW : 0xFFFFC83C);
+            case FACTORY -> {
+                float d = s * 0.85f;
+                line(bb, mat, cx - d, cy - d, cx + d, cy + d, lw, white);
+                line(bb, mat, cx + d, cy - d, cx - d, cy + d, lw, white);
+                // hilts
+                float h = s * 0.45f;
+                line(bb, mat, cx - d - h * 0.2f, cy + d - h, cx - d + h, cy + d + h * 0.2f, lw * 0.8f, white);
+                line(bb, mat, cx + d + h * 0.2f, cy + d - h, cx + d - h, cy + d + h * 0.2f, lw * 0.8f, white);
+            }
+            case LAB2, LAB3 -> {
+                drawShape(bb, mat, Shape.CIRCLE, cx, cy, s * 1.05f + grow, shadow ? GLYPH_SHADOW : 0xE0281E3C);
+                if (!shadow) {
+                    int bars = role == Role.LAB3 ? 3 : 2;
+                    int col = role == Role.LAB3 ? 0xFFFF8CFF : 0xFFB4DCFF;   // T3 magenta, T2 pale blue
+                    float bw = s * 0.22f, gap = s * 0.2f;
+                    float total = bars * bw + (bars - 1) * gap;
+                    float x = cx - total / 2;
+                    for (int i = 0; i < bars; i++) {
+                        rect(bb, mat, x, cy - s * 0.6f, x + bw, cy + s * 0.6f, col);
+                        x += bw + gap;
+                    }
+                }
+            }
+            case MEX -> {
+                if (shadow) {
+                    drawShape(bb, mat, Shape.CIRCLE, cx, cy, s + grow, GLYPH_SHADOW);
+                } else {
+                    int rim = tier > 0 ? 0xFFE8A040 : 0xFFA8A8B0;   // T2 copper-gold, T1 iron
+                    drawShape(bb, mat, Shape.CIRCLE, cx, cy, s, rim);
+                    drawShape(bb, mat, Shape.CIRCLE, cx, cy, s * (tier > 0 ? 0.55f : 0.68f), 0xFF34343C);
+                    drawShape(bb, mat, Shape.CIRCLE, cx, cy, s * 0.25f, rim);
+                }
+            }
+            case WIND -> {
+                int col = shadow ? GLYPH_SHADOW : 0xFFFFF0A0;
+                float r = s * 1.05f + grow;
+                for (int i = 0; i < 3; i++) {
+                    double a = -Math.PI / 2 + Math.PI * 2 * i / 3;
+                    float tx = cx + (float) Math.cos(a) * r, ty = cy + (float) Math.sin(a) * r;
+                    float wx = (float) Math.cos(a + Math.PI / 2) * r * 0.32f;
+                    float wy = (float) Math.sin(a + Math.PI / 2) * r * 0.32f;
+                    tri(bb, mat, cx, cy, tx + wx, ty + wy, tx, ty, col);
+                }
+                drawShape(bb, mat, Shape.CIRCLE, cx, cy, s * 0.25f + grow, col);
+            }
+            case CONVERTER -> {
+                int col = shadow ? GLYPH_SHADOW : 0xFFFFE040;
+                float g = grow;
+                // a two-piece lightning bolt
+                tri(bb, mat, cx + s * 0.35f + g, cy - s * 1.1f - g, cx - s * 0.65f - g, cy + s * 0.15f + g, cx + s * 0.1f, cy + s * 0.05f, col);
+                tri(bb, mat, cx - s * 0.35f - g, cy + s * 1.1f + g, cx + s * 0.65f + g, cy - s * 0.15f - g, cx - s * 0.1f, cy - s * 0.05f, col);
+            }
+            case DEFENCE -> {
+                int col = shadow ? GLYPH_SHADOW : 0xFFFF6E5A;
+                float r = s * 0.8f;
+                float thin = lw * 0.75f;
+                ringLines(bb, mat, cx, cy, r, thin, col);
+                line(bb, mat, cx - s * 1.15f, cy, cx - s * 0.35f, cy, thin, col);
+                line(bb, mat, cx + s * 0.35f, cy, cx + s * 1.15f, cy, thin, col);
+                line(bb, mat, cx, cy - s * 1.15f, cx, cy - s * 0.35f, thin, col);
+                line(bb, mat, cx, cy + s * 0.35f, cx, cy + s * 1.15f, thin, col);
+            }
+            case CAPTURE -> {
+                float px = cx - s * 0.55f;
+                line(bb, mat, px, cy - s * 1.1f, px, cy + s * 1.1f, Math.max(1f, s * 0.2f) + grow, shadow ? GLYPH_SHADOW : GLYPH_WHITE);
+                int col = shadow ? GLYPH_SHADOW : 0xFF000000 | brighten(ownerRgb, 0.15f);
+                tri(bb, mat, px - grow * 0.5f, cy - s * 1.1f - grow, px + s * 1.25f + grow, cy - s * 0.55f, px - grow * 0.5f, cy + grow, col);
+            }
+            default -> { }
+        }
+    }
+
+    private static void ringLines(BufferBuilder bb, Matrix4f mat, float cx, float cy, float r, float w, int argb) {
+        int n = 14;
+        for (int i = 0; i < n; i++) {
+            double a0 = Math.PI * 2 * i / n, a1 = Math.PI * 2 * (i + 1) / n;
+            line(bb, mat, cx + (float) Math.cos(a0) * r, cy + (float) Math.sin(a0) * r,
+                    cx + (float) Math.cos(a1) * r, cy + (float) Math.sin(a1) * r, w, argb);
+        }
     }
 
     private static boolean offScreen(float[] xs, float[] ys) {
@@ -397,9 +626,9 @@ public class StrategicViewClientEvents {
         if (len < 1e-4f)
             return;
         float nx = -dy / len * w / 2, ny = dx / len * w / 2;
-        float[] xs = { x0 + nx, x1 + nx, x1 - nx, x0 - nx };
-        float[] ys = { y0 + ny, y1 + ny, y1 - ny, y0 - ny };
-        quad(bb, mat, xs, ys, argb);
+        // two triangles straight into the buffer (no temp arrays: this runs for every plate edge and glyph stroke)
+        tri(bb, mat, x0 + nx, y0 + ny, x1 + nx, y1 + ny, x1 - nx, y1 - ny, argb);
+        tri(bb, mat, x0 + nx, y0 + ny, x1 - nx, y1 - ny, x0 - nx, y0 - ny, argb);
     }
 
     private static int darken(int rgb, float f) {

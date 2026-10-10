@@ -3,6 +3,8 @@ package com.solegendary.reignofnether.attackwarnings;
 import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.hud.buttons.Button;
 import com.solegendary.reignofnether.hud.HudClientEvents;
+import com.solegendary.reignofnether.alliance.AlliancesClient;
+import com.solegendary.reignofnether.minimap.MinimapClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.registrars.SoundRegistrar;
 import com.solegendary.reignofnether.util.MiscUtil;
@@ -57,11 +59,19 @@ public class AttackWarningClientEvents {
         );
     }
 
-    public static void checkAndTriggerAttackWarning(String attackedPlayerName, BlockPos attackPos) {
+    public static void checkAndTriggerAttackWarning(String attackedPlayerName, BlockPos attackPos, boolean isCommander) {
         if (MC.player == null || !OrthoviewClientEvents.isEnabled())
             return;
-        if (!MC.player.getName().getString().equals(attackedPlayerName))
+        String me = MC.player.getName().getString();
+        if (!me.equals(attackedPlayerName)) {
+            // BAR-style: an ally's commander under fire shows up on your minimap too (orange, not the red own-unit ping)
+            if (isCommander && AlliancesClient.isAllied(me, attackedPlayerName))
+                MinimapClientEvents.addCombatPing(attackPos.getX(), attackPos.getZ(), MinimapClientEvents.PING_ALLY_COMMANDER);
             return;
+        }
+        // red pulsing ring on the minimap wherever our stuff is being hit (rate-limited inside, so a big fight
+        // shows a few rings rather than a carpet of them)
+        MinimapClientEvents.addCombatPing(attackPos.getX(), attackPos.getZ(), MinimapClientEvents.PING_UNDER_ATTACK);
 
         Vec3 centrePos = MiscUtil.getOrthoviewCentreWorldPos(MC);
         float dist2dSqr = new Vec2((float) attackPos.getX(), (float) attackPos.getZ())

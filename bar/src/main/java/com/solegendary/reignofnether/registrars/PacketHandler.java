@@ -469,5 +469,10 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.barfx.BarFxClientboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.barfx.BarFxClientboundPacket::handle)
                 .add();
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.startpos.CapturePointsClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.startpos.CapturePointsClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.startpos.CapturePointsClientboundPacket::decode)
+                .consumerMainThread(com.solegendary.reignofnether.startpos.CapturePointsClientboundPacket::handle)
+                .add();
     }
 }

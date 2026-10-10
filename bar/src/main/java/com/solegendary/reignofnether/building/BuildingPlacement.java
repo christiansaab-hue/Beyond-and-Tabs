@@ -699,7 +699,8 @@ public class BuildingPlacement {
             this.onBlockBreak((ServerLevel) getLevel(), bp, false);
         }
         if (intAmount > 0) {
-            AttackWarningClientboundPacket.sendWarning(ownerName, BuildingUtils.getCentrePos(getBlocks()));
+            // rate-limited per owner (was one packet to everyone per hit); centrePos instead of re-scanning blocks
+            com.solegendary.reignofnether.attackwarnings.AttackWarningServerEvents.warn(getLevel(), ownerName, centrePos, false);
         }
     }
 
