@@ -173,7 +173,14 @@ public class CommanderDGun extends Ability {
         List<LivingEntity> out = new ArrayList<>();
         Vec3 seg = to.subtract(from);
         double len2 = seg.lengthSqr();
-        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+        // candidates from the grid cells under the line's bounding box (padded for wide units), not every unit
+        List<LivingEntity> candidates = UnitServerEvents.getAllUnits();
+        if (self.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            double pad = halfWidth + 2;
+            candidates = com.solegendary.reignofnether.unit.UnitGrid.inBox(sl, Math.min(from.x, to.x) - pad,
+                Math.min(from.z, to.z) - pad, Math.max(from.x, to.x) + pad, Math.max(from.z, to.z) + pad, new ArrayList<>());
+        }
+        for (LivingEntity le : candidates) {
             if (le == self || !le.isAlive() || !(le instanceof Unit u) || le.level() != self.level())
                 continue;
             String other = u.getOwnerName();

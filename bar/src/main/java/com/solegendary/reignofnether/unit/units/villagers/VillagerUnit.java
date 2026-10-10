@@ -391,7 +391,12 @@ public class VillagerUnit extends Vindicator implements Unit, WorkerUnit, Attack
                 }
 
                 boolean inRangeOfBellHolder = false;
-                for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+                // every villager runs this each second: on the server look only at the nearby grid cells, not at
+                // every unit on the map (villagers x units at 8v8)
+                java.util.List<LivingEntity> nearby = this.level() instanceof ServerLevel sl
+                    ? com.solegendary.reignofnether.unit.UnitGrid.near(sl, getX(), getZ(), UnitItems.BELL_OF_ARMS_RANGE + 2, new ArrayList<>())
+                    : UnitServerEvents.getAllUnits();
+                for (LivingEntity le : nearby) {
                     if (le instanceof UnitInventory inv && inv.isHoldingActive(UnitItems.BELL_OF_ARMS)) {
                         int range = UnitItems.BELL_OF_ARMS_RANGE;
                         if (this.getEyePosition().distanceToSqr(le.position()) <= range * range) {

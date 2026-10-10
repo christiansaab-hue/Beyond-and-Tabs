@@ -1503,15 +1503,33 @@ public class SkirmishGameTests {
                     spawned.add(m);
                 }
 
-                String[] names = { "wreck reclaim", "momentum", "formation", "capture points", "queue lines",
-                    "player panel", "builder lookup x200 (naive)", "bot enemy scans x64 (naive)" };
+                // the real code paths (budgeted), then the pre-grid/pre-index ways as a logged reference only
+                String[] names = { "unit grid rebuild", "wreck reclaim", "momentum", "formation", "capture points",
+                    "queue lines", "player panel", "builder lookup x200", "bot enemy scans x64",
+                    "REF builder lookup x200 (old scan)", "REF bot enemy scans x64 (old scan)" };
+                int budgeted = 9;
+                var buildings = com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings();
+                List<net.minecraft.world.entity.LivingEntity> scan = new ArrayList<>();
                 Runnable[] systems = {
+                    () -> {   // paid once per tick by the first grid query; forced here so every pass pays it
+                        com.solegendary.reignofnether.unit.UnitGrid.invalidate();
+                        com.solegendary.reignofnether.unit.UnitGrid.near(level, baseX, baseZ, 1, scan);
+                    },
                     () -> com.solegendary.reignofnether.resources.WreckServerEvents.tickReclaim(level, 0.05f),
                     () -> com.solegendary.reignofnether.unit.MomentumServerEvents.sampleAll(level),
                     () -> com.solegendary.reignofnether.unit.FormationServerEvents.update(level),
                     () -> com.solegendary.reignofnether.startpos.CapturePointServerEvents.tick(level, 0.05f),
                     com.solegendary.reignofnether.unit.UnitQueueSync::buildPayloads,
                     com.solegendary.reignofnether.player.PlayerPanelServerEvents::buildRows,
+                    () -> {   // every building asks for its builders every tick; one index rebuild per tick (a death)
+                        com.solegendary.reignofnether.building.BuilderIndex.invalidate();
+                        int n = 0;
+                        for (int b = 0; b < 200; b++)
+                            n += com.solegendary.reignofnether.building.BuilderIndex.buildersOf(
+                                buildings.isEmpty() ? null : buildings.get(b % buildings.size())).size();
+                        stressSink += n;
+                    },
+                    () -> stressGridEnemyScans(level, 64, 12, scan),
                     () -> stressNaiveBuilderScans(200),
                     () -> stressNaiveEnemyScans(64, 12),
                 };
@@ -1527,11 +1545,16 @@ public class SkirmishGameTests {
                             total[s] += dt;
                     }
                 }
+                // the grid must find exactly what the full scan finds
+                int viaGrid = stressGridEnemyScans(level, 64, 12, scan), viaScan = stressNaiveEnemyScans(64, 12);
+                if (viaGrid != viaScan)
+                    helper.fail("UnitGrid found " + viaGrid + " enemies in reach, the full scan " + viaScan);
                 double sum = 0;
                 StringBuilder sb = new StringBuilder();
                 for (int s = 0; s < systems.length; s++) {
                     double ms = total[s] / 1e6 / STRESS_ITERATIONS;
-                    sum += ms;
+                    if (s < budgeted)
+                        sum += ms;
                     sb.append(String.format(java.util.Locale.ROOT, "%s=%.3fms ", names[s], ms));
                 }
                 int units = 0;
@@ -1597,8 +1620,32 @@ public class SkirmishGameTests {
         stressSink += n;
     }
 
+    /** The same check as {@link #stressNaiveEnemyScans}, the way BotPlayer does it now: through UnitGrid. */
+    static int stressGridEnemyScans(ServerLevel level, int casters, double range,
+                                     List<net.minecraft.world.entity.LivingEntity> scan) {
+        var all = com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits();
+        int n = 0;
+        for (int c = 0; c < casters && c < all.size(); c++) {
+            var le = all.get(all.size() - 1 - (c * 5) % all.size());
+            if (!(le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u))
+                continue;
+            String name = u.getOwnerName();
+            for (var other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), range, scan)) {
+                if (!(other instanceof com.solegendary.reignofnether.unit.interfaces.Unit ou) || !other.isAlive()
+                        || other.distanceToSqr(le) > range * range)
+                    continue;
+                String o = ou.getOwnerName();
+                if (o != null && !o.equals(name)
+                        && !com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(name, o))
+                    n++;
+            }
+        }
+        stressSink += n;
+        return n;
+    }
+
     /** A bot's "three enemies within reach?" check over every unit, for {@code casters} units (the old way). */
-    static void stressNaiveEnemyScans(int casters, double range) {
+    static int stressNaiveEnemyScans(int casters, double range) {
         var all = com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits();
         int n = 0;
         for (int c = 0; c < casters && c < all.size(); c++) {
@@ -1617,6 +1664,7 @@ public class SkirmishGameTests {
             }
         }
         stressSink += n;
+        return n;
     }
 
     static ResourceLocation rl(String path) {

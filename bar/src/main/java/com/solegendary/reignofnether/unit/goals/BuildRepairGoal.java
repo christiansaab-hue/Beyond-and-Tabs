@@ -33,6 +33,13 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
 
     private Boolean isBuildingServerside = false;
 
+    // bumped whenever any worker's building target changes, so BuilderIndex (target -> workers) knows to rebuild
+    private static int targetGeneration = 0;
+
+    public static int getTargetGeneration() {
+        return targetGeneration;
+    }
+
     public boolean autocastRepair = false;
 
     public BuildRepairGoal(Mob mob) {
@@ -150,6 +157,7 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
             }
         }
         this.buildingTarget = target;
+        targetGeneration++;
         this.moveTarget = null; // force a fresh approach cell for the new target (calcMoveTarget then holds it)
         calcMoveTarget();
         this.start();
@@ -161,6 +169,7 @@ public class BuildRepairGoal extends MoveToTargetBlockGoal {
     public void stopBuilding() {
         queuedBuildings.clear();
         buildingTarget = null;
+        targetGeneration++;
         super.stopMoving();
     }
 }

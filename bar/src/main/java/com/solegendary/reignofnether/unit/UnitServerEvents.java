@@ -179,6 +179,11 @@ public class UnitServerEvents {
         return allUnits;
     }
 
+    /** Bumped whenever a unit joins or leaves allUnits: lets per-tick caches (UnitGrid, BuilderIndex) stay exact. */
+    public static int getAllUnitsModCount() {
+        return allUnitsModCount;
+    }
+
     // Per-owner sum of unit population, memoised for the current server tick. getCurrentPopulation used to scan
     // every unit on every call, and it's called per active production item per tick (ProductionItem
     // .isBelowPopulationSupply), for every queue/afford check, graveyards, scoreboard, etc. Keyed by
