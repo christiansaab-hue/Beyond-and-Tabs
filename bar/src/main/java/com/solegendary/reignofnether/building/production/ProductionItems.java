@@ -79,6 +79,7 @@ public class ProductionItems {
     public static final BeeProd BEE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bee"), new BeeProd());
 
     public static final com.solegendary.reignofnether.research.researchItems.ResearchTier2 RESEARCH_TIER_2 = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "research_tier_2"), new com.solegendary.reignofnether.research.researchItems.ResearchTier2());
+    public static final com.solegendary.reignofnether.research.researchItems.ResearchTier3 RESEARCH_TIER_3 = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "research_tier_3"), new com.solegendary.reignofnether.research.researchItems.ResearchTier3());
     public static final com.solegendary.reignofnether.research.researchItems.UpgradeExtractor UPGRADE_EXTRACTOR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "upgrade_extractor"), new com.solegendary.reignofnether.research.researchItems.UpgradeExtractor());
     public static final ResearchVindicatorAxes RESEARCH_VINDICATOR_AXES = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "vindicator_axes"), new ResearchVindicatorAxes());
     public static final ResearchPillagerCrossbows RESEARCH_PILLAGER_CROSSBOWS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "pillager_crossbows"), new ResearchPillagerCrossbows());

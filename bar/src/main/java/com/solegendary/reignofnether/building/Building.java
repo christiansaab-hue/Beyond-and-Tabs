@@ -78,7 +78,7 @@ public abstract class Building {
     // buildTimeModifier. Reign of Nether used 10 ticks/block for one villager with diminishing returns for more
     // villagers; BAR build power adds up linearly, so this is set a bit higher to keep 2-3 builders close to the
     // old timings (eg. "60s for a Town Centre with 3 villagers").
-    public static final float BUILD_TICKS_PER_BLOCK = 15f;
+    public static final float BUILD_TICKS_PER_BLOCK = 21f;   // was 15 - slower pacing (lovish: "base 0-100 in ten mins")
     public double maxHealth = 0;
     protected double maxHealthBonusPerUpgradeLevel = 0;
 

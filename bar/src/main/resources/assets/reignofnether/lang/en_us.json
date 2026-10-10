@@ -2285,5 +2285,8 @@
   "entity.reignofnether.bone_dragon_unit.tooltip1": "Gravebound experimental: a skeletal wyrm that flies over walls and lines.",
   "entity.reignofnether.bone_dragon_unit.tooltip2": "Breathes soul-fire on anything below it.",
   "entity.reignofnether.bone_dragon_unit.tooltip3": "Flies low and wears no armour - ranged units and anti-air shred it.",
-  "entity.reignofnether.bone_dragon_unit.tooltip4": "Requires a Stronghold."
+  "entity.reignofnether.bone_dragon_unit.tooltip4": "Requires a Stronghold.",
+  "research.reignofnether.tier_3": "Tier 3 Technology",
+  "research.reignofnether.tier_3.tooltip1": "Requires Tier 2. Unlocks your faction's Tier 3 building - and with it your experimental.",
+  "research.reignofnether.tier_3.tooltip2": "A long, heavy investment: your army runs thin while it researches."
 }

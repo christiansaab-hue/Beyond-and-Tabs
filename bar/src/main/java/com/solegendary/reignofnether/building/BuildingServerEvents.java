@@ -682,7 +682,8 @@ public class BuildingServerEvents {
     }
 
     public static int getTotalPopulationSupply(String ownerName) {
-        if (ResearchServerEvents.playerHasCheat(ownerName, "foodforthought")) {
+        // BAR has no supply buildings - just a unit cap. Everyone gets the full cap (gamerule maxPopulation).
+        if (true) {
             return UnitServerEvents.maxPopulation;
         }
 

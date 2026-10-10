@@ -82,8 +82,8 @@ public final class StartAreaClearing {
         for (BlockPos p : positions)
             stampBasePatches(level, p, cx, cz, rng);
         if (positions.size() > 1) {
-            for (int i = 0; i < 4; i++) {   // the contested middle
-                double a = i * Math.PI / 2 + Math.PI / 4;
+            for (int i = 0; i < 6; i++) {   // the contested middle (more mexes, lovish Oct 10)
+                double a = i * Math.PI / 3 + Math.PI / 6;
                 com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
                         (int) (cx + Math.cos(a) * 9), (int) (cz + Math.sin(a) * 9));
             }
@@ -92,7 +92,7 @@ public final class StartAreaClearing {
             for (BlockPos p : positions)
                 ringR = Math.max(ringR, (float) Math.hypot(p.getX() + 0.5f - cx, p.getZ() + 0.5f - cz));
             if (ringR > 60) {
-                int ringCount = Math.max(2, Math.round(positions.size() * 2 * mexRichness));
+                int ringCount = Math.max(4, Math.round(positions.size() * 3 * mexRichness));
                 for (int i = 0; i < ringCount; i++) {
                     double a = Math.PI * 2 * i / ringCount + Math.PI / positions.size();
                     com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
@@ -107,16 +107,19 @@ public final class StartAreaClearing {
         float x0 = p.getX() + 0.5f, z0 = p.getZ() + 0.5f;
         float dx = cx - x0, dz = cz - z0, len = (float) Math.hypot(dx, dz);
         double toCentre = len < 1e-3f ? 0 : Math.atan2(dz, dx);
-        int homePatches = mexRichness >= 1.3f ? 4 : 3;   // rich maps start every base with a 4th patch
+        int homePatches = mexRichness >= 1.3f ? 6 : 5;   // more mexes (lovish Oct 10); rich maps get a 6th
         for (int k = 0; k < homePatches; k++) {   // home ring, symmetric about the lane
             double a = toCentre + Math.PI + (k - (homePatches - 1) / 2.0) * (Math.PI / 2.2);
             com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
-                    (int) (x0 + Math.cos(a) * 17), (int) (z0 + Math.sin(a) * 17));
+                    (int) (x0 + Math.cos(a) * 18), (int) (z0 + Math.sin(a) * 18));
         }
         if (len > 40) {
             // near expansion on the lane, worth walking out for
             float k = Math.min(0.35f, 70f / Math.max(1f, len));
             com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (x0 + dx * k), (int) (z0 + dz * k));
+            // a second, farther lane patch halfway to the middle
+            if (len > 80)
+                com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (x0 + dx * 0.5f), (int) (z0 + dz * 0.5f));
             // flank expansions: off to each side, farther out, richer (2 patches) on one random side -
             // bases that want them have to stretch, and denying them actually hurts
             float px = -dz / len, pz = dx / len;
@@ -125,13 +128,17 @@ public final class StartAreaClearing {
                 float ex = x0 + dx * 0.5f + px * side * len * 0.55f;
                 float ez = z0 + dz * 0.5f + pz * side * len * 0.55f;
                 com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) ex, (int) ez);
+                // both flanks are pairs now; the rich side gets a third
+                com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (ex + px * side * 9), (int) (ez + pz * side * 9));
                 if (side == richSide)
-                    com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (ex + px * side * 9), (int) (ez + pz * side * 9));
+                    com.solegendary.reignofnether.resources.MetalPatches.stamp(level, (int) (ex + dx / len * 9), (int) (ez + dz / len * 9));
             }
             // a far backfield patch behind the base: safe but slow to saturate (lean maps may not get one)
-            if (mexRichness >= 0.8f || rng.nextBoolean())
+            com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
+                    (int) (x0 - dx / len * 42), (int) (z0 - dz / len * 42));
+            if (mexRichness >= 0.8f || rng.nextBoolean())   // and a second one off to the side
                 com.solegendary.reignofnether.resources.MetalPatches.stamp(level,
-                        (int) (x0 - dx / len * 42), (int) (z0 - dz / len * 42));
+                        (int) (x0 - dx / len * 38 - dz / len * 14), (int) (z0 - dz / len * 38 + dx / len * 14));
             // metal-everywhere maps scatter bonus patches off the lane
             if (mexRichness >= 1.15f) {
                 double a = toCentre + (rng.nextBoolean() ? 1 : -1) * (Math.PI / 3);

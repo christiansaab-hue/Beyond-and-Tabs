@@ -174,8 +174,7 @@ public class BotPlayer {
                 placeNear(level, converterFor(), layoutSlot(Layout.CONVERTER, count(buildings, converterFor())), workers, 1);
             else if (farms < 1 && !workers.isEmpty())
                 placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
-            else if (popCap - pop < 4 && !workers.isEmpty())
-                placeNear(level, kit.house(), layoutSlot(Layout.HOUSE, houses), workers, 1);
+            // (no houses: there is no supply any more, like BAR)
             else if (armyBuildings < 1 + (int) (minutes / 4) && minutes >= 1 && !workers.isEmpty())
                 placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
             else if (kit.tower() != null && count(buildings, kit.tower()) < 1 + (int) (minutes / 5) && minutes >= 2 && !workers.isEmpty()) {
@@ -446,6 +445,20 @@ public class BotPlayer {
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
         if (difficulty == Difficulty.EASY || minutes < (difficulty == Difficulty.HARD ? 12 : 14))
             return;
+        // Tier 3 research first (after Tier 2), at the capitol - same gate as a player
+        boolean hasT2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+        boolean hasT3 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3);
+        if (!hasT3) {
+            BuildingPlacement cap = null;
+            for (BuildingPlacement bp : buildings)
+                if (bp.getBuilding().isCapitol && bp.isBuilt)
+                    cap = bp;
+            if (hasT2 && cap instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
+                cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3);
+            return;
+        }
         BuildingPlacement t3 = null;
         for (BuildingPlacement bp : buildings)
             if (bp.getBuilding() == t3Building())

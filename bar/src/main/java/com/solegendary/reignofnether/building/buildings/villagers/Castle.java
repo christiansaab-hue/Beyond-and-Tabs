@@ -100,6 +100,7 @@ public class Castle extends ProductionBuilding implements GarrisonableBuildingAd
                 BuildingClientEvents.hasFinishedBuilding(Buildings.WITCH_HUT)
                     && BuildingClientEvents.hasFinishedBuilding(Buildings.BLACKSMITH)
                     && BuildingClientEvents.hasFinishedBuilding(Buildings.ARCANE_TOWER)
+                    && ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_3)
             ) || ResearchClient.hasCheat("modifythephasevariance"),
             List.of(Component.translatable("buildings.reignofnether.castle").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),

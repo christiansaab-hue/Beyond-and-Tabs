@@ -74,7 +74,9 @@ public class BuildingClientEvents {
     static final Minecraft MC = Minecraft.getInstance();
 
     public static int getTotalPopulationSupply(String playerName) {
-        if (ResearchClient.hasCheat("foodforthought")) {
+        // BAR has no supply buildings - just a unit cap (lovish, Oct 10: "I'd rather there be no supply").
+        // Everyone gets the full cap (gamerule maxPopulation) from the start; houses only add energy now.
+        if (true) {
             return GameruleClient.maxPopulation;
         }
 

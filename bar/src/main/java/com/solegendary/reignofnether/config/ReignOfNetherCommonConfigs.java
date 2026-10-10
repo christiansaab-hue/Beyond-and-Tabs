@@ -162,6 +162,7 @@ public class ReignOfNetherCommonConfigs {
         ResearchCosts.RESEARCH_EVOKER_VEXES.define(BUILDER);
         ResearchCosts.RESEARCH_UPGRADED_WINDCALLERS.define(BUILDER);
         ResearchCosts.RESEARCH_TIER_2.define(BUILDER);
+        ResearchCosts.RESEARCH_TIER_3.define(BUILDER);
         ResearchCosts.UPGRADE_EXTRACTOR.define(BUILDER);
         ResearchCosts.RESEARCH_CASTLE_FLAG.define(BUILDER);
         ResearchCosts.RESEARCH_GRAND_LIBRARY.define(BUILDER);
@@ -210,7 +211,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry CREEPER = ResourceCostConfigEntry.Unit(50, 0, 100, 35, 2, ResourceCosts.CREEPER, "Creeper Config");
         public static final ResourceCostConfigEntry BAT = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.BAT, "Bat Config");
         public static final ResourceCostConfigEntry ZOMBIE = ResourceCostConfigEntry.Unit(75, 0, 0, 18, 1, ResourceCosts.ZOMBIE, "Zombie Config");
-        public static final ResourceCostConfigEntry ZOMBIE_VILLAGER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.ZOMBIE_VILLAGER, "Zombie Villager Config");
+        public static final ResourceCostConfigEntry ZOMBIE_VILLAGER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.ZOMBIE_VILLAGER, "Zombie Villager Config");
         public static final ResourceCostConfigEntry SKELETON = ResourceCostConfigEntry.Unit(50,45,0,18,1, ResourceCosts.SKELETON, "Skeleton Config");
         public static final ResourceCostConfigEntry STRAY = ResourceCostConfigEntry.Unit(50,45,0,18,1, ResourceCosts.STRAY, "Stray Config");
         public static final ResourceCostConfigEntry BOGGED = ResourceCostConfigEntry.Unit(50,45,0,18,1, ResourceCosts.BOGGED, "Bogged Config");
@@ -228,7 +229,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry ZOGLIN = ResourceCostConfigEntry.Unit(100,0,40,25,2, ResourceCosts.ZOGLIN, "Zoglin Config");
 
         // VillagersFaction
-        public static final ResourceCostConfigEntry VILLAGER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.VILLAGER, "Villager Config");
+        public static final ResourceCostConfigEntry VILLAGER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.VILLAGER, "Villager Config");
         public static final ResourceCostConfigEntry SCOUT_DOG = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.SCOUT_DOG, "Scout Dog Config");
         public static final ResourceCostConfigEntry SCOUT_CAT = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.SCOUT_CAT, "Scout Cat Config");
         public static final ResourceCostConfigEntry MILITIA = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.MILITIA, "Militia Config");
@@ -247,7 +248,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry ENCHANTER = ResourceCostConfigEntry.Unit(0,0,0,30, 5, ResourceCosts.ENCHANTER, "Enchanter Config");
 
         // Piglins
-        public static final ResourceCostConfigEntry GRUNT = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.GRUNT, "Grunt Config");
+        public static final ResourceCostConfigEntry GRUNT = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.GRUNT, "Grunt Config");
         public static final ResourceCostConfigEntry STRIDER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.STRIDER, "Strider Config");
         public static final ResourceCostConfigEntry BRUTE = ResourceCostConfigEntry.Unit(120,0,0,25,2, ResourceCosts.BRUTE, "Brute Config");
         public static final ResourceCostConfigEntry HEADHUNTER = ResourceCostConfigEntry.Unit(90,60,0,25,2, ResourceCosts.HEADHUNTER, "Headhunter Config");
@@ -356,7 +357,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry RESEARCH_UPGRADED_WINDCALLERS = ResourceCostConfigEntry.Research(300,150,150, 140, ResourceCosts.RESEARCH_UPGRADED_WINDCALLERS, "Upgraded Windcallers Research Config");
         public static final ResourceCostConfigEntry RESEARCH_CASTLE_FLAG = ResourceCostConfigEntry.Research(200,150,150, 90, ResourceCosts.RESEARCH_CASTLE_FLAG, "Captain Banner Research Config");
         // BAR tech: ore->metal, wood->energy at bake time
-        public static final ResourceCostConfigEntry RESEARCH_TIER_2 = ResourceCostConfigEntry.Research(0,800,160, 75, ResourceCosts.RESEARCH_TIER_2, "Tier 2 Technology Research Config");
+        // pacing (lovish, Oct 10: "I got to tier 3 so fast"): T2 takes 2 minutes, T3 a further 4 after it
+        public static final ResourceCostConfigEntry RESEARCH_TIER_2 = ResourceCostConfigEntry.Research(0,800,160, 120, ResourceCosts.RESEARCH_TIER_2, "Tier 2 Technology Research Config");
+        public static final ResourceCostConfigEntry RESEARCH_TIER_3 = ResourceCostConfigEntry.Research(0,2400,600, 240, ResourceCosts.RESEARCH_TIER_3, "Tier 3 Technology Research Config");
         public static final ResourceCostConfigEntry UPGRADE_EXTRACTOR = ResourceCostConfigEntry.Research(0,200,120, 45, ResourceCosts.UPGRADE_EXTRACTOR, "Tier 2 Extractor Upgrade Config");
         public static final ResourceCostConfigEntry RESEARCH_GRAND_LIBRARY = ResourceCostConfigEntry.Research(0,200,100, 140, ResourceCosts.RESEARCH_GRAND_LIBRARY, "Grand Library Research Config");
         public static final ResourceCostConfigEntry RESEARCH_SILVERFISH = ResourceCostConfigEntry.Research(0,300,300, 120, ResourceCosts.RESEARCH_SILVERFISH, "Silverfish Research Config");

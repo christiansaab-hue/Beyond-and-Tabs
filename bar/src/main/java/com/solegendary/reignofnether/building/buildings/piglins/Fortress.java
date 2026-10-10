@@ -73,7 +73,7 @@ public class Fortress extends ProductionBuilding implements GarrisonableBuilding
             hotkey,
             () -> BuildingClientEvents.getBuildingToPlace() == Buildings.FORTRESS,
             () -> false,
-            () -> hasPrerequisiteBuildings() || ResearchClient.hasCheat("modifythephasevariance"),
+            () -> (hasPrerequisiteBuildings() && ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_3)) || ResearchClient.hasCheat("modifythephasevariance"),
             List.of(
                     Component.translatable("buildings.reignofnether.fortress").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                     ResourceCosts.getFormattedCost(cost),
