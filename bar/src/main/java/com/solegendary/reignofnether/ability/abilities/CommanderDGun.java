@@ -46,6 +46,11 @@ import java.util.List;
  *   <li>Verdant Court - <b>Thornburst</b>: a cone of thorns instead of a line ({@link #CONE_RANGE} blocks deep,
  *       {@link #CONE_HALF_ANGLE_DEG} degrees either side), and what it hits is rooted for {@link #ROOT_TICKS} ticks.
  *       Shorter than the line, wider up close: a brawler's D-gun for the faction that fights in the thickets.</li>
+ *   <li>Tidewrought - <b>Broadside</b>: a walking cannonade instead of a beam - {@link #BROADSIDE_SHOTS} cannonball
+ *       impacts stepping {@link #BROADSIDE_STEP} blocks forward, {@link #BROADSIDE_DELAY} ticks apart, each bursting
+ *       {@link #BROADSIDE_RADIUS} blocks wide. Every enemy caught takes the D-gun's damage once per volley. Entity damage
+ *       only: no explosion, so no terrain and no friend is touched. Same reach as the line, but a quick unit can step
+ *       out of the later shots - the Admiral's gun rewards aiming at a crowd, not a runner.</li>
  *   <li>Any faction without one designed (FactionTraits) - a plain <b>D-gun</b>, same rules.</li>
  * </ul>
  * Friendly units are never hit (BAR's D-gun does hit friends - kept off here until lovish says otherwise).
@@ -62,6 +67,11 @@ public class CommanderDGun extends Ability {
     public static final float CONE_RANGE = 10f;
     public static final float CONE_HALF_ANGLE_DEG = 35f;
     public static final int ROOT_TICKS = 40;
+    /** Broadside (Tidewrought): the walking cannonade's shots, spacing, cadence and burst radius. */
+    public static final int BROADSIDE_SHOTS = 6;
+    public static final float BROADSIDE_STEP = 2.5f;
+    public static final int BROADSIDE_DELAY = 4;
+    public static final float BROADSIDE_RADIUS = 2.0f;
 
     public CommanderDGun() {
         super(UnitAction.COMMANDER_DGUN, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, RANGE, 0, false, true);
@@ -71,9 +81,9 @@ public class CommanderDGun extends Ability {
     }
 
     /** PLAIN: same rules, no faction flavour - factions whose D-gun is not designed yet (they used to get Sunfire). */
-    public enum Kind { SUNFIRE, BLOODSTORM, SOULREAPER, THORNBURST, PLAIN }
+    public enum Kind { SUNFIRE, BLOODSTORM, SOULREAPER, THORNBURST, BROADSIDE, PLAIN }
 
-    static Kind kindFor(Unit unit) {
+    public static Kind kindFor(Unit unit) {
         return FactionTraits.of(Factions.getFaction(unit)).dgunKind;
     }
 
@@ -82,6 +92,7 @@ public class CommanderDGun extends Ability {
             case BLOODSTORM -> "Bloodstorm";
             case SOULREAPER -> "Soulreaper";
             case THORNBURST -> "Thornburst";
+            case BROADSIDE -> "Broadside";
             case PLAIN -> "D-gun";
             default -> "Sunfire Decree";
         };
@@ -95,6 +106,7 @@ public class CommanderDGun extends Ability {
             case BLOODSTORM -> "The Warlord's greataxe, thrown through the line.";
             case SOULREAPER -> "The Lich Regent's scythe of soul-fire.";
             case THORNBURST -> "The Grove Warden calls the bramble up in a fan.";
+            case BROADSIDE -> "The Admiral's guns walk their fire up the beach.";
             case PLAIN -> "The commander's own weapon.";
             default -> "The Lord Marshal's lance of sunlight.";
         };
@@ -102,6 +114,7 @@ public class CommanderDGun extends Ability {
             case BLOODSTORM -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/iron_axe.png");
             case SOULREAPER -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/netherite_hoe.png");
             case THORNBURST -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/sweet_berries.png");
+            case BROADSIDE -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/fire_charge.png");
             case PLAIN -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/iron_sword.png");
             default -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/blaze_rod.png");
         };
@@ -116,6 +129,9 @@ public class CommanderDGun extends Ability {
                 FormattedCharSequence.forward(kind == Kind.THORNBURST
                     ? ENERGY_COST + " energy, " + CD_SECONDS + " s cooldown, " + (int) CONE_RANGE
                         + "-block cone that roots. Destroys light units outright."
+                    : kind == Kind.BROADSIDE
+                    ? ENERGY_COST + " energy, " + CD_SECONDS + " s cooldown, " + BROADSIDE_SHOTS
+                        + " cannon shots walking " + (int) (BROADSIDE_SHOTS * BROADSIDE_STEP) + " blocks. Destroys light units outright."
                     : ENERGY_COST + " energy, " + CD_SECONDS + " s cooldown, " + RANGE
                         + "-block line. Destroys light units outright.", Style.EMPTY),
                 FormattedCharSequence.forward(flavour, Style.EMPTY.withItalic(true))
@@ -152,6 +168,13 @@ public class CommanderDGun extends Ability {
         Kind kind = kindFor(unitUsing);
         boolean cone = kind == Kind.THORNBURST;
 
+        if (kind == Kind.BROADSIDE) {
+            broadside(sl, self, owner, from, dir);
+            this.setToMaxCooldown(unitUsing);
+            AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, this.cooldownMax);
+            return;
+        }
+
         for (LivingEntity le : cone ? coneHits(self, owner, from, dir) : hits(self, owner, from, to)) {
             // indirect magic, not mobAttack: RoN rewrites mob-attack damage to the attacker's melee damage
             le.hurt(sl.damageSources().indirectMagic(self, self),
@@ -187,6 +210,61 @@ public class CommanderDGun extends Ability {
         }
         this.setToMaxCooldown(unitUsing);
         AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, this.cooldownMax);
+    }
+
+    /**
+     * Broadside: schedules the {@link #BROADSIDE_SHOTS} impacts down the flat direction {@code dir} from {@code from}
+     * (one scheduled task each - a handful per cast, nothing per tick). The impact points are fixed now; the shots land
+     * on whoever stands there when they come down. One hit set per volley, so a unit caught by two overlapping bursts
+     * is only hurt once. Public for the game test.
+     */
+    public static void broadside(ServerLevel sl, LivingEntity self, String owner, Vec3 from, Vec3 dir) {
+        java.util.Set<LivingEntity> already = new java.util.HashSet<>();
+        sl.playSound(null, self.blockPosition(), SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 2.5f, 0.6f);
+        sl.sendParticles(ParticleTypes.LARGE_SMOKE, from.x + dir.x, from.y, from.z + dir.z, 8, 0.3, 0.2, 0.3, 0.02);
+        for (int i = 1; i <= BROADSIDE_SHOTS; i++) {
+            Vec3 at = from.add(dir.scale(i * BROADSIDE_STEP));
+            com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule((i - 1) * BROADSIDE_DELAY + 2,
+                () -> broadsideImpact(sl, self, owner, at, already));
+        }
+    }
+
+    /** One cannonball landing at {@code at}: hurts every not-yet-hit enemy within the burst, smoke and a boom. */
+    static int broadsideImpact(ServerLevel sl, LivingEntity self, String owner, Vec3 at, java.util.Set<LivingEntity> already) {
+        List<LivingEntity> hit = broadsideHits(self, owner, at);
+        hit.removeIf(already::contains);
+        already.addAll(hit);
+        for (LivingEntity le : hit)
+            // indirect magic, not mobAttack (RoN rewrites mob-attack damage) and not an explosion (no terrain, no friends)
+            le.hurt(sl.damageSources().indirectMagic(self, self),
+                CommanderServerEvents.isCommander(le) ? COMMANDER_DAMAGE : DAMAGE);
+        sl.sendParticles(ParticleTypes.EXPLOSION, at.x, at.y - 0.5, at.z, 1, 0, 0, 0, 0);
+        sl.sendParticles(ParticleTypes.CLOUD, at.x, at.y - 0.6, at.z, 6, BROADSIDE_RADIUS * 0.4, 0.15, BROADSIDE_RADIUS * 0.4, 0.02);
+        sl.playSound(null, BlockPos.containing(at), SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 1.8f, 1.1f);
+        return hit.size();
+    }
+
+    /** Every hostile unit within {@link #BROADSIDE_RADIUS} (flat, to its near edge) of one impact. Public for the game test. */
+    public static List<LivingEntity> broadsideHits(LivingEntity self, String owner, Vec3 at) {
+        List<LivingEntity> out = new ArrayList<>();
+        if (!(self.level() instanceof ServerLevel sl))
+            return out;
+        double r = BROADSIDE_RADIUS + 2;
+        for (LivingEntity le : com.solegendary.reignofnether.unit.UnitGrid.inBox(sl, at.x - r, at.z - r, at.x + r, at.z + r,
+                new ArrayList<>())) {
+            if (le == self || !le.isAlive() || !(le instanceof Unit u) || le.level() != self.level())
+                continue;
+            String other = u.getOwnerName();
+            if (owner.equals(other) || AlliancesServerEvents.isAllied(owner, other))
+                continue;
+            if (Math.abs(le.getY() + le.getBbHeight() / 2 - at.y) > 4)
+                continue;
+            double dx = le.getX() - at.x, dz = le.getZ() - at.z;
+            double reach = BROADSIDE_RADIUS + le.getBbWidth() / 2;
+            if (dx * dx + dz * dz <= reach * reach)
+                out.add(le);
+        }
+        return out;
     }
 
     /** Thornburst's look: thorny leaves fanning out along the cone, and a crunch of brambles. */

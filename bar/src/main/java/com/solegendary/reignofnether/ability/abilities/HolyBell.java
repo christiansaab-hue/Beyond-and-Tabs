@@ -80,8 +80,17 @@ public class HolyBell extends Ability {
 
     /** Rings the bell: marks and reveals every hostile unit in range and returns them. Public for the game test. */
     public static List<LivingEntity> ring(ServerLevel sl, LivingEntity self, String owner) {
+        return ring(sl, self, owner, RADIUS);
+    }
+
+    /**
+     * The same with a custom reach. Only the game tests use it: a full 24-block pulse reaches into the neighbouring
+     * test arenas (16 wide, 5 apart) and stripped other tests' units of their thicket cover, a layout-dependent flake.
+     * The visible toll ring is still drawn at {@link #RADIUS}.
+     */
+    public static List<LivingEntity> ring(ServerLevel sl, LivingEntity self, String owner, double radius) {
         List<LivingEntity> out = new ArrayList<>();
-        double r2 = RADIUS * RADIUS;
+        double r2 = radius * radius;
         Set<String> allies = AlliancesServerEvents.getAllAllies(owner);
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (le == self || !le.isAlive() || !(le instanceof Unit u) || le.level() != sl || le.distanceToSqr(self) > r2)

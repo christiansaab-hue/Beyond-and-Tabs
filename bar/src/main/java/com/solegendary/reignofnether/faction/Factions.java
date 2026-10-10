@@ -41,7 +41,7 @@ public class Factions {
 	public static Faction NONE;
 	// faction 4 of claude/design-factions.md (design/verdant_court_plan.md): playable from slice 1 (T1 only)
 	public static Faction VERDANT_COURT;
-	// faction 5 (design/tidewrought_plan.md): slice 0 = lobby preview only; no capitol, worker or units yet
+	// faction 5 (design/tidewrought_plan.md): playable from slice 1 (T1 only, plus the Tides core)
 	public static Faction TIDEWROUGHT;
 
 	public static void register() {
@@ -104,14 +104,16 @@ public class Factions {
 			.setTraits(FactionTraits.VERDANT)
 		);
 
-		// After the Court so no existing registry id moves. Preview = unplayable, so it is in none of PLAYABLE / CLASSIC
-		// / SURVIVAL and never in the "Random" pool (randomLive needs isLive); the lobby shows a greyed "coming soon"
-		// tile and the server refuses to reserve or start it. Its traits are explicit from day one so nothing it ever
-		// touches falls back to another faction's look. Icon is vanilla prismarine bricks (teal) until a portrait exists.
+		// After the Court so no existing registry id moves. Live since slice 1 (design/tidewrought_plan.md): playable in
+		// the lobby, skirmish (code 5), sandbox, "Random" and for bots, like the Court - but no cube map and no spawn
+		// wave yet, so it stays out of the title screen and survival. Calm theme: vanilla's underwater music
+		// (SoundRegistrar.TIDEWROUGHT_CALM_THEME_SONG). Custom (sandbox) buildings follow the Kingdom's "buildable" flag
+		// until CustomBuilding grows a Tidewrought one. The lobby icon stays vanilla prismarine bricks (teal).
 		TIDEWROUGHT = register("tidewrought", new Faction()
-			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/prismarine_bricks.png"))
+			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/shipwright.png"))
 			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/prismarine_bricks.png"))
-			.setPreview()
+			.setSound(SoundRegistrar.TIDEWROUGHT_CALM_THEME_SONG.get())
+			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
 			.noCubeMap()
 			.setTraits(FactionTraits.TIDEWROUGHT)
 		);
@@ -195,6 +197,14 @@ public class Factions {
 		registerEntity(VERDANT_COURT, EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), ProductionItems.WORLD_TREE_WALKER);   // T3 (Heart of the Wild)
 		registerEntity(VERDANT_COURT, EntityRegistrar.WISP_CHOIR_UNIT.get(), ProductionItems.WISP_CHOIR);
 		registerEntity(VERDANT_COURT, EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), ProductionItems.BLOOM_PRIESTESS);
+
+		// Tidewrought (slice 1: T1 only)
+		registerWorkerEntity(TIDEWROUGHT, EntityRegistrar.SHIPWRIGHT_UNIT.get(), ProductionItems.SHIPWRIGHT);
+		registerScoutEntity(TIDEWROUGHT, EntityRegistrar.GULL_SPOTTER_UNIT.get(), ProductionItems.GULL_SPOTTER);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), ProductionItems.CUTLASS_RAIDER);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.REEF_GUARD_UNIT.get(), ProductionItems.REEF_GUARD);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.BOMBARD_CREW_UNIT.get(), ProductionItems.BOMBARD_CREW);
+		registerEntity(TIDEWROUGHT, EntityRegistrar.TIDE_PRIEST_UNIT.get(), ProductionItems.TIDE_PRIEST);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -281,6 +291,13 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, Keybindings.hotkey2);   // T3 lab: the Castle's and Stronghold's slot
 		registerBuildings(VERDANT_COURT, Buildings.STORM_OAK, Keybindings.abilitySlot5);       // T2 defence: the Watchtowers' slot
+
+		// Tidewrought: the same hotkey slots (capitol slot 1, army lab slot 6, economy 5/6/7); no T2/T3 lab yet
+		registerStartBuilding(TIDEWROUGHT, Buildings.WRECK_HARBOUR, Keybindings.abilitySlot1);
+		registerBuildings(TIDEWROUGHT, Buildings.METAL_EXTRACTOR_TIDE, Keybindings.hotkey5);
+		registerBuildings(TIDEWROUGHT, Buildings.WIND_GENERATOR_TIDE, Keybindings.hotkey6);
+		registerBuildings(TIDEWROUGHT, Buildings.ENERGY_CONVERTER_TIDE, Keybindings.hotkey7);
+		registerBuildings(TIDEWROUGHT, Buildings.SLIPWAY, Keybindings.abilitySlot6);
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

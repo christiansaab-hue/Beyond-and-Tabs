@@ -144,6 +144,14 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WorldTreeWalkerRenderer::new);
         // Verdant Court: vanilla bodies with the Court's own skins (the fox keeps its vanilla look)
         evt.registerEntityRenderer(EntityRegistrar.SEEDSHAPER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SeedshaperRenderer::new);
+        // Tidewrought: vanilla illager / witch bodies in their own skins (tools/gen_tide_skins.py), AM's seagull as is
+        evt.registerEntityRenderer(EntityRegistrar.SHIPWRIGHT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ShipwrightRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.GULL_SPOTTER_UNIT.get(), com.github.alexthe666.alexsmobs.client.render.RenderSeagull::new);
+        evt.registerEntityRenderer(EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.CutlassRaiderRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.REEF_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ReefGuardRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BOMBARD_CREW_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BombardCrewRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.TIDE_PRIEST_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.TidePriestRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BOMBARD_SHELL.get(), (ctx) -> new ThrownItemRenderer<>(ctx, 1.5F, false));
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
         // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)
         evt.registerEntityRenderer(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.MoonwellBearerRenderer::new);

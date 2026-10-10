@@ -389,13 +389,25 @@ public final class BarFxClient {
                 }
                 verdantPetals(tier, x, cy, z, scale);
             }
+            case BarFx.F_TIDE -> {
+                // brass shards and teal spray in a white splash puff: a corsair goes over the side. Our own brass /
+                // sea-teal chunks carry the debris budget; a few vanilla splash and bubble-pop particles add the water
+                chunks(x, cy, z, (bits + 1) / 2, speed * .9f, 0xC9A23E, 4f);
+                chunks(x, cy, z, bits / 2, speed * .8f, 0x1E7F7A, 4f);
+                sparks(x, cy, z, bits, speed, 0x8CF0E6, 0, 0);
+                for (int i = 0; i < puffs; i++) {
+                    P p = smoke(x + rnd(-.3f, .3f), cy, z + rnd(-.3f, .3f), ps, rnd(1.0f, 1.6f), 0xE6F4F2, .45f);
+                    p.vy = rnd(.4f, .8f); p.grow = 1.9f;
+                }
+                tideSpray(tier, x, cy, z, scale);
+            }
             default -> { }
         }
         if (tier >= 3) {
             // a proper blast: bright core, brief light ring along the ground, a scorch where it stood (no shake)
             float g = groundOr(x, y, z);
             int core = faction == BarFx.F_GRAVEBOUND ? 0x9FF0FF : faction == BarFx.F_HORDE ? 0xFFA040
-                    : faction == BarFx.F_VERDANT ? 0xB8FFB0 : 0xFFE0A0;
+                    : faction == BarFx.F_VERDANT ? 0xB8FFB0 : faction == BarFx.F_TIDE ? 0x9CF6EE : 0xFFE0A0;
             flash(x, cy, z, 1.6f + scale * .6f, .3f, core);
             ring(x, g, z, 3f + scale * 1.2f, .45f, core);
             scorch(x, g, z, 1f + scale * .6f, 30, 0x16120E);
@@ -419,6 +431,25 @@ public final class BarFxClient {
                 case 1 -> level.addParticle(net.minecraft.core.particles.ParticleTypes.SPORE_BLOSSOM_AIR, px, py, pz, 0, 0, 0);
                 default -> level.addParticle(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, px, py, pz, 0, 0, 0);
             }
+        }
+    }
+
+    /**
+     * Vanilla splash / bubble particles for a Tidewrought death, counted by tier like the Court's petals (at most 12
+     * for a T3, 4 for a T1; the vanilla particle engine has its own cap).
+     */
+    static void tideSpray(int tier, float x, float cy, float z, float scale) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null)
+            return;
+        int n = tier >= 3 ? 12 : tier == 2 ? 7 : 4;
+        float r = .4f * scale;
+        for (int i = 0; i < n; i++) {
+            double px = x + rnd(-r, r), py = cy + rnd(-.2f, .5f), pz = z + rnd(-r, r);
+            if (i % 2 == 0)
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.SPLASH, px, py, pz, 0, 0.1, 0);
+            else
+                level.addParticle(net.minecraft.core.particles.ParticleTypes.BUBBLE_POP, px, py, pz, 0, 0.05, 0);
         }
     }
 
@@ -538,6 +569,7 @@ public final class BarFxClient {
             case BarFx.N_GRAVEBOUND -> 0x5FE6F0;   // soul-cyan
             case BarFx.N_HORDE -> 0xFF8A2E;        // ember-orange
             case BarFx.N_VERDANT -> 0x7CE07A;      // leaf-green
+            case BarFx.N_TIDE -> 0x3CC8BE;         // sea-teal
             case BarFx.N_NEUTRAL -> 0xE0E0E0;      // plain white (no faction tint)
             default -> 0xFFCF4A;                   // golden
         };

@@ -41,7 +41,8 @@ public class WindmillRenderClientEvents {
         for (BuildingBlock bb : placement.getBlocks()) {
             BlockState bs = bb.getBlockState();
             if ((bs.is(Blocks.STRIPPED_SPRUCE_LOG) || bs.is(Blocks.STRIPPED_DARK_OAK_LOG)
-                    || bs.is(Blocks.STRIPPED_CRIMSON_STEM) || bs.is(Blocks.BONE_BLOCK) || bs.is(Blocks.STRIPPED_OAK_LOG))
+                    || bs.is(Blocks.STRIPPED_CRIMSON_STEM) || bs.is(Blocks.BONE_BLOCK) || bs.is(Blocks.STRIPPED_OAK_LOG)
+                    || bs.is(Blocks.STRIPPED_MANGROVE_LOG))
                     && bs.hasProperty(BlockStateProperties.AXIS)
                     && bs.getValue(BlockStateProperties.AXIS) != Direction.Axis.Y)
                 return bb;
@@ -94,6 +95,9 @@ public class WindmillRenderClientEvents {
             } else if (hubBlock.getBlockState().is(Blocks.STRIPPED_OAK_LOG)) {
                 bladeCloth = Blocks.GREEN_WOOL.defaultBlockState();   // the Verdant Court: leaf-green sails on silver birch
                 bladeArm = Blocks.BIRCH_PLANKS.defaultBlockState();
+            } else if (hubBlock.getBlockState().is(Blocks.STRIPPED_MANGROVE_LOG)) {
+                bladeCloth = Blocks.CYAN_WOOL.defaultBlockState();   // the Tidewrought: teal sailcloth on spruce spars
+                bladeArm = Blocks.SPRUCE_PLANKS.defaultBlockState();
             } else {
                 bladeCloth = Blocks.WHITE_WOOL.defaultBlockState();
                 bladeArm = Blocks.SPRUCE_PLANKS.defaultBlockState();

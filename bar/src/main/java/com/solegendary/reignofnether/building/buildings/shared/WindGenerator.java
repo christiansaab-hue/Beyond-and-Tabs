@@ -31,7 +31,7 @@ public class WindGenerator extends Building {
         this("");
     }
 
-    /** variant: "" (Kingdom plaster mill), "_dark" (The Fallen), "_nether" (The Gilded Legion) or "_verdant" (Verdant Court). */
+    /** variant: "" (Kingdom plaster mill), "_dark" (The Fallen), "_nether" (The Gilded Legion), "_verdant" (Verdant Court) or "_tide" (Tidewrought). */
     public WindGenerator(String variant) {
         super(structureName + variant, cost, false);
         this.name = buildingName;

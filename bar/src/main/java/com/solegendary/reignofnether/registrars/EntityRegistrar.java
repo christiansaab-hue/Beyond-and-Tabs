@@ -315,6 +315,52 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bloom_priestess_unit").toString()));
 
+    // Tidewrought (design/tidewrought_plan.md, slice 1). The Gull Spotter is Alex's Mobs' seagull body (RenderSeagull),
+    // a little bigger than AM's wild gull so it can be clicked from the RTS camera
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.ShipwrightUnit>> SHIPWRIGHT_UNIT = ENTITIES.register("shipwright_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.ShipwrightUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shipwright_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.GullSpotterUnit>> GULL_SPOTTER_UNIT = ENTITIES.register("gull_spotter_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.GullSpotterUnit::new, MobCategory.CREATURE)
+                    .sized(0.6f, 0.6f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gull_spotter_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.CutlassRaiderUnit>> CUTLASS_RAIDER_UNIT = ENTITIES.register("cutlass_raider_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.CutlassRaiderUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "cutlass_raider_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.ReefGuardUnit>> REEF_GUARD_UNIT = ENTITIES.register("reef_guard_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.ReefGuardUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "reef_guard_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit>> BOMBARD_CREW_UNIT = ENTITIES.register("bombard_crew_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PILLAGER.getWidth(), EntityType.PILLAGER.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bombard_crew_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.TidePriestUnit>> TIDE_PRIEST_UNIT = ENTITIES.register("tide_priest_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.tide.TidePriestUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.WITCH.getWidth(), EntityType.WITCH.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tide_priest_unit").toString()));
+
+    // the Bombard Crew's mortar shell (ThrownItemRenderer draws it as a fire charge)
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.tide.BombardShell>> BOMBARD_SHELL = ENTITIES.register("bombard_shell",
+            () -> EntityType.Builder.<com.solegendary.reignofnether.unit.units.tide.BombardShell>of(com.solegendary.reignofnether.unit.units.tide.BombardShell::new, MobCategory.MISC)
+                    .sized(0.4f, 0.4f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .updateInterval(10)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bombard_shell").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit>> EMBALMER_UNIT = ENTITIES.register("embalmer_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
@@ -643,6 +689,12 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd.itemName -> EntityRegistrar.ELDER_TREANT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.WispChoirProd.itemName -> EntityRegistrar.WISP_CHOIR_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.BloomPriestessProd.itemName -> EntityRegistrar.BLOOM_PRIESTESS_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.ShipwrightProd.itemName -> EntityRegistrar.SHIPWRIGHT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.GullSpotterProd.itemName -> EntityRegistrar.GULL_SPOTTER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.CutlassRaiderProd.itemName -> EntityRegistrar.CUTLASS_RAIDER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.ReefGuardProd.itemName -> EntityRegistrar.REEF_GUARD_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.BombardCrewProd.itemName -> EntityRegistrar.BOMBARD_CREW_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.tide.TidePriestProd.itemName -> EntityRegistrar.TIDE_PRIEST_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

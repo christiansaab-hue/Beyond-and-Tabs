@@ -27,8 +27,8 @@ import java.util.UUID;
  * is {@link #SPEED_BONUS} faster and regenerates {@link #REGEN_PER_PASS} HP every {@link #PASS_TICKS} ticks (2 HP/s).
  * <p>
  * Who is tidal ({@link #isTidal}): a unit whose faction's {@link FactionTraits#tidal} is set (the Tidewrought), or any
- * unit carrying the {@link #TIDAL_TAG} entity tag (summons borrowed from another faction, and the game tests - the
- * faction has no units yet). The same check makes MobilityClass pick TIDAL, so pathing and the buff never disagree.
+ * unit carrying the {@link #TIDAL_TAG} entity tag (summons borrowed from another faction, and the game tests).
+ * The same check makes MobilityClass pick TIDAL, so pathing and the buff never disagree.
  * <p>
  * Cost at 8v8: one pass every {@link #PASS_TICKS} ticks over the existing unit list - for a non-tidal unit that is
  * one faction-traits lookup, for a tidal one a single block-state read at its feet. The speed modifier (fixed UUID,
@@ -40,7 +40,7 @@ public class TidesServerEvents {
     public static final int PASS_TICKS = 10;
     /** +20% movement speed while wet (MULTIPLY_TOTAL, so it scales whatever else is on the unit). */
     public static final double SPEED_BONUS = 0.20;
-    /** 1 HP per pass = 2 HP/s. Unit-specific regen (Reef Guard) is a later slice's business. */
+    /** 1 HP per pass = 2 HP/s. A unit may add to it through TidalUnit.tidesRegenBonus (the Reef Guard: 3 HP/s). */
     public static final float REGEN_PER_PASS = 1f;
     /** Entity tag that makes any unit tidal (see class comment). */
     public static final String TIDAL_TAG = "bt_tidal";
@@ -114,11 +114,15 @@ public class TidesServerEvents {
             if (nowWet && !has)
                 attr.addTransientModifier(new AttributeModifier(SPEED_MOD, "tides_speed", SPEED_BONUS,
                         AttributeModifier.Operation.MULTIPLY_TOTAL));
-            else if (!nowWet && has)
+            else if (!nowWet && has) {
                 attr.removeModifier(SPEED_MOD);
+                // the Cutlass Raider's Ambush keys off this step out of the water (TidalUnit)
+                if (le instanceof TidalUnit tu && le.isAlive())
+                    tu.onLeftWater(le.level().getGameTime());
+            }
         }
         if (nowWet && le.getHealth() < le.getMaxHealth())
-            le.heal(REGEN_PER_PASS);
+            le.heal(REGEN_PER_PASS + (le instanceof TidalUnit tu ? tu.tidesRegenBonus() : 0f));
         return nowWet;
     }
 

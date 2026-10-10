@@ -57,6 +57,13 @@ public class ResourceCosts {
     public static final ResourceCost STORM_OAK = new ResourceCost(ID, "STORM_OAK");
     // Verdant Court
     public static final ResourceCost SEEDSHAPER = new ResourceCost(ID, "SEEDSHAPER");
+    // Tidewrought
+    public static final ResourceCost SHIPWRIGHT = new ResourceCost(ID, "SHIPWRIGHT");
+    public static final ResourceCost GULL_SPOTTER = new ResourceCost(ID, "GULL_SPOTTER");
+    public static final ResourceCost CUTLASS_RAIDER = new ResourceCost(ID, "CUTLASS_RAIDER");
+    public static final ResourceCost REEF_GUARD = new ResourceCost(ID, "REEF_GUARD");
+    public static final ResourceCost BOMBARD_CREW = new ResourceCost(ID, "BOMBARD_CREW");
+    public static final ResourceCost TIDE_PRIEST = new ResourceCost(ID, "TIDE_PRIEST");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
     // Verdant Court T1, slice 2 (design/verdant_court_plan.md)
     public static final ResourceCost MOONWELL_BEARER = new ResourceCost(ID, "MOONWELL_BEARER");
@@ -124,6 +131,9 @@ public class ResourceCosts {
     //Verdant Court
     public static final ResourceCost HEARTWOOD_HALL = new ResourceCost(ID, "HEARTWOOD_HALL");
     public static final ResourceCost GROVE = new ResourceCost(ID, "GROVE");
+    // Tidewrought
+    public static final ResourceCost WRECK_HARBOUR = new ResourceCost(ID, "WRECK_HARBOUR");
+    public static final ResourceCost SLIPWAY = new ResourceCost(ID, "SLIPWAY");
     public static final ResourceCost TOWN_CENTRE = new ResourceCost(ID, "TOWN_CENTRE");
     public static final ResourceCost VILLAGER_HOUSE = new ResourceCost(ID, "VILLAGER_HOUSE");
     public static final ResourceCost WHEAT_FARM = new ResourceCost(ID, "WHEAT_FARM");
@@ -310,6 +320,12 @@ public class ResourceCosts {
         HEART_OF_THE_WILD.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.HEART_OF_THE_WILD);
         STORM_OAK.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.STORM_OAK);
         SEEDSHAPER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEEDSHAPER);
+        SHIPWRIGHT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SHIPWRIGHT);
+        GULL_SPOTTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.GULL_SPOTTER);
+        CUTLASS_RAIDER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.CUTLASS_RAIDER);
+        REEF_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.REEF_GUARD);
+        BOMBARD_CREW.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BOMBARD_CREW);
+        TIDE_PRIEST.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.TIDE_PRIEST);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
         MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);
         OWL_WATCHER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OWL_WATCHER);
@@ -375,6 +391,8 @@ public class ResourceCosts {
         TOWN_CENTRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.TOWN_CENTRE);
         HEARTWOOD_HALL.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.HEARTWOOD_HALL);
         GROVE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.GROVE);
+        WRECK_HARBOUR.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WRECK_HARBOUR);
+        SLIPWAY.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.SLIPWAY);
         VILLAGER_HOUSE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.VILLAGER_HOUSE);
         WHEAT_FARM.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WHEAT_FARM);
         BARRACKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.BARRACKS);

@@ -179,5 +179,6 @@ public enum UnitAction {
     BLOOM,                // Beyond and Tabs: Verdant Court Bloom Priestess heal-and-cleanse burst
     PLANT_VINE_SNARE,     // Beyond and Tabs: Verdant Court Seedshaper hidden root trap
     PLANT_THICKET,        // Beyond and Tabs: Verdant Court Seedshaper 3x3 cover thicket (Living Terrain)
-    OVERGROWTH            // Beyond and Tabs: Verdant Court Grove Warden instant thicket ring + root
+    OVERGROWTH,           // Beyond and Tabs: Verdant Court Grove Warden instant thicket ring + root
+    RAISE_TIDEPOOL        // Beyond and Tabs: Tidewrought Tide Priest aimed tidepool (the Tides core)
 }
