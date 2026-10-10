@@ -39,7 +39,9 @@ public class Factions {
 	public static Faction NEUTRAL;
 	public static Faction RANDOM;
 	public static Faction NONE;
-	
+	// factions 4-7 of claude/design-factions.md, announced in the lobby before they are built (design/verdant_court_plan.md)
+	public static Faction VERDANT_COURT;
+
 	public static void register() {
 		VILLAGERS = register("villagers", new Faction()
 			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/villager.png"))
@@ -82,7 +84,16 @@ public class Factions {
 			.setUnplayable()
 			.noCubeMap()
 		);
-		
+
+		// Registered last so the registry ids of the six above don't move (getFaction(int) reads them). Preview only:
+		// no cube map (title screen / survival skip it), no spawn wave (not a survival faction), not playable.
+		VERDANT_COURT = register("verdant_court", new Faction()
+			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/flowering_azalea_leaves.png"))
+			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/flowering_azalea_leaves.png"))
+			.setPreview()
+			.noCubeMap()
+		);
+
 		registerUnits();
 		registerBuildings();
 	}
@@ -309,6 +320,12 @@ public class Factions {
 		return faction;
 	}
 	
+	/** The factions a player can actually start as: playable, not a placeholder, and with a capitol and a worker. */
+	public static boolean isLive(Faction faction) {
+		return faction != null && faction.playable && !faction.preview
+			&& faction.capitolBuilding != null && faction.workerEntityType != null;
+	}
+
 	public static ResourceLocation getKey(Faction faction) {
 		return ReignOfNetherRegistries.FACTIONS.getKey(faction);
 	}

@@ -1748,6 +1748,51 @@ public class SkirmishGameTests {
         return n;
     }
 
+    /**
+     * Announcing a faction must not disturb the three live ones: each is still playable with a capitol, a worker and a
+     * bot kit that agree, and the Verdant Court preview is registered (so the lobby can show it) but kept out of every
+     * list a player, the title screen, survival or random could pick from. Static registration only, no world state.
+     */
+    @GameTest(template = ARENA)
+    public static void preview_faction_leaves_the_three_live_factions_intact(GameTestHelper helper) {
+        var live = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
+            com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.PIGLINS);
+        for (var f : live) {
+            if (!com.solegendary.reignofnether.faction.Factions.isLive(f)) {
+                helper.fail(f.getName() + " is no longer a live faction");
+                return;
+            }
+            if (com.solegendary.reignofnether.faction.Factions.getFaction(f.key) != f)
+                helper.fail(f.getName() + " does not resolve by its key");
+            if (!com.solegendary.reignofnether.faction.Factions.PLAYABLE_FACTIONS.contains(f.key)
+                    || !com.solegendary.reignofnether.faction.Factions.CLASSIC_FACTIONS.contains(f.key))
+                helper.fail(f.getName() + " dropped out of the playable / classic lists");
+            Building capitol = ReignOfNetherRegistries.BUILDING.get(f.capitolBuilding);
+            if (capitol == null)
+                helper.fail(f.getName() + ": capitol " + f.capitolBuilding + " is not a registered building");
+            if (net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getValue(f.workerEntityType) == null)
+                helper.fail(f.getName() + ": worker " + f.workerEntityType + " is not a registered entity");
+            if (com.solegendary.reignofnether.bot.BotPlayer.kitFor(f).capitol() != capitol)
+                helper.fail(f.getName() + ": the bot kit builds a different capitol than the faction starts with");
+        }
+        var verdant = com.solegendary.reignofnether.faction.Factions.VERDANT_COURT;
+        if (verdant == null || com.solegendary.reignofnether.faction.Factions.getFaction(verdant.key) != verdant) {
+            helper.fail("Verdant Court preview is not registered");
+            return;
+        }
+        if (!verdant.preview || com.solegendary.reignofnether.faction.Factions.isLive(verdant))
+            helper.fail("Verdant Court must stay a preview until its units exist");
+        if (com.solegendary.reignofnether.faction.Factions.PLAYABLE_FACTIONS.contains(verdant.key)
+                || com.solegendary.reignofnether.faction.Factions.CLASSIC_FACTIONS.contains(verdant.key)
+                || com.solegendary.reignofnether.faction.Factions.SURVIVAL_FACTIONS.contains(verdant.key))
+            helper.fail("Verdant Court leaked into a pickable faction list");
+        // registered after the originals, so their registry ids (Factions.getFaction(int)) are unchanged
+        if (ReignOfNetherRegistries.FACTIONS.getId(verdant)
+                < ReignOfNetherRegistries.FACTIONS.getId(com.solegendary.reignofnether.faction.Factions.NONE))
+            helper.fail("Verdant Court was registered before the original factions and shifted their ids");
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

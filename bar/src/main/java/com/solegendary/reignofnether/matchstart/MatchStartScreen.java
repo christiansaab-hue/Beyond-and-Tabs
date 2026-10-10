@@ -47,6 +47,8 @@ public class MatchStartScreen extends Screen {
     private static final int HEADER_H = 32;
     private static final int BOTTOM_H = 28;
     private static final int FRAME_SIZE = 22;
+    // faction tiles per slot row (3 live + Verdant Court preview + random); the row layout is sized from this
+    private static final int FACTION_TILES = 5;
     private static final int ICON_SIZE = 14;
     private static final int ROW_H = 26;
 
@@ -416,14 +418,14 @@ public class MatchStartScreen extends Screen {
 
         // Highlight clickable rows (empty slots or my slot's left area) like the spectate button
         if (sp.enabled && (empty || mine)) {
-            int rowHitRight = x + width - FRAME_SIZE * 3 - 2 * 2 - FRAME_SIZE - 6 - 8 - 16;
+            int rowHitRight = x + width - FRAME_SIZE * (FACTION_TILES - 1) - 2 * 2 - FRAME_SIZE - 6 - 8 - 16;
             boolean hovered = !overlayActive && mx >= x && mx <= rowHitRight && my >= y && my <= rowBottom;
             if (hovered) g.fill(x, y, rowHitRight, rowBottom, 0x32FFFFFF);
         }
 
         int tileY = y + ((ROW_H - FRAME_SIZE) / 2) - 1;
         int readyX = x + width - FRAME_SIZE - 2;
-        int factionTotalW = FRAME_SIZE * 3 + 2 * 2;
+        int factionTotalW = FRAME_SIZE * (FACTION_TILES - 1) + 2 * 2;
         int factionStartX = readyX - 20 - factionTotalW;
 
         int headX = x + 6;
@@ -453,7 +455,7 @@ public class MatchStartScreen extends Screen {
         String drawnName = this.font.plainSubstrByWidth(name, nameMaxW);
         g.drawString(this.font, drawnName, nameX, tileY + (FRAME_SIZE - this.font.lineHeight) / 2 + 1, nameCol, false);
 
-        Faction[] order = { Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.RANDOM };
+        Faction[] order = { Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT, Factions.RANDOM };
         int currentX = factionStartX - 6;
         for (Faction f : order) {
             renderFactionTile(g, sp, f, currentX, tileY, localName, mx, my);
@@ -485,6 +487,20 @@ public class MatchStartScreen extends Screen {
         ResourceLocation icon = f.icon;
         if (f == Factions.RANDOM)
             icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/question_mark.png");
+
+        if (f.preview) {
+            // announced, not built yet: greyed, never selectable, says so on hover
+            Button preview = new ButtonBuilder("Faction " + f.getName())
+                    .iconResource(icon)
+                    .isSelected(() -> false)
+                    .isEnabled(() -> false)
+                    .tooltipLines(List.of(fcs(MiscUtil.getFactionName(f)),
+                            fcs(I18n.get("matchstart.reignofnether.faction_coming_soon"))))
+                    .build();
+            preview.render(g, x, y, mx, my);
+            hudButtons.add(preview);
+            return;
+        }
 
         Button button = new ButtonBuilder("Faction " + f.getName())
                 .iconResource(icon)

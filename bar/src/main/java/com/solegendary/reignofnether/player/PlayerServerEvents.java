@@ -424,6 +424,11 @@ public class PlayerServerEvents {
     public static void startRTS(int playerId, Vec3 pos, Faction faction, int startPosColorId) {
         if (faction == Factions.RANDOM) 
             faction = MiscUtil.getRandomItem(List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS));
+        // a preview faction has no capitol, worker or units yet: starting one would spawn a player with nothing
+        if (faction.preview) {
+            ReignOfNether.LOGGER.warn("[Player] startRTS refused: {} is a preview faction", faction.key);
+            return;
+        }
         ReignOfNether.LOGGER.info("[Player] startRTS: playerId={}, pos=[{},{},{}], faction={}, startPosColorId={}", playerId, pos.x, pos.y, pos.z, faction, startPosColorId);
         synchronized (rtsPlayers) {
             boolean readiedStart = startPosColorId != 0;
