@@ -811,13 +811,17 @@ public class SkirmishGameTests {
 
     /** Two dry, fairly flat base sites 160 blocks apart, searched eastward from (x, z); null if none found. */
     static net.minecraft.world.phys.Vec3[] soakStarts(ServerLevel level, int x, int z) {
-        for (int step = 0; step < 16; step++) {
-            int bx = x + step * 96;
-            var a = soakDrySpot(level, bx, z);
-            var b = soakDrySpot(level, bx, z + 160);
-            if (a != null && b != null)
-                return new net.minecraft.world.phys.Vec3[] { a, b };
-        }
+        // the seed is random per CI run, so one line of x can be all ocean: try a few parallel lines before giving up
+        for (int bz : new int[] { z, z + 480, z - 480, z + 960 })
+            for (int step = 0; step < 16; step++) {
+                int bx = x + step * 96;
+                var a = soakDrySpot(level, bx, bz);
+                if (a == null)
+                    continue;
+                var b = soakDrySpot(level, bx, bz + 160);
+                if (b != null)
+                    return new net.minecraft.world.phys.Vec3[] { a, b };
+            }
         return null;
     }
 
