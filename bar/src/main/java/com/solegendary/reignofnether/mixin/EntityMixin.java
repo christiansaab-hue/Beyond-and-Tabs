@@ -39,8 +39,20 @@ public abstract class EntityMixin {
     private void shouldRenderAtSqrDistance(
             double pDistance, CallbackInfoReturnable<Boolean> cir
     ) {
-        if (!OrthoviewClientEvents.isEnabled() || this.getType() != EntityType.ITEM)
+        if (!OrthoviewClientEvents.isEnabled())
             return;
+
+        // Vanilla culls mobs further than ~64 * bbSize blocks from the camera (about 68 blocks for a skeleton).
+        // The orthoview camera floats 30+ blocks above the ground (higher still when lifted over tall terrain
+        // such as Nether-base pillars) and sits ~24 blocks behind the player, so units near the middle/top of
+        // the screen crossed that limit and their models vanished while their selection outlines and rings
+        // (drawn separately) remained: the "empty white boxes" bug. Distance doesn't change on-screen size in an
+        // orthographic projection, so skip the distance cull entirely; frustum culling still drops anything
+        // off-screen and the server's tracking range bounds what exists clientside at all.
+        if (this.getType() != EntityType.ITEM) {
+            cir.setReturnValue(true);
+            return;
+        }
 
         double d0 = this.bb.getSize();
         if (Double.isNaN(d0)) {

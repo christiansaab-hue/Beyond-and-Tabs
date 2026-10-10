@@ -919,6 +919,71 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** Ground column for the slope test: dirt under a grass top at topY, solid down to bottomY. */
+    private static void groundColumn(ServerLevel level, int x, int z, int bottomY, int topY) {
+        for (int y = bottomY; y < topY; y++)
+            level.setBlock(new BlockPos(x, y, z), Blocks.DIRT.defaultBlockState(), 2);
+        level.setBlock(new BlockPos(x, topY, z), Blocks.GRASS_BLOCK.defaultBlockState(), 2);
+    }
+
+    /**
+     * BAR forgives gentle slopes: a 1-block step under a (3x3) wind generator footprint must be accepted from either
+     * side - terrain poking into the bottom layer from the low side, a 1-block gap from the high side - and a tuft of
+     * grass in the way doesn't matter. A 4-block cliff must still be refused from the top (hanging over the drop)
+     * and from the bottom (clipping the cliff face). Origin = the ground block, the footprint is x/z in [o, o+2].
+     */
+    @GameTest(template = ARENA)
+    public static void wind_generator_accepts_a_step_but_not_a_cliff(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int g = 245;
+        int cx = base.getX() - 40, cz = base.getZ() - 40;   // away from the other platform tests
+        Building wind = Buildings.WIND_GENERATOR_VILLAGERS;
+
+        // 1) step, placed on the LOW side: columns x+1..x+2 are one block higher (inside the bottom layer)
+        int ax = cx, az = cz;
+        for (int dx = -2; dx <= 4; dx++)
+            for (int dz = -2; dz <= 4; dz++)
+                groundColumn(level, ax + dx, az + dz, g - 3, dx >= 1 ? g + 1 : g);
+        level.setBlock(new BlockPos(ax, g + 1, az + 1), Blocks.GRASS.defaultBlockState(), 2);
+        String err = BuildingValidators.getPlacementValidityError(level, wind, new BlockPos(ax, g, az), "tester",
+            Rotation.NONE, false, false, true);
+        if (err != null)
+            helper.fail("1-block step refused from the low side: " + err);
+
+        // 2) step, placed on the HIGH side: only column x is high, x+1..x+2 have a 1-block gap under them
+        int bx = cx + 12, bz = cz;
+        for (int dx = -2; dx <= 4; dx++)
+            for (int dz = -2; dz <= 4; dz++)
+                groundColumn(level, bx + dx, bz + dz, g - 3, dx <= 0 ? g + 1 : g);
+        err = BuildingValidators.getPlacementValidityError(level, wind, new BlockPos(bx, g + 1, bz), "tester",
+            Rotation.NONE, false, false, true);
+        if (err != null)
+            helper.fail("1-block step refused from the high side: " + err);
+
+        // 3) 4-block cliff, placed on TOP: column x+2 hangs over a 4-block drop
+        int ccx = cx, ccz = cz + 12;
+        for (int dx = -2; dx <= 4; dx++)
+            for (int dz = -2; dz <= 4; dz++)
+                groundColumn(level, ccx + dx, ccz + dz, g - 7, dx <= 1 ? g : g - 4);
+        err = BuildingValidators.getPlacementValidityError(level, wind, new BlockPos(ccx, g, ccz), "tester",
+            Rotation.NONE, false, false, true);
+        if (err == null)
+            helper.fail("wind generator accepted hanging over a 4-block cliff");
+
+        // 4) the same cliff from the BOTTOM: the footprint would be buried 4 blocks into the cliff face
+        int dxo = cx + 12, dzo = cz + 12;
+        for (int dx = -2; dx <= 4; dx++)
+            for (int dz = -2; dz <= 4; dz++)
+                groundColumn(level, dxo + dx, dzo + dz, g - 7, dx >= 1 ? g : g - 4);
+        err = BuildingValidators.getPlacementValidityError(level, wind, new BlockPos(dxo, g - 4, dzo), "tester",
+            Rotation.NONE, false, false, true);
+        if (err == null)
+            helper.fail("wind generator accepted at the foot of a 4-block cliff");
+
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

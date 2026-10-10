@@ -29,7 +29,13 @@ public class BuildingValidators {
 
     // minimum % of blocks below a building that need to be supported by a solid block for it to be placeable
     // 1 means you can't have any gaps at all, 0 means you can place buildings in mid-air
-    private static final float MIN_SUPPORTED_BLOCKS_PERCENT = 0.6f;
+    // BAR forgives gentle slopes, so this is lower than RoN's 0.6, and columns with a 1-block gap (filled with
+    // terrain on placement, see BuildingServerEvents.levelFootprint) count as supported
+    private static final float MIN_SUPPORTED_BLOCKS_PERCENT = 0.5f;
+    // a footprint column with no ground within this many blocks below is hanging over a cliff
+    private static final int CLIFF_DEPTH = 3;
+    // max share of footprint columns allowed over a cliff (one corner over a hole is fine, a cliff edge isn't)
+    private static final float MAX_CLIFF_COLUMNS_PERCENT = 0.25f;
     private static final float MIN_NETHER_BLOCKS_PERCENT = 0.8f; // piglin buildings must be build on at least 80%
     private static final int MIN_BRIDGE_SIZE = 10; // a bridge must have at least 10 blocks to be placeable
     private static final float MIN_BRIDGE_LIQUID_BLOCKS_PERCENT = 0.20f; // at least 20% of covered blocks must be liquid
@@ -77,7 +83,26 @@ public class BuildingValidators {
         return null;
     }
 
+    // Soft blocks (grass, flowers, snow layers, leaves...) never block a footprint: they are cleared on placement.
+    // Fluids are NOT soft even though water/lava are replaceable - buildings never go in water.
+    public static boolean isSoftBlock(BlockState bs) {
+        if (!bs.getFluidState().isEmpty())
+            return false;
+        return bs.isAir() || bs.canBeReplaced() || bs.getBlock() instanceof LeavesBlock
+                || bs.getBlock() instanceof SnowLayerBlock || bs.getBlock() instanceof BushBlock;
+    }
+
+    // ground a building can stand on (leaves, barriers and bottom slabs don't count, as in RoN)
+    public static boolean isSupportingBlock(BlockState bs) {
+        return bs.isSolid() && !isSoftBlock(bs) &&
+                !(bs.getBlock() instanceof BarrierBlock) &&
+                !(bs.getBlock() instanceof SlabBlock && bs.getValue(BlockStateProperties.SLAB_TYPE) == SlabType.BOTTOM);
+    }
+
     // disallow any building block from clipping into any other existing blocks
+    // BAR-style slope tolerance: soft blocks are ignored anywhere, and solid terrain poking up into the bottom layer
+    // (a 1-block step) is allowed - the foundation replaces it / it is cleared on placement. Terrain any higher, or
+    // any fluid, still clips (so the low side of a cliff is rejected).
     private static boolean isBuildingPlacementClipping(Level level, Building building, List<BuildingBlock> blocks) {
         if (level == null) {
             return false;
@@ -85,12 +110,20 @@ public class BuildingValidators {
         if (isBridge(building) || level.getGameRules().getRule(GameRuleRegistrar.SLANTED_BUILDING).get()) {
             return false;
         }
-
+        int minY = BuildingUtils.getMinCorner(blocks).getY();
         for (BuildingBlock block : blocks) {
+            BlockState bsBuilding = block.getBlockState();
+            if (!bsBuilding.isSolid() && bsBuilding.getFluidState().isEmpty())
+                continue;
             BlockPos bp = block.getBlockPos();
-            if ((level.getBlockState(bp).isSolid() || !level.getBlockState(bp).getFluidState().isEmpty()) && (block.getBlockState().isSolid() || !block.getBlockState().getFluidState().isEmpty())) {
+            BlockState bsWorld = level.getBlockState(bp);
+            if (!bsWorld.getFluidState().isEmpty())
                 return true;
-            }
+            if (!bsWorld.isSolid() || isSoftBlock(bsWorld))
+                continue;
+            if (bp.getY() == minY)
+                continue; // up to 1 block of terrain inside the bottom layer is levelled on placement
+            return true;
         }
         return false;
     }
@@ -170,36 +203,53 @@ public class BuildingValidators {
     }
 
 
-    // 90% all solid blocks at the base of the building must be on top of solid non-barrier blocks to be placeable
-    // excluding those under blocks which aren't solid anyway
+    // Depth of the gap under a footprint column's bottom block: 0 = on ground (or terrain poking into the bottom
+    // layer), 1 = a 1-block gap (filled on placement), ..., CLIFF_DEPTH + 1 = no ground found, -1 = water/lava below.
+    public static int getGapDepth(Level level, BlockPos bottomPos) {
+        if (isSupportingBlock(level.getBlockState(bottomPos)))
+            return 0;
+        for (int d = 0; d <= CLIFF_DEPTH; d++) {
+            BlockState bs = level.getBlockState(bottomPos.below(d + 1));
+            if (!bs.getFluidState().isEmpty())
+                return -1;
+            if (isSupportingBlock(bs))
+                return d;
+        }
+        return CLIFF_DEPTH + 1;
+    }
+
+    // At least MIN_SUPPORTED_BLOCKS_PERCENT of the solid blocks at the base of the building must stand on ground
+    // (directly, or over a 1-block gap that gets filled on placement), none may sit over water/lava, and at most
+    // MAX_CLIFF_COLUMNS_PERCENT may hang over a drop deeper than CLIFF_DEPTH. Columns over ice are ignored as in RoN.
     private static boolean isBuildingPlacementInAirOrOnIllegalBlocks(Level level, Building building, List<BuildingBlock> blocks) {
         if (isBridge(building) || level.getGameRules().getRule(GameRuleRegistrar.SLANTED_BUILDING).get()) {
             return false;
         }
         BlockPos minPos = BuildingUtils.getMinCorner(blocks);
-        int solidBlocksBelow = 0;
+        int supportedColumns = 0;
+        int cliffColumns = 0;
         int blocksBelow = 0;
         for (BuildingBlock block : blocks) {
             if (block.getBlockPos().getY() == minPos.getY()) {
                 BlockPos bp = block.getBlockPos();
                 BlockState bs = block.getBlockState(); // building block
-                BlockState bsBelow = level.getBlockState(bp.below()); // world block
-
-                if (bs.isSolid() && !(bsBelow.getBlock() instanceof IceBlock)) {
-                    blocksBelow += 1;
-                    if (bsBelow.isSolid() &&
-                            !(bsBelow.getBlock() instanceof LeavesBlock) &&
-                            !(bsBelow.getBlock() instanceof BarrierBlock) &&
-                            !(bsBelow.getBlock() instanceof SlabBlock && bsBelow.getValue(BlockStateProperties.SLAB_TYPE) == SlabType.BOTTOM)) {
-                        solidBlocksBelow += 1;
-                    }
-                }
+                if (!bs.isSolid() || level.getBlockState(bp.below()).getBlock() instanceof IceBlock)
+                    continue;
+                blocksBelow += 1;
+                int depth = getGapDepth(level, bp);
+                if (depth < 0)
+                    return true; // over water or lava
+                if (depth <= 1)
+                    supportedColumns += 1;
+                else if (depth > CLIFF_DEPTH)
+                    cliffColumns += 1;
             }
         }
         if (blocksBelow <= 0) {
             return false; // avoid division by 0
         }
-        return ((float) solidBlocksBelow / (float) blocksBelow) < MIN_SUPPORTED_BLOCKS_PERCENT;
+        return ((float) supportedColumns / (float) blocksBelow) < MIN_SUPPORTED_BLOCKS_PERCENT ||
+                ((float) cliffColumns / (float) blocksBelow) > MAX_CLIFF_COLUMNS_PERCENT;
     }
 
     private static boolean isBuildingPlacementWithinWorldBorder(Level level, Building building, List<BuildingBlock> blocks) {

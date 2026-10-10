@@ -275,6 +275,16 @@ public class FogOfWarClientEvents {
 
         if (isBlockVisible(entity.getOnPos())) return true;
 
+        // Own + allied units must never hide: the server only refreshes vision masks every few ticks, so a unit
+        // that just stepped into unexplored ground (e.g. pushing into an enemy base) would otherwise vanish until
+        // the next mask arrives. getGameProfile().getName() avoids the Component allocation of getName().
+        if (entity instanceof Unit unit && MC.player != null) {
+            String owner = unit.getOwnerName();
+            String me = MC.player.getGameProfile().getName();
+            if (owner.equals(me) || AlliancesClient.isAllied(me, owner))
+                return true;
+        }
+
         return entity instanceof RangedAttackerUnit rangedAttackerUnit &&
                 rangedAttackerUnit.getFogRevealDuration() > 0;
     }

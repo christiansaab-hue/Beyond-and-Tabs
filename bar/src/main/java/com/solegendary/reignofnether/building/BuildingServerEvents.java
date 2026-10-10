@@ -468,6 +468,8 @@ public class BuildingServerEvents {
                     (serverLevel.getGameRules().getRule(GameRuleRegistrar.SLANTED_BUILDING).get() &&
                             !(newBuilding.getBuilding() instanceof AbstractBridge))) {
                 BuildingUtils.clearBuildingArea(newBuilding);
+            } else if (!(newBuilding.getBuilding() instanceof AbstractBridge)) {
+                levelFootprint(newBuilding);
             }
             buildings.add(newBuilding);
             newBuilding.forceChunk(true);
@@ -540,6 +542,43 @@ public class BuildingServerEvents {
             return newBuilding;
         }
         return null;
+    }
+
+    /**
+     * BuildingValidators accepts gentle slopes (soft blocks in the way, 1 block of terrain poking into the bottom
+     * layer, 1-block gaps under it), so level the site here: clear soft blocks inside the footprint and terrain
+     * left inside the bottom layer where the building itself has no block (so it isn't buried), and fill 1-block
+     * gaps under the foundation with the surrounding ground (so it isn't floating on scaffolding over a tiny step).
+     * Deeper gaps keep RoN's scaffolding. Bottom-layer terrain under a building block is simply overwritten when
+     * that block is built.
+     */
+    public static void levelFootprint(BuildingPlacement building) {
+        Level level = building.getLevel();
+        int minY = BuildingUtils.getMinCorner(building.blocks).getY();
+        BlockState air = Blocks.AIR.defaultBlockState();
+        for (BuildingBlock block : building.blocks) {
+            BlockPos bp = block.getBlockPos();
+            BlockState bsWorld = level.getBlockState(bp);
+            if (!bsWorld.isAir() && block.getBlockState().isAir() && bsWorld.getFluidState().isEmpty()
+                    && (BuildingValidators.isSoftBlock(bsWorld) || bp.getY() == minY))
+                level.setBlockAndUpdate(bp, air);
+
+            if (bp.getY() != minY || block.getBlockState().isAir())
+                continue;
+            // soft blocks occupying a building block's spot go too (otherwise they'd pop off as items when built)
+            if (!bsWorld.isAir() && BuildingValidators.isSoftBlock(bsWorld))
+                level.setBlockAndUpdate(bp, air);
+            BlockPos gapPos = bp.below();
+            // the gap is below our footprint, so make sure it isn't a neighbouring building's space
+            if (BuildingValidators.getGapDepth(level, bp) == 1
+                    && !BuildingUtils.isPosInsideAnyBuilding(level.isClientSide(), gapPos)) {
+                BlockState ground = level.getBlockState(gapPos.below());
+                BlockState fill = ground.is(Blocks.GRASS_BLOCK) || ground.is(Blocks.MYCELIUM) || ground.is(Blocks.PODZOL)
+                        || !ground.isCollisionShapeFullBlock(level, gapPos.below()) || ground.hasBlockEntity()
+                        ? Blocks.DIRT.defaultBlockState() : ground;
+                level.setBlockAndUpdate(gapPos, fill);
+            }
+        }
     }
 
     private static void placeScaffoldingUnder(BuildingBlock block, BuildingPlacement newBuilding) {
