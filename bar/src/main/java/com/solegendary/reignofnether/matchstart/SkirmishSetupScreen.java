@@ -89,6 +89,7 @@ public class SkirmishSetupScreen extends Screen {
     Object paletteFor = null;
     static final Object PLAYER = new Object();
     int palX, palY;
+    int lastPalHover = -1;   // palette swatch under the mouse last frame, for the hover tick
     final FactionPicker picker = new FactionPicker();
 
     public SkirmishSetupScreen(Screen parent) {
@@ -173,11 +174,13 @@ public class SkirmishSetupScreen extends Screen {
         boolean full = settings.teamSize(team) >= MAX_PER_TEAM;
         Button add = addRenderableWidget(Button.builder(Component.literal("Add AI"), b -> {
             settings.bots.add(new Bot(team));
+            LobbySounds.join();
             rebuild();
         }).bounds(x + w - 110, y, 52, 16).build());
         add.active = !full;
         Button join = addRenderableWidget(Button.builder(Component.literal("Join"), b -> {
             settings.team = team;
+            LobbySounds.join();
             rebuild();
         }).bounds(x + w - 54, y, 54, 16).build());
         join.active = settings.team != team && !full;
@@ -197,6 +200,7 @@ public class SkirmishSetupScreen extends Screen {
                 .create(x + w - 68, y, 50, ROW_H - 2, Component.literal(""), (b, v) -> bot.difficulty = v));
             addRenderableWidget(Button.builder(Component.literal("x"), b -> {
                 settings.bots.remove(bot);
+                LobbySounds.leave();
                 rebuild();
             }).bounds(x + w - 16, y, 16, ROW_H - 2).build());
             y += ROW_H;
@@ -286,14 +290,26 @@ public class SkirmishSetupScreen extends Screen {
             gg.fill(palX, palY, palX + pw, palY + ph, 0xF0101216);
             gg.drawString(font, "Pick a colour", palX + 4, palY + 4, 0xE0E0E0, false);
             int current = paletteFor == PLAYER ? settings.colour : ((Bot) paletteFor).colour;
+            int hovered = -1;
             for (int i = 0; i < PlayerColors.PLAYER_COLOR_COUNT; i++) {
                 int sx = palX + 3 + (i % cols) * (PAL_SWATCH + PAL_GAP);
                 int sy = palY + 16 + (i / cols) * (PAL_SWATCH + PAL_GAP);
                 boolean hover = mx >= sx && mx < sx + PAL_SWATCH && my >= sy && my < sy + PAL_SWATCH;
+                if (hover) hovered = i;
                 int frame = i == current ? 0xFFFFFFFF : hover ? 0xFFAAAAAA : 0xFF000000;
                 gg.fill(sx - 1, sy - 1, sx + PAL_SWATCH + 1, sy + PAL_SWATCH + 1, frame);
                 gg.fill(sx, sy, sx + PAL_SWATCH, sy + PAL_SWATCH, 0xFF000000 | PlayerColors.colors[i].hexCode);
+                // a colour someone else in the lobby already has: crossed out (picking it buzzes)
+                if (colourTaken(i, paletteFor)) {
+                    for (int d = 2; d < PAL_SWATCH - 2; d++) {
+                        gg.fill(sx + d, sy + d, sx + d + 1, sy + d + 1, 0xC0000000);
+                        gg.fill(sx + PAL_SWATCH - 1 - d, sy + d, sx + PAL_SWATCH - d, sy + d + 1, 0xC0000000);
+                    }
+                }
             }
+            if (hovered != lastPalHover && hovered >= 0)
+                LobbySounds.hover();
+            lastPalHover = hovered;
             gg.drawString(font, "right-click: random/auto", palX + 4, palY + ph - 11, DIM, false);
         }
 
@@ -397,6 +413,16 @@ public class SkirmishSetupScreen extends Screen {
         }
     }
 
+    /** Whether colour {@code idx} belongs to a row other than {@code row} (the player or another bot). */
+    static boolean colourTaken(int idx, Object row) {
+        if (row != PLAYER && settings.colour == idx)
+            return true;
+        for (Bot b : settings.bots)
+            if (b != row && b.colour == idx)
+                return true;
+        return false;
+    }
+
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (picker.mouseClicked(mx, my, button))
@@ -406,18 +432,27 @@ public class SkirmishSetupScreen extends Screen {
             if (button == 1) {   // right-click anywhere in the popup: back to random/auto
                 if (paletteFor == PLAYER) settings.colour = -1; else ((Bot) paletteFor).colour = -1;
                 paletteFor = null;
+                LobbySounds.colour();
                 return true;
             }
             for (int i = 0; i < PlayerColors.PLAYER_COLOR_COUNT; i++) {
                 int sx = palX + 3 + (i % cols) * (PAL_SWATCH + PAL_GAP);
                 int sy = palY + 16 + (i / cols) * (PAL_SWATCH + PAL_GAP);
                 if (mx >= sx && mx < sx + PAL_SWATCH && my >= sy && my < sy + PAL_SWATCH) {
+                    // two rows on one colour can't be told apart in the match (a bot on the player's colour was
+                    // silently put back to auto), so a taken colour is refused and the palette stays open
+                    if (colourTaken(i, paletteFor)) {
+                        LobbySounds.denied();
+                        return true;
+                    }
                     if (paletteFor == PLAYER) settings.colour = i; else ((Bot) paletteFor).colour = i;
                     paletteFor = null;
+                    LobbySounds.colour();
                     return true;
                 }
             }
             paletteFor = null;   // clicked outside: close
+            LobbySounds.close();
             return true;
         }
         if (button == 0) {
@@ -425,6 +460,8 @@ public class SkirmishSetupScreen extends Screen {
                 int sx = (Integer) s[0], sy = (Integer) s[1];
                 if (mx >= sx - 2 && mx < sx + SWATCH + 2 && my >= sy - 2 && my < sy + SWATCH + 2) {
                     paletteFor = s[2];
+                    lastPalHover = -1;
+                    LobbySounds.open();
                     palX = Math.min(sx + SWATCH + 6, width - (PAL_PER_ROW * (PAL_SWATCH + PAL_GAP) + 10));
                     palY = Math.max(4, Math.min(sy - 10, height - 90));
                     return true;

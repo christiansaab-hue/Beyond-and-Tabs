@@ -88,6 +88,16 @@ public class MatchStartScreen extends Screen {
     // the slot the open picker belongs to (StartPos objects are replaced on every sync, the block pos is stable)
     private net.minecraft.core.BlockPos pickerFor = null;
 
+    // lobby sounds: slots that can't be clicked (someone else's row, your ready tile before a faction) buzz when
+    // clicked; the hover tick fires once per change of clickable target under the mouse
+    private final List<RowHit> deniedHits = new ArrayList<>();
+    private int lastHoverKey = -1;
+    // slot occupancy and our ready state as of last tick: joins, claims, leaves and ready changes are sounded when
+    // the server's sync confirms them, which covers the roster rows, the map's start-pos buttons and auto-unready
+    private final Map<net.minecraft.core.BlockPos, String> lastOccupant = new HashMap<>();
+    private boolean lastOwnReady = false;
+    private boolean slotsPrimed = false;
+
     public MatchStartScreen() {
         super(Component.literal("Match Setup"));
     }
@@ -142,6 +152,7 @@ public class MatchStartScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         rowHits.clear();
         chipHits.clear();
+        deniedHits.clear();
         hudButtons.clear();
         validatePicker();
         // while the faction list is open nothing beneath it may light up or show a tooltip
@@ -203,6 +214,59 @@ public class MatchStartScreen extends Screen {
         }
 
         picker.render(g, this.font, realMouseX, realMouseY);
+        hoverTick(mouseX, mouseY);
+    }
+
+    /** A quiet tick when the mouse moves onto a different clickable slot row or faction chip. */
+    private void hoverTick(int mx, int my) {
+        int key = -1;
+        if (!isMouseOverOverlay(mx, my)) {
+            for (RowHit ch : chipHits)
+                if (mx >= ch.x1 && mx < ch.x2 && my >= ch.y1 && my < ch.y2)
+                    key = ch.pos.pos.hashCode() * 31 + 2;
+            if (key == -1)
+                for (RowHit rh : rowHits)
+                    if (mx >= rh.x1 && mx <= rh.x2 && my >= rh.y1 && my <= rh.y2)
+                        key = rh.pos.pos.hashCode() * 31 + 1;
+        }
+        if (key != lastHoverKey && key != -1)
+            LobbySounds.hover();
+        lastHoverKey = key;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        soundSlotChanges();
+    }
+
+    private void soundSlotChanges() {
+        Minecraft mc = Minecraft.getInstance();
+        String me = mc.player != null ? mc.player.getName().getString() : "";
+        boolean ownReady = false, selfClaimed = false, selfLeft = false, joined = false;
+        for (StartPos sp : StartPosClientEvents.startPoses) {
+            String now = sp.enabled ? sp.playerName : "";
+            String before = lastOccupant.put(sp.pos, now);
+            if (!me.isEmpty() && now.equals(me))
+                ownReady = sp.ready;
+            if (!slotsPrimed || before == null || before.equals(now))
+                continue;
+            if (!now.isBlank()) {
+                if (now.equals(me)) selfClaimed = true;
+                else joined = true;
+            } else if (before.equals(me)) {
+                selfLeft = true;
+            }
+        }
+        if (slotsPrimed) {
+            // claiming a slot is picking its colour; moving slots is a claim, not a leave
+            if (selfClaimed) LobbySounds.colour();
+            else if (selfLeft) LobbySounds.leave();
+            else if (ownReady != lastOwnReady) LobbySounds.ready(ownReady);
+            if (joined) LobbySounds.join();
+        }
+        lastOwnReady = ownReady;
+        slotsPrimed = true;
     }
 
     /** The slot the picker was opened for, if the local player still holds it; otherwise the picker closes. */
@@ -521,6 +585,12 @@ public class MatchStartScreen extends Screen {
 
         if (sp.enabled && (empty || mine)) {
             rowHits.add(new RowHit(sp, x, y, rowHitRight, rowBottom));
+        } else if (sp.enabled && !overlayActive && y >= rosterViewTop && rowBottom <= rosterViewBottom) {
+            deniedHits.add(new RowHit(sp, x, y, x + width, rowBottom));   // someone else's slot
+        }
+        if (mine && (sp.faction == Factions.NONE || sp.faction == Factions.NEUTRAL)
+                && tileY >= rosterViewTop && tileY + FRAME_SIZE <= rosterViewBottom) {
+            deniedHits.add(new RowHit(sp, readyX, tileY, readyX + FRAME_SIZE, tileY + FRAME_SIZE));   // no faction yet
         }
         // only a chip inside the roster's visible (scissored) area can be clicked
         if (mine && chipY1 >= rosterViewTop && chipY2 <= rosterViewBottom) {
@@ -754,6 +824,12 @@ public class MatchStartScreen extends Screen {
             for (RowHit ch : chipHits) {
                 if (mx >= ch.x1 && mx < ch.x2 && my >= ch.y1 && my < ch.y2) {
                     openPicker(ch.pos, ch.x1, ch.y1, ch.x2, ch.y2);
+                    return true;
+                }
+            }
+            for (RowHit dh : deniedHits) {
+                if (mx >= dh.x1 && mx < dh.x2 && my >= dh.y1 && my < dh.y2) {
+                    LobbySounds.denied();
                     return true;
                 }
             }

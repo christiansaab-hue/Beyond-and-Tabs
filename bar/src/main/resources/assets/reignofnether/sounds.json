@@ -414,5 +414,47 @@
     "announcer.game_start": {
         "subtitle": "sounds.reignofnether.announcer",
         "sounds": [ { "name": "reignofnether:announcer/game_start", "stream": false } ]
+    },
+    "ui.hover_tick": {
+        "sounds": [ { "name": "reignofnether:ui/hover_tick", "stream": false } ]
+    },
+    "ui.servo_open": {
+        "sounds": [ { "name": "reignofnether:ui/servo_open", "stream": false } ]
+    },
+    "ui.servo_close": {
+        "sounds": [ { "name": "reignofnether:ui/servo_close", "stream": false } ]
+    },
+    "ui.relay_chunk": {
+        "sounds": [ { "name": "reignofnether:ui/relay_chunk", "stream": false } ]
+    },
+    "ui.confirm_chirp": {
+        "sounds": [ { "name": "reignofnether:ui/confirm_chirp", "stream": false } ]
+    },
+    "ui.denied_buzz": {
+        "sounds": [ { "name": "reignofnether:ui/denied_buzz", "stream": false } ]
+    },
+    "ui.ready_chime": {
+        "sounds": [ { "name": "reignofnether:ui/ready_chime", "stream": false } ]
+    },
+    "ui.unready_click": {
+        "sounds": [ { "name": "reignofnether:ui/unready_click", "stream": false } ]
+    },
+    "ui.join_chirp": {
+        "sounds": [ { "name": "reignofnether:ui/join_chirp", "stream": false } ]
+    },
+    "ui.faction_sunforged": {
+        "sounds": [ { "name": "reignofnether:ui/faction_sunforged", "stream": false } ]
+    },
+    "ui.faction_gravebound": {
+        "sounds": [ { "name": "reignofnether:ui/faction_gravebound", "stream": false } ]
+    },
+    "ui.faction_horde": {
+        "sounds": [ { "name": "reignofnether:ui/faction_horde", "stream": false } ]
+    },
+    "ui.faction_verdant": {
+        "sounds": [ { "name": "reignofnether:ui/faction_verdant", "stream": false } ]
+    },
+    "ui.faction_tidewrought": {
+        "sounds": [ { "name": "reignofnether:ui/faction_tidewrought", "stream": false } ]
     }
 }

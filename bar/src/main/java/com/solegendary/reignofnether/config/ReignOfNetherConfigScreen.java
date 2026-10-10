@@ -87,10 +87,14 @@ public class ReignOfNetherConfigScreen extends Screen {
         int labelHeight = 20;
         int left = this.width / 2 - width / 2;
 
-        addRenderableOnly(new Label("Minimap").pos(left, y).size(width, labelHeight));
+        // the lobby-sounds toggle shares this row: the screen has no spare row left above Back at GUI scale 4
+        addRenderableOnly(new Label("Interface").pos(left, y).size(width, labelHeight));
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.SQUARE_MINIMAP, "Square minimap", "Diamond minimap")
                 .pos(left, y + labelHeight)
-                .size(width, labelHeight));
+                .size(110, labelHeight));
+        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.LOBBY_SOUNDS, "Lobby sounds")
+                .pos(left + 112, y + labelHeight)
+                .size(width - 112, labelHeight));
     }
 
     // BAR-style notifications: on/off plus a volume button that steps 0-25-50-75-100% (0 keeps the text lines),

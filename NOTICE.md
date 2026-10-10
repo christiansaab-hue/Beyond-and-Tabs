@@ -28,6 +28,15 @@ from or meant to imitate any real person or any other game's narrator, and no th
 Post-processing (pitch, filtering, chorus, reverb, chime) is done with ffmpeg in `.github/workflows/voice.yml`; the
 two-tone chime is generated from sine waves. The lines themselves are in `tools/voice_lines.txt`.
 
+## Lobby UI sounds
+
+The clicks, chirps, buzz, chime and faction stingers in `bar/src/main/resources/assets/reignofnether/sounds/ui/` are
+**original, procedurally generated** audio, synthesised from sine waves, a few odd harmonics, seeded noise, envelopes
+and simple filters by `tools/gen_ui_sounds.py` (numpy + ffmpeg/libvorbis; re-run it to reproduce them). They were made
+to evoke the general feel of a late-90s RTS lobby, but no audio from Total Annihilation or any other game or library
+was sampled, traced, resynthesised or used as a reference recording; the script reads no input files. They are part
+of this project and distributed under its licence.
+
 ## Reign of Nether
 
 `bar/` is a fork of [Reign of Nether](https://github.com/SoLegendary/reignofnether) by SoLegendary and contributors,

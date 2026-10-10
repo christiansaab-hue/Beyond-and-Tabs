@@ -21,6 +21,7 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Integer> ALERT_VOLUME;
     public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
     public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> LOBBY_SOUNDS;
 
     static {
         BUILDER.push("Configuration File");
@@ -44,6 +45,8 @@ public class ReignOfNetherClientConfigs {
         ANNOUNCER_VOICE = BUILDER.define("announcer_voice", true);
         BUILDER.comment("Announcer voice volume, 0-100");
         VOICE_VOLUME = BUILDER.defineInRange("voice_volume", 100, 0, 100);
+        BUILDER.comment("Clicks, chirps and faction stingers in the match lobby and skirmish setup screen");
+        LOBBY_SOUNDS = BUILDER.define("lobby_sounds", true);
         SPEC = BUILDER.build();
     }
 

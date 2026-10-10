@@ -52,6 +52,7 @@ public class FactionPicker {
     private int x, y, w, h;
     private int scroll = 0;      // in entries
     private int highlight = -1;  // keyboard cursor, index into entries
+    private int lastHovered = -1; // the row under the mouse last frame, so the hover tick fires once per row change
 
     /**
      * Every faction the lobby can show, in registry order (so new factions append and the old order stays): the live
@@ -143,7 +144,9 @@ public class FactionPicker {
         if (highlight < 0 || !entries.get(highlight).selectable())
             highlight = step(-1, 1);
         this.scroll = 0;
+        this.lastHovered = -1;
         ensureVisible(highlight);
+        LobbySounds.open();
     }
 
     private int indexOf(Faction f) {
@@ -187,12 +190,22 @@ public class FactionPicker {
     }
 
     private void pick(int idx) {
-        if (idx < 0 || idx >= entries.size() || !entries.get(idx).selectable())
+        if (idx < 0 || idx >= entries.size())
             return;
+        if (!entries.get(idx).selectable()) {
+            LobbySounds.denied();   // a "coming soon" preview
+            return;
+        }
+        Faction f = entries.get(idx).faction();
+        // re-picking the current faction clears it in the lobby (and is a no-op in skirmish): no fanfare for that
+        if (f == selected)
+            LobbySounds.close();
+        else
+            LobbySounds.faction(f);
         Consumer<Faction> cb = onPick;
         close();
         if (cb != null)
-            cb.accept(entries.get(idx).faction());
+            cb.accept(f);
     }
 
     public void render(GuiGraphics g, Font font, int mx, int my) {
@@ -205,6 +218,11 @@ public class FactionPicker {
         g.fill(x, y, x + w, y + h, BG);
 
         int hovered = entryAt(mx, my);
+        if (hovered != lastHovered) {
+            if (hovered >= 0 && entries.get(hovered).selectable())
+                LobbySounds.hover();
+            lastHovered = hovered;
+        }
         int rows = visibleRows();
         boolean scrolls = maxScroll() > 0;
         int textRight = x + w - (scrolls ? 8 : 4);
@@ -261,6 +279,7 @@ public class FactionPicker {
             return true;
         }
         close();
+        LobbySounds.close();
         return true;
     }
 
@@ -275,15 +294,21 @@ public class FactionPicker {
     public boolean keyPressed(int keyCode) {
         if (!open)
             return false;
+        int before = highlight;
         switch (keyCode) {
             case GLFW.GLFW_KEY_UP -> highlight = step(highlight < 0 ? entries.size() : highlight, -1);
             case GLFW.GLFW_KEY_DOWN, GLFW.GLFW_KEY_TAB -> highlight = step(highlight, 1);
             case GLFW.GLFW_KEY_HOME -> highlight = step(-1, 1);
             case GLFW.GLFW_KEY_END -> highlight = step(entries.size(), -1);
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER, GLFW.GLFW_KEY_SPACE -> pick(highlight);
-            case GLFW.GLFW_KEY_ESCAPE -> close();
+            case GLFW.GLFW_KEY_ESCAPE -> {
+                close();
+                LobbySounds.close();
+            }
             default -> { }
         }
+        if (open && highlight != before)
+            LobbySounds.hover();
         ensureVisible(highlight);
         return true;
     }
