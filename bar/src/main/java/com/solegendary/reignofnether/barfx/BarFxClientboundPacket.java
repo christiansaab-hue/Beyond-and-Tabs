@@ -19,6 +19,11 @@ public class BarFxClientboundPacket {
         this.events = events;
     }
 
+    /** The events carried (the game test round-trips a packet through its codec). */
+    public List<BarFx.Event> events() {
+        return events;
+    }
+
     public BarFxClientboundPacket(FriendlyByteBuf buffer) {
         int n = Math.min(buffer.readVarInt(), MAX_EVENTS);
         this.events = new ArrayList<>(n);

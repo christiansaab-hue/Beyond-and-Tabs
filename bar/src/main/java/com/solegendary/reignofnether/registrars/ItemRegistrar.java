@@ -85,6 +85,18 @@ public class ItemRegistrar {
             ITEMS.register("fox_courier_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.FOX_COURIER_UNIT,
                     0xE2803A, 0xF6EEE2, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> MOONWELL_BEARER_UNIT_SPAWN_EGG =
+            ITEMS.register("moonwell_bearer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.MOONWELL_BEARER_UNIT,
+                    0x2E5A48, 0xB8D8F0, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> OWL_WATCHER_UNIT_SPAWN_EGG =
+            ITEMS.register("owl_watcher_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.OWL_WATCHER_UNIT,
+                    0x8A8A80, 0xD8C890, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> HIVE_KEEPER_UNIT_SPAWN_EGG =
+            ITEMS.register("hive_keeper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.HIVE_KEEPER_UNIT,
+                    0xD89A2A, 0x4E6A2E, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> LEAFBLADE_UNIT_SPAWN_EGG =
             ITEMS.register("leafblade_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.LEAFBLADE_UNIT,
                     0x3E7A34, 0xC0C8CC, new Item.Properties()));

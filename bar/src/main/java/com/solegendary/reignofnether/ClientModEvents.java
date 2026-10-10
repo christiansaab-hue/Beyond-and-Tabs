@@ -131,6 +131,10 @@ public class ClientModEvents {
         // Verdant Court: vanilla bodies with the Court's own skins (the fox keeps its vanilla look)
         evt.registerEntityRenderer(EntityRegistrar.SEEDSHAPER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SeedshaperRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);
+        // slice 2: the Bearer and the Watcher keep their vanilla bodies (witch with a lantern, grey parrot)
+        evt.registerEntityRenderer(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), net.minecraft.client.renderer.entity.WitchRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.OWL_WATCHER_UNIT.get(), net.minecraft.client.renderer.entity.ParrotRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.HIVE_KEEPER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.HiveKeeperRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.LEAFBLADE_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.LeafbladeRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.THORNBOW_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ThornbowRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SentinelTreantRenderer::new);
@@ -256,6 +260,7 @@ public class ClientModEvents {
     @SubscribeEvent
     public static void registerBlockEntityRenderers(EntityRenderersEvent.RegisterRenderers evt) {
         evt.registerBlockEntityRenderer(BlockEntityRegistrar.INVISIBLE_BLOCK_ENTITY.get(), InvisibleBlockRenderer::new);
+        evt.registerBlockEntityRenderer(BlockEntityRegistrar.VINE_SNARE_BLOCK_ENTITY.get(), com.solegendary.reignofnether.blocks.VineSnareRenderer::new);
     }
 
     @SubscribeEvent

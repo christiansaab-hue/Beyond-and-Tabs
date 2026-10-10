@@ -167,6 +167,9 @@ public class Factions {
 		// Verdant Court (slice 1: T1 only)
 		registerWorkerEntity(VERDANT_COURT, EntityRegistrar.SEEDSHAPER_UNIT.get(), ProductionItems.SEEDSHAPER);
 		registerScoutEntity(VERDANT_COURT, EntityRegistrar.FOX_COURIER_UNIT.get(), ProductionItems.FOX_COURIER);
+		registerEntity(VERDANT_COURT, EntityRegistrar.MOONWELL_BEARER_UNIT.get(), ProductionItems.MOONWELL_BEARER);   // slice 2
+		registerEntity(VERDANT_COURT, EntityRegistrar.OWL_WATCHER_UNIT.get(), ProductionItems.OWL_WATCHER);
+		registerEntity(VERDANT_COURT, EntityRegistrar.HIVE_KEEPER_UNIT.get(), ProductionItems.HIVE_KEEPER);
 		registerEntity(VERDANT_COURT, EntityRegistrar.LEAFBLADE_UNIT.get(), ProductionItems.LEAFBLADE);
 		registerEntity(VERDANT_COURT, EntityRegistrar.THORNBOW_UNIT.get(), ProductionItems.THORNBOW);
 		registerEntity(VERDANT_COURT, EntityRegistrar.SENTINEL_TREANT_UNIT.get(), ProductionItems.SENTINEL_TREANT);

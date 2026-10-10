@@ -64,6 +64,9 @@ public class CommonModEvents {
         // Verdant Court
         evt.put(EntityRegistrar.SEEDSHAPER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SeedshaperUnit.createAttributes().build());
         evt.put(EntityRegistrar.FOX_COURIER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.FoxCourierUnit.createAttributes().build());
+        evt.put(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.OWL_WATCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.OwlWatcherUnit.createAttributes().build());
+        evt.put(EntityRegistrar.HIVE_KEEPER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.HiveKeeperUnit.createAttributes().build());
         evt.put(EntityRegistrar.LEAFBLADE_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.LeafbladeUnit.createAttributes().build());
         evt.put(EntityRegistrar.THORNBOW_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ThornbowUnit.createAttributes().build());
         evt.put(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit.createAttributes().build());
@@ -163,6 +166,9 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.BAT_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEEDSHAPER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.MOONWELL_BEARER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.OWL_WATCHER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.HIVE_KEEPER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.LEAFBLADE_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.THORNBOW_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SENTINEL_TREANT_UNIT_SPAWN_EGG);

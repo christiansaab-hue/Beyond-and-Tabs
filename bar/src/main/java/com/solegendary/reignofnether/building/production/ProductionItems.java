@@ -45,6 +45,9 @@ public class ProductionItems {
     // Verdant Court
     public static final com.solegendary.reignofnether.unit.units.verdant.SeedshaperProd SEEDSHAPER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seedshaper"), new com.solegendary.reignofnether.unit.units.verdant.SeedshaperProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.FoxCourierProd FOX_COURIER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "fox_courier"), new com.solegendary.reignofnether.unit.units.verdant.FoxCourierProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerProd MOONWELL_BEARER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "moonwell_bearer"), new com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.OwlWatcherProd OWL_WATCHER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "owl_watcher"), new com.solegendary.reignofnether.unit.units.verdant.OwlWatcherProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.HiveKeeperProd HIVE_KEEPER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "hive_keeper"), new com.solegendary.reignofnether.unit.units.verdant.HiveKeeperProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.LeafbladeProd LEAFBLADE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "leafblade"), new com.solegendary.reignofnether.unit.units.verdant.LeafbladeProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.ThornbowProd THORNBOW = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornbow"), new com.solegendary.reignofnether.unit.units.verdant.ThornbowProd());
     public static final com.solegendary.reignofnether.unit.units.verdant.SentinelTreantProd SENTINEL_TREANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sentinel_treant"), new com.solegendary.reignofnether.unit.units.verdant.SentinelTreantProd());
@@ -183,6 +186,9 @@ public class ProductionItems {
         SUN_COLOSSUS,
         SEEDSHAPER,
         FOX_COURIER,
+        MOONWELL_BEARER,
+        OWL_WATCHER,
+        HIVE_KEEPER,
         LEAFBLADE,
         THORNBOW,
         SENTINEL_TREANT,

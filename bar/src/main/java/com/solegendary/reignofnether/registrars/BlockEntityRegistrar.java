@@ -40,6 +40,12 @@ public class BlockEntityRegistrar {
                             BlockRegistrar.WRAITH_SNOW_LAYER.get()).build(null)
             );
 
+    public static final RegistryObject<BlockEntityType<com.solegendary.reignofnether.blocks.VineSnareBlockEntity>> VINE_SNARE_BLOCK_ENTITY =
+            register("vine_snare_block_entity",
+                    () -> BlockEntityType.Builder.of(com.solegendary.reignofnether.blocks.VineSnareBlockEntity::new,
+                            BlockRegistrar.VINE_SNARE.get()).build(null)
+            );
+
     private static <T extends BlockEntity> RegistryObject<BlockEntityType<T>> register(String name, Supplier<BlockEntityType<T>> blockEntity) {
         return BLOCK_ENTITIES.register(name, blockEntity);
     }

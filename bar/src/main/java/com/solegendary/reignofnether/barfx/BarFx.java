@@ -48,8 +48,26 @@ public final class BarFx {
     // ---- death kinds
     public static final byte D_FLESH = 0, D_CONSTRUCT = 1, D_BONE = 2, D_SLIME = 3;
 
-    // ---- death flags: low 2 bits = faction debris tint, next 2 bits = cost tier (0 = not an RTS unit)
-    public static final byte F_NONE = 0, F_SUNFORGED = 1, F_GRAVEBOUND = 2, F_HORDE = 3;
+    // ---- death flags: low 3 bits = faction debris tint, next 2 bits = cost tier (0 = not an RTS unit).
+    // The faction field was 2 bits until the Verdant Court needed a fifth value (F_NONE + three factions filled it);
+    // 3 bits leave room for factions 5-7 of design-factions.md. The flags byte still has 3 spare bits.
+    public static final byte F_NONE = 0, F_SUNFORGED = 1, F_GRAVEBOUND = 2, F_HORDE = 3, F_VERDANT = 4;
+    static final int FACTION_BITS = 3, FACTION_MASK = (1 << FACTION_BITS) - 1;
+
+    /** Packs a death event's flags: faction debris tint (F_*, 0-7) and cost tier (0-3). Public for the game test. */
+    public static byte deathFlags(byte faction, int tier) {
+        return (byte) ((faction & FACTION_MASK) | ((Math.max(0, Math.min(3, tier)) & 3) << FACTION_BITS));
+    }
+
+    /** The faction debris tint (F_*) of packed death flags. */
+    public static int deathFaction(byte flags) {
+        return flags & FACTION_MASK;
+    }
+
+    /** The cost tier (0-3) of packed death flags. */
+    public static int deathTier(byte flags) {
+        return (flags >> FACTION_BITS) & 3;
+    }
 
     /** Metal cost from which a dying unit counts as T2 / T3 for its death blast (T1 below). */
     public static final int T2_METAL = 120, T3_METAL = 500;
@@ -145,8 +163,7 @@ public final class BarFx {
      */
     public static void death(Level level, Vec3 pos, byte kind, float width, float height, byte faction, int tier) {
         if (level == null || level.isClientSide() || pos == null) return;
-        byte flags = (byte) ((faction & 3) | ((Math.max(0, Math.min(3, tier)) & 3) << 2));
-        emit(level, new Event(DEATH, kind, flags, (float) pos.x, (float) pos.y, (float) pos.z, width, height, 0));
+        emit(level, new Event(DEATH, kind, deathFlags(faction, tier), (float) pos.x, (float) pos.y, (float) pos.z, width, height, 0));
     }
 
     /**

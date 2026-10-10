@@ -135,6 +135,18 @@ public class BlockRegistrar {
                     .pushReaction(PushReaction.DESTROY)),
             CreativeModeTabs.BUILDING_BLOCKS);
 
+    // Verdant Court Vine Snare (PlantVineSnare): shapeless, collisionless and drawn only for its owner's side. No block
+    // item: it is only ever planted by a Seedshaper. Replaceable, so it never blocks a building's footprint
+    public static final RegistryObject<VineSnareBlock> VINE_SNARE = registerBlock("vine_snare",
+            () -> new VineSnareBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT)
+                    .replaceable()
+                    .noCollission()
+                    .noOcclusion()
+                    .noLootTable()
+                    .instabreak()
+                    .sound(SoundType.CAVE_VINES)
+                    .pushReaction(PushReaction.DESTROY)));
+
     public static final RegistryObject<Block> RTS_START_BLOCK_BLUE = registerBlock("rts_start_block_blue", () ->
             new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_BLUE)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);

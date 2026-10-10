@@ -217,6 +217,25 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "fox_courier_unit").toString()));
 
+    // Verdant Court T1, slice 2
+    public static final RegistryObject<EntityType<MoonwellBearerUnit>> MOONWELL_BEARER_UNIT = ENTITIES.register("moonwell_bearer_unit",
+            () -> EntityType.Builder.of(MoonwellBearerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.WITCH.getWidth(), EntityType.WITCH.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "moonwell_bearer_unit").toString()));
+
+    public static final RegistryObject<EntityType<OwlWatcherUnit>> OWL_WATCHER_UNIT = ENTITIES.register("owl_watcher_unit",
+            () -> EntityType.Builder.of(OwlWatcherUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PARROT.getWidth(), EntityType.PARROT.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "owl_watcher_unit").toString()));
+
+    public static final RegistryObject<EntityType<HiveKeeperUnit>> HIVE_KEEPER_UNIT = ENTITIES.register("hive_keeper_unit",
+            () -> EntityType.Builder.of(HiveKeeperUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "hive_keeper_unit").toString()));
+
     public static final RegistryObject<EntityType<LeafbladeUnit>> LEAFBLADE_UNIT = ENTITIES.register("leafblade_unit",
             () -> EntityType.Builder.of(LeafbladeUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
@@ -555,6 +574,9 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.villagers.SunColossusProd.itemName -> EntityRegistrar.SUN_COLOSSUS_UNIT.get();
             case SeedshaperProd.itemName -> EntityRegistrar.SEEDSHAPER_UNIT.get();
             case FoxCourierProd.itemName -> EntityRegistrar.FOX_COURIER_UNIT.get();
+            case MoonwellBearerProd.itemName -> EntityRegistrar.MOONWELL_BEARER_UNIT.get();
+            case OwlWatcherProd.itemName -> EntityRegistrar.OWL_WATCHER_UNIT.get();
+            case HiveKeeperProd.itemName -> EntityRegistrar.HIVE_KEEPER_UNIT.get();
             case LeafbladeProd.itemName -> EntityRegistrar.LEAFBLADE_UNIT.get();
             case ThornbowProd.itemName -> EntityRegistrar.THORNBOW_UNIT.get();
             case SentinelTreantProd.itemName -> EntityRegistrar.SENTINEL_TREANT_UNIT.get();

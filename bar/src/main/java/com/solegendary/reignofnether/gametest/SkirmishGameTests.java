@@ -2667,6 +2667,239 @@ public class SkirmishGameTests {
             helper.succeed();
     }
 
+    // ------------------------------------------------------------------ Verdant Court slice 2
+
+    /**
+     * The Moonwell Bearer's pulse heals a hurt friendly unit, never a hurt enemy standing just as close, and never
+     * itself.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_moonwell_heals_friend_not_foe(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_moonwell", foeOwner = "gametest_moonwell_foe";
+        var bearer = com.solegendary.reignofnether.registrars.EntityRegistrar.MOONWELL_BEARER_UNIT.get().create(level);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var friend = vill.create(level);
+        var foe = vill.create(level);
+        if (bearer == null || friend == null || foe == null) {
+            helper.fail("could not create the Moonwell test units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        bearer.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() - 1.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        bearer.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(bearer, friend, foe);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(5, () -> {
+            try {
+                friend.setHealth(friend.getMaxHealth() * 0.4f);
+                foe.setHealth(foe.getMaxHealth() * 0.4f);
+                bearer.setHealth(bearer.getMaxHealth() * 0.5f);
+                float friendHp = friend.getHealth(), foeHp = foe.getHealth(), selfHp = bearer.getHealth();
+                int healed = bearer.pulse(level);
+                if (healed != 1)
+                    helper.fail("the pulse should heal exactly the one hurt friend, healed " + healed);
+                if (friend.getHealth() <= friendHp)
+                    helper.fail("the hurt friend was not healed: " + friendHp + " -> " + friend.getHealth());
+                if (foe.getHealth() > foeHp)
+                    helper.fail("the Moonwell Bearer healed an enemy");
+                if (bearer.getHealth() > selfHp)
+                    helper.fail("the Moonwell Bearer healed itself");
+                float expect = bearer.isNightPower()
+                        ? com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit.NIGHT_HEAL
+                        : com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit.DAY_HEAL;
+                if (Math.abs(friend.getHealth() - friendHp - expect) > 0.01f)
+                    helper.fail("healed " + (friend.getHealth() - friendHp) + ", expected " + expect);
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /**
+     * A Vine Snare ignores its owner's units, then roots the first enemy unit to walk into it (Slowness VII) and is
+     * spent: of two enemies dropped on it at once, exactly one is rooted.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_vine_snare_roots_first_enemy_and_is_spent(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_snare", foeOwner = "gametest_snare_foe";
+        BlockPos spot = helper.absolutePos(new BlockPos(5, 2, 12));
+        if (!com.solegendary.reignofnether.ability.abilities.PlantVineSnare.plant(level, owner, spot, false)) {
+            helper.fail("the Vine Snare could not be planted at " + spot);
+            return;
+        }
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var friend = vill.create(level);
+        var foeA = vill.create(level);
+        var foeB = vill.create(level);
+        if (friend == null || foeA == null || foeB == null) {
+            helper.fail("could not create the snare test units");
+            level.removeBlock(spot, false);
+            return;
+        }
+        friend.setOwnerName(owner);
+        foeA.setOwnerName(foeOwner);
+        foeB.setOwnerName(foeOwner);
+        friend.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(friend);
+        List<net.minecraft.world.entity.Mob> all = List.of(friend, foeA, foeB);
+        var snareBlock = com.solegendary.reignofnether.registrars.BlockRegistrar.VINE_SNARE.get();
+        helper.runAfterDelay(10, () -> {
+            boolean ok = true;
+            if (!level.getBlockState(spot).is(snareBlock)) {
+                helper.fail("the snare was sprung by its owner's own unit");
+                ok = false;
+            } else if (friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN)) {
+                helper.fail("the snare rooted a friendly unit");
+                ok = false;
+            }
+            if (!ok) {
+                for (var e : all) e.discard();
+                level.removeBlock(spot, false);
+                return;
+            }
+            friend.moveTo(spot.getX() + 3.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+            foeA.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.4, 0, 0);
+            foeB.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.6, 0, 0);
+            level.addFreshEntity(foeA);
+            level.addFreshEntity(foeB);
+        });
+        helper.runAfterDelay(25, () -> {
+            try {
+                int rooted = 0;
+                for (var foe : List.of(foeA, foeB)) {
+                    var root = foe.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+                    if (root != null && root.getAmplifier() >= com.solegendary.reignofnether.blocks.VineSnareBlock.ROOT_AMPLIFIER)
+                        rooted++;
+                }
+                if (level.getBlockState(spot).is(snareBlock))
+                    helper.fail("the snare is still there after enemies walked into it");
+                else if (rooted != 1)
+                    helper.fail("the snare should root exactly the first enemy, rooted " + rooted);
+                else
+                    helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+                if (level.getBlockState(spot).is(snareBlock))
+                    level.removeBlock(spot, false);
+            }
+        });
+    }
+
+    /** The Hive Keeper's swarm: three bees owned by the keeper's player that fly at a nearby enemy and sting it. */
+    @GameTest(template = ARENA, timeoutTicks = 220)
+    public static void verdant_hive_keeper_bees_sting_a_foe(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_hive", foeOwner = "gametest_hive_foe";
+        var keeper = com.solegendary.reignofnether.registrars.EntityRegistrar.HIVE_KEEPER_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (keeper == null || foe == null) {
+            helper.fail("could not create the Hive Keeper test units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 4));
+        keeper.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        keeper.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        level.addFreshEntity(keeper);
+        level.addFreshEntity(foe);
+        List<com.solegendary.reignofnether.unit.units.neutral.BeeUnit> bees = new ArrayList<>();
+        boolean[] stung = { false };
+        helper.runAfterDelay(3, () -> {
+            bees.addAll(keeper.releaseSwarm(level));
+            keeper.discard();   // from here on only the bees can hurt the foe
+        });
+        for (int t = 4; t < 200; t++)
+            helper.runAfterDelay(t, () -> {
+                if (foe.getLastHurtByMob() instanceof com.solegendary.reignofnether.unit.units.neutral.BeeUnit b
+                        && owner.equals(b.getOwnerName()))
+                    stung[0] = true;
+            });
+        helper.runAfterDelay(200, () -> {
+            // also sweep up any bee the keeper released on its own tick before the manual release
+            var area = new net.minecraft.world.phys.AABB(at).inflate(24);
+            List<com.solegendary.reignofnether.unit.units.neutral.BeeUnit> all = new ArrayList<>(bees);
+            for (var b : level.getEntitiesOfClass(com.solegendary.reignofnether.unit.units.neutral.BeeUnit.class, area))
+                if (owner.equals(b.getOwnerName()) && !all.contains(b))
+                    all.add(b);
+            int released = bees.size();
+            boolean owned = true, summoned = true;
+            for (var b : bees) {
+                owned &= owner.equals(b.getOwnerName());
+                summoned &= b.isSummoned();
+            }
+            for (var b : all)
+                b.discard();
+            foe.discard();
+            if (released != com.solegendary.reignofnether.unit.units.verdant.HiveKeeperUnit.SWARM_SIZE)
+                helper.fail("the Hive Keeper released " + released + " bees, expected "
+                        + com.solegendary.reignofnether.unit.units.verdant.HiveKeeperUnit.SWARM_SIZE);
+            else if (!owned || !summoned)
+                helper.fail("the swarm's bees must be summoned and owned by the keeper's player");
+            else if (!stung[0])
+                helper.fail("no bee from the swarm stung the enemy");
+            else
+                helper.succeed();
+        });
+    }
+
+    /**
+     * The death-FX faction field (3 bits since the Verdant Court) carries every live faction's debris tint and every
+     * cost tier through the packet codec intact, and each live faction has its own tint.
+     */
+    @GameTest(template = ARENA)
+    public static void death_fx_packet_carries_all_four_factions(GameTestHelper helper) {
+        byte[] tints = {
+            com.solegendary.reignofnether.barfx.BarFx.F_SUNFORGED, com.solegendary.reignofnether.barfx.BarFx.F_GRAVEBOUND,
+            com.solegendary.reignofnether.barfx.BarFx.F_HORDE, com.solegendary.reignofnether.barfx.BarFx.F_VERDANT };
+        var live = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT);
+        for (int i = 0; i < live.size(); i++)
+            if (FactionTraits.of(live.get(i)).deathDebris != tints[i]) {
+                helper.fail(live.get(i).getName() + " has debris tint " + FactionTraits.of(live.get(i)).deathDebris
+                        + ", expected " + tints[i]);
+                return;
+            }
+        List<com.solegendary.reignofnether.barfx.BarFx.Event> sent = new ArrayList<>();
+        for (byte f : tints)
+            for (int tier = 0; tier <= 3; tier++)
+                sent.add(new com.solegendary.reignofnether.barfx.BarFx.Event(com.solegendary.reignofnether.barfx.BarFx.DEATH,
+                        com.solegendary.reignofnether.barfx.BarFx.D_FLESH,
+                        com.solegendary.reignofnether.barfx.BarFx.deathFlags(f, tier), 1, 2, 3, 0.6f, 1.8f, 0));
+        var buf = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+        try {
+            new com.solegendary.reignofnether.barfx.BarFxClientboundPacket(sent).encode(buf);
+            var got = new com.solegendary.reignofnether.barfx.BarFxClientboundPacket(buf).events();
+            if (got.size() != sent.size()) {
+                helper.fail("decoded " + got.size() + " events, sent " + sent.size());
+                return;
+            }
+            int k = 0;
+            for (byte f : tints)
+                for (int tier = 0; tier <= 3; tier++, k++) {
+                    var e = got.get(k);
+                    int df = com.solegendary.reignofnether.barfx.BarFx.deathFaction(e.flags);
+                    int dt = com.solegendary.reignofnether.barfx.BarFx.deathTier(e.flags);
+                    if (df != f || dt != tier) {
+                        helper.fail("faction " + f + " tier " + tier + " came back as faction " + df + " tier " + dt);
+                        return;
+                    }
+                }
+        } finally {
+            buf.release();
+        }
+        helper.succeed();
+    }
+
 
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
