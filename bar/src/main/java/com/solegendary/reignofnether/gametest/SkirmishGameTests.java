@@ -930,6 +930,30 @@ public class SkirmishGameTests {
             if (!com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(n))
                 helper.fail("startRTSBot did not add " + n + " to the match");
         int[] startUnits = { soakUnits(kingdom).size(), soakUnits(grave).size() };
+        // TEMP diagnostics: how each side's units leave (death cause, place, time) and why a side was defeated
+        long t0 = level.getGameTime();
+        List<String> deaths = java.util.Collections.synchronizedList(new ArrayList<>());
+        List<net.minecraft.world.entity.LivingEntity> starters = new ArrayList<>(soakUnits(grave));
+        for (String n : names)
+            com.solegendary.reignofnether.player.PlayerServerEvents.DIAG_DEFEATS.remove(n);
+        java.util.function.Consumer<net.minecraftforge.event.entity.living.LivingDeathEvent> onDeath = evt -> {
+            if (evt.getEntity().level() != level || !(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    || !names.contains(u.getOwnerName()))
+                return;
+            var le = evt.getEntity();
+            var src = evt.getSource();
+            if (deaths.size() < 12)
+                deaths.add(u.getOwnerName().substring(14) + " " + net.minecraft.world.entity.EntityType.getKey(le.getType()).getPath()
+                    + " died t" + (level.getGameTime() - t0) + " " + src.getMsgId()
+                    + (src.getEntity() != null ? " by " + net.minecraft.world.entity.EntityType.getKey(src.getEntity().getType()).getPath()
+                        + (src.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit a ? "(" + a.getOwnerName() + ")" : "") : "")
+                    + " at " + le.blockPosition().toShortString()
+                    + " cmdr=" + com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le)
+                    + " fire=" + le.isOnFire() + " water=" + le.isInWater() + " lava=" + le.isInLava()
+                    + " day=" + level.getDayTime());
+        };
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
+            false, net.minecraftforge.event.entity.living.LivingDeathEvent.class, onDeath);
         int[] maxBuildings = new int[2], maxUnits = new int[2];
         Runnable sample = () -> {
             for (int i = 0; i < 2; i++) {
@@ -965,8 +989,20 @@ public class SkirmishGameTests {
                 failures.remove(n);
             }
             leftovers.forEach(net.minecraft.world.entity.Entity::discard);
-            if (!problems.isEmpty())
-                helper.fail(String.join("; ", problems));
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
+            if (!problems.isEmpty()) {
+                StringBuilder diag = new StringBuilder(" | deaths: ").append(deaths);
+                diag.append(" | defeats: ").append(names.stream().map(n -> n + "=" + com.solegendary.reignofnether.player.PlayerServerEvents.DIAG_DEFEATS.get(n)).toList());
+                diag.append(" | grave starters: ");
+                for (var le : starters)
+                    diag.append(net.minecraft.world.entity.EntityType.getKey(le.getType()).getPath()).append(" alive=").append(le.isAlive())
+                        .append(" removed=").append(le.getRemovalReason()).append(" owner='")
+                        .append(((com.solegendary.reignofnether.unit.interfaces.Unit) le).getOwnerName()).append("' hp=").append(le.getHealth())
+                        .append(" at ").append(le.blockPosition().toShortString()).append("; ");
+                diag.append("| starts ").append(starts[0]).append(" ").append(starts[1]).append(" cmdrDefeat=")
+                    .append(level.getGameRules().getBoolean(com.solegendary.reignofnether.registrars.GameRuleRegistrar.COMMANDER_DEFEAT));
+                helper.fail(String.join("; ", problems) + diag);
+            }
             helper.succeed();
         });
     }

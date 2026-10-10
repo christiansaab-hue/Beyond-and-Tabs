@@ -1084,6 +1084,9 @@ public class PlayerServerEvents {
         }
     }
 
+    /** TEMP soak diagnostics. */
+    public static final java.util.Map<String, String> DIAG_DEFEATS = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static void defeat(String playerName, String reason) {
         if (SandboxServer.isSandboxPlayer(playerName))
             return;
@@ -1099,6 +1102,11 @@ public class PlayerServerEvents {
             return;
 
         ReignOfNether.LOGGER.info("[Player] defeat: playerName={}, reason={}", playerName, reason);
+        // TEMP soak diagnostics: why a side left the match, read back by the bot soak GameTest
+        DIAG_DEFEATS.put(playerName, reason + " @t" + (serverLevel != null ? serverLevel.getGameTime() : -1)
+            + " via " + java.util.Arrays.stream(Thread.currentThread().getStackTrace()).skip(2).limit(6)
+                .map(e -> e.getClassName().substring(e.getClassName().lastIndexOf('.') + 1) + "." + e.getMethodName() + ":" + e.getLineNumber())
+                .collect(java.util.stream.Collectors.joining(">")));
 
         synchronized (rtsPlayers) {
             // Remove the defeated player from the list
