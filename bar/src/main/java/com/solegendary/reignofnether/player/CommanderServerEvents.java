@@ -53,17 +53,22 @@ public class CommanderServerEvents {
     public static void ensureAbility(Entity entity) {
         if (!(entity instanceof Unit unit) || unit.getAbilities() == null)
             return;
-        boolean hasSignature = false, hasDGun = false;
+        boolean hasSignature = false, hasDGun = false, hasRaise = false;
         for (com.solegendary.reignofnether.ability.Ability a : unit.getAbilities().get()) {
             if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility)
                 hasSignature = true;
             if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun)
                 hasDGun = true;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.RaiseDead)
+                hasRaise = true;
         }
         if (!hasSignature)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
         if (!hasDGun)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderDGun());
+        var faction = com.solegendary.reignofnether.faction.Factions.getFaction(unit);
+        if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS) && !hasRaise)
+            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.RaiseDead());
     }
 
     /** Client side: tags don't sync, but the commander's translated name does - that's how the client knows. */

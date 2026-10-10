@@ -221,6 +221,14 @@ public class WreckServerEvents {
         return 1f;
     }
 
+    /** Takes metal off a wreck (Raise Dead); an emptied wreck is removed. */
+    public static void drain(ServerLevel level, Entity w, float amount) {
+        float left = metalOf(w) - amount;
+        w.getPersistentData().putFloat(KEY_METAL, Math.max(0, left));
+        if (left <= 0.01f)
+            remove(level, w, false);
+    }
+
     static void remove(ServerLevel level, Entity w, boolean reclaimed) {
         if (reclaimed)
             level.playSound(null, w.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.3f, 1.6f);

@@ -393,6 +393,51 @@ public class SkirmishGameTests {
         });
     }
 
+    /** Raise Dead: needs population room; with it, a wreck rises as a Ghoul and pays from the wreck first. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void raise_dead_turns_wrecks_into_ghouls(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_lich";
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var lich = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_UNIT.get().create(level);
+        if (lich == null) {
+            helper.fail("could not create a zombie unit");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(13, 2, 13));
+        lich.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        lich.setOwnerName(owner);
+        level.addFreshEntity(lich);
+        var wreck = com.solegendary.reignofnether.resources.WreckServerEvents.spawnWreck(level, at.getX() - 1.5,
+            at.getY(), at.getZ() + 0.5, 200f, com.solegendary.reignofnether.faction.Factions.MONSTERS);
+        helper.runAfterDelay(3, () -> {
+            if (wreck == null || wreck.isRemoved()) {
+                helper.fail("test wreck did not spawn");
+                return;
+            }
+            if (com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner) != 0)
+                helper.fail("raised a Ghoul with no population room");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
+            int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
+            int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
+            if (raised != 1)
+                helper.fail("expected one Ghoul from one wreck, got " + raised);
+            float left = com.solegendary.reignofnether.resources.WreckServerEvents.metalOf(wreck);
+            if (left > 200f - com.solegendary.reignofnether.resources.ResourceCosts.ZOMBIE.metal() + 0.01f)
+                helper.fail("the Ghoul was not paid from the wreck (" + left + " left)");
+            if (pool.getMetal() < -0.01f || pool.getMetal() > 0.01f)
+                helper.fail("pool paid although the wreck covered the cost: " + pool.getMetal());
+            for (var e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, lich.getBoundingBox().inflate(6)))
+                if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName()))
+                    e.discard();
+            wreck.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
