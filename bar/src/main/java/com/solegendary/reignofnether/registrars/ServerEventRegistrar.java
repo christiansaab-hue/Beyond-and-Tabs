@@ -55,6 +55,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchesServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.WreckServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.MomentumServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.FormationServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BattlefieldSetup.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.BattlefieldWall.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderServerEvents.class);

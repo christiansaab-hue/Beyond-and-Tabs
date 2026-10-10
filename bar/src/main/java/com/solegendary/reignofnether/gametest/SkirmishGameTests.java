@@ -359,6 +359,40 @@ public class SkirmishGameTests {
         });
     }
 
+    /** Sunforged Formation: a crossbow with two melee guards beside it is in formation; alone it is not. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void sunforged_formation_needs_two_guards(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_kingdom_line";
+        var bow = com.solegendary.reignofnether.registrars.EntityRegistrar.PILLAGER_UNIT.get().create(level);
+        var lone = com.solegendary.reignofnether.registrars.EntityRegistrar.PILLAGER_UNIT.get().create(level);
+        var g1 = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var g2 = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (bow == null || lone == null || g1 == null || g2 == null) {
+            helper.fail("could not create kingdom units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(12, 2, 3));
+        bow.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        g1.moveTo(at.getX() + 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        g2.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 2.5, 0, 0);
+        lone.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 12.5, 0, 0);
+        for (var e : List.of(bow, lone, g1, g2)) {
+            e.setOwnerName(owner);
+            level.addFreshEntity(e);
+        }
+        helper.runAfterDelay(3, () -> {
+            com.solegendary.reignofnether.unit.FormationServerEvents.update(level);
+            if (!com.solegendary.reignofnether.unit.FormationServerEvents.isInFormation(bow))
+                helper.fail("crossbow with two guards beside it is not in formation");
+            if (com.solegendary.reignofnether.unit.FormationServerEvents.isInFormation(lone))
+                helper.fail("a lone crossbow counts as in formation");
+            for (var e : List.of(bow, lone, g1, g2))
+                e.discard();
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
