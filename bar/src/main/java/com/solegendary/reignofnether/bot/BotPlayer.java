@@ -39,22 +39,32 @@ public class BotPlayer {
 
     public enum Difficulty { EASY, MEDIUM, HARD }
 
-    /** What each faction uses for each job. */
-    record Kit(Building capitol, Building house, Building farm, Building extractor, Building wind, Building armyBuilding,
-               Building tower, ProductionItem worker, List<ProductionItem> army) { }
+    /**
+     * What each faction uses for each job. T2 lives in its own lab (needs Tier 2 research): it trains the T2 army
+     * and the T2 constructor, the only worker that may raise the T3 lab.
+     */
+    public record Kit(Building capitol, Building house, Building farm, Building extractor, Building wind, Building armyBuilding,
+               Building tower, ProductionItem worker, List<ProductionItem> army,
+               Building t2Lab, ProductionItem t2Worker, List<ProductionItem> t2Army) { }
 
-    static Kit kitFor(Faction faction) {
+    public static Kit kitFor(Faction faction) {
         if (faction.equals(Factions.PIGLINS))
             return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, Buildings.NETHERWART_FARM,
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.BASTION,
-                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER));
+                    null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
+                    Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
+                    List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST));
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, Buildings.HAUNTED_HOUSE, Buildings.PUMPKIN_FARM,
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,
-                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON));
+                    Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON),
+                    Buildings.DUNGEON, ProductionItems.EMBALMER,
+                    List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN));
         return new Kit(Buildings.TOWN_CENTRE, Buildings.VILLAGER_HOUSE, Buildings.WHEAT_FARM,
                 Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Buildings.BARRACKS,
-                Buildings.WATCHTOWER, ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER));
+                Buildings.WATCHTOWER, ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER),
+                Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,
+                List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER));
     }
 
     public final String name;
@@ -159,6 +169,8 @@ public class BotPlayer {
 
         // 4) expand the economy (a few sites at a time - more for harder bots - so the flow economy isn't buried)
         long minutes = (gameTime - startedAt) / (20 * 60);
+        boolean tier2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (unbuilt < maxConcurrentSites()) {
             int extractors = count(buildings, kit.extractor()), winds = count(buildings, kit.wind());
             int farms = count(buildings, kit.farm()), houses = count(buildings, kit.house());
@@ -166,7 +178,10 @@ public class BotPlayer {
             int pop = UnitServerEvents.getCurrentPopulation(name);
             int popCap = BuildingServerEvents.getTotalPopulationSupply(name);
             BlockPos patch = extractors < 2 + minutes ? freePatch(level) : null;
-            if (patch != null && !workers.isEmpty())
+            // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
+            if (tier2 && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1 && !workers.isEmpty())
+                placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
+            else if (patch != null && !workers.isEmpty())
                 placeNear(level, kit.extractor(), patch.offset(-2, 0, -2), workers, 1);
             else if (winds < 2 + minutes && winds <= extractors * 2 && !workers.isEmpty())
                 placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
@@ -191,8 +206,6 @@ public class BotPlayer {
         }
 
         // 4b) tech: research tier 2 from ~5 minutes, then refit home extractors one at a time
-        boolean tier2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
-                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (!tier2 && minutes >= 5 && capitol instanceof ProductionPlacement cp && cp.productionQueue.isEmpty())
             cp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
         if (tier2) {
@@ -220,6 +233,20 @@ public class BotPlayer {
                 pp.setRepeatQueue(true);
                 if (pp.productionQueue.size() < 2)
                     pp.startProductionItem(kit.army().get(rng.nextInt(kit.army().size())));
+            }
+
+        // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
+        // it would loop the constructor too
+        int t2Workers = 0;
+        for (LivingEntity w : workers)
+            if (com.solegendary.reignofnether.unit.T2Workers.isT2Worker(w))
+                t2Workers++;
+        for (BuildingPlacement bp : buildings)
+            if (bp.isBuilt && bp.getBuilding() == kit.t2Lab() && bp instanceof ProductionPlacement pp) {
+                if (t2Workers < targetT2Workers())
+                    queueT2Worker(pp);
+                if (pp.productionQueue.size() < 2)
+                    pp.startProductionItem(kit.t2Army().get(rng.nextInt(kit.t2Army().size())));
             }
 
         // 5b) late game: medium/hard bots raise their faction's T3 building and field experimentals
@@ -282,6 +309,16 @@ public class BotPlayer {
             return false;
         order(idle, UnitAction.ATTACK_MOVE, best.blockPosition());
         return true;
+    }
+
+    int targetT2Workers() { return difficulty == Difficulty.HARD ? 2 : 1; }
+
+    /** Queues one T2 constructor at the T2 lab unless one is already in its queue. */
+    void queueT2Worker(ProductionPlacement lab) {
+        for (var item : lab.productionQueue)
+            if (item.item == kit.t2Worker())
+                return;
+        lab.startProductionItem(kit.t2Worker());
     }
 
     void trainWorkers(BuildingPlacement capitol, int workerCount) {
@@ -474,8 +511,8 @@ public class BotPlayer {
     }
 
     /**
-     * BAR bots go experimental late: from minute 14 (hard 12) a medium/hard bot builds its T3 building near home,
-     * then keeps one experimental in production whenever it has 20 population free. Easy bots never do.
+     * BAR bots go experimental late: from minute 14 (hard 12) a medium/hard bot has a T2 constructor build its T3
+     * lab near home, then keeps one experimental in production whenever it has 20 population free. Easy bots never do.
      */
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
         if (difficulty == Difficulty.EASY || minutes < (difficulty == Difficulty.HARD ? 12 : 14))
@@ -499,8 +536,20 @@ public class BotPlayer {
             if (bp.getBuilding() == t3Building())
                 t3 = bp;
         if (t3 == null) {
-            if (!workers.isEmpty())
-                placeNear(level, t3Building(), layoutSlot(Layout.ARMY, 3), workers, 3);
+            // only a T2 constructor may raise the T3 lab (the server enforces it): the nearest one to home places
+            // it, and other workers join the site through assignBuilders. None yet - train one at the T2 lab
+            LivingEntity builder = null;
+            for (LivingEntity w : workers)
+                if (com.solegendary.reignofnether.unit.T2Workers.isT2Worker(w)
+                        && (builder == null || w.blockPosition().distSqr(home) < builder.blockPosition().distSqr(home)))
+                    builder = w;
+            if (builder != null) {
+                placeNear(level, t3Building(), layoutSlot(Layout.ARMY, 3), new ArrayList<>(List.of(builder)), 1);
+            } else {
+                for (BuildingPlacement bp : buildings)
+                    if (bp.isBuilt && bp.getBuilding() == kit.t2Lab() && bp instanceof ProductionPlacement lab)
+                        queueT2Worker(lab);
+            }
             return;
         }
         if (!t3.isBuilt || !(t3 instanceof ProductionPlacement pp))

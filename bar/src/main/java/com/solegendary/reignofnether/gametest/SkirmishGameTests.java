@@ -696,6 +696,66 @@ public class SkirmishGameTests {
         });
     }
 
+    /** Each faction's bot kit points at its real T2 lab, and that lab trains the kit's T2 constructor and T2 army. */
+    @GameTest(template = ARENA)
+    public static void bot_kits_use_their_t2_lab(GameTestHelper helper) {
+        for (var f : List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
+                com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.PIGLINS)) {
+            var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(f);
+            if (!(kit.t2Lab() instanceof com.solegendary.reignofnether.building.production.ProductionBuilding lab)) {
+                helper.fail(f.getName() + ": T2 lab " + kit.t2Lab() + " is not a production building");
+                return;
+            }
+            if (com.solegendary.reignofnether.unit.T2Workers.isT3Lab(lab))
+                helper.fail(f.getName() + ": the T2 lab is a T3 lab");
+            var items = lab.productions.get();
+            if (!items.contains(kit.t2Worker()))
+                helper.fail(f.getName() + ": " + lab.structureName + " does not train the kit's T2 constructor");
+            for (var item : kit.t2Army())
+                if (!items.contains(item))
+                    helper.fail(f.getName() + ": " + lab.structureName + " does not train " + item);
+        }
+        helper.succeed();
+    }
+
+    /** The server refuses a T3 lab placed by T1 workers only; a T2 constructor among the builders passes. */
+    @GameTest(template = ARENA)
+    public static void t3_lab_needs_a_t2_builder_on_the_server(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 2, 8));
+        var t1 = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var t2 = com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get().create(level);
+        if (t1 == null || t2 == null) {
+            helper.fail("could not create the workers");
+            return;
+        }
+        t1.moveTo(base.getX() + 0.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        t2.moveTo(base.getX() + 2.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(t1);
+        level.addFreshEntity(t2);
+        int[] t1Only = { t1.getId() }, withT2 = { t1.getId(), t2.getId() };
+        for (Building lab : List.of(Buildings.CASTLE, Buildings.STRONGHOLD, Buildings.FORTRESS)) {
+            if (com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, t1Only))
+                helper.fail(lab.structureName + " may be placed by a T1 worker alone");
+            if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, withT2))
+                helper.fail(lab.structureName + " refused with a T2 constructor among the builders");
+        }
+        if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, Buildings.ARCANE_TOWER, t1Only))
+            helper.fail("a T2 lab must not need a T2 constructor");
+        // the real placement path: a T1-only Castle is refused before it ever reaches the terrain checks
+        String owner = "gametest_t3_owner";
+        BlockPos pos = base.offset(80, 0, -80);
+        var placed = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(Buildings.CASTLE, pos,
+            Rotation.NONE, owner, t1Only, false, false, false, true);
+        if (placed != null) {
+            com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(placed);
+            helper.fail("placeBuilding accepted a Castle from a T1 worker");
+        }
+        t1.discard();
+        t2.discard();
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
