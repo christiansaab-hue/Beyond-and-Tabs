@@ -97,14 +97,21 @@ public final class EconomyBarRenderer {
             bottom += 12;
         }
 
-        // BAR "wasting" warning: at storage cap with positive net income, everything extra is thrown away
-        boolean metalWaste = updateWaste(true, resources.ore, eco.metalStorage, eco.metalIncome - eco.metalExpense);
-        boolean energyWaste = updateWaste(false, resources.wood, eco.energyStorage, eco.energyIncome - eco.energyExpense);
-        if (metalWaste || energyWaste) {
+        // BAR "wasting" warning: only TRUE waste - the server measures what overflowed with every ally full too.
+        // Overflow that went to allies is not lost, so it gets a quiet "sharing" note instead
+        boolean metalWaste = updateWaste(true, eco.metalWasted);
+        boolean energyWaste = updateWaste(false, eco.energyWasted);
+        boolean metalShare = !metalWaste && eco.metalShared > 0.05f;
+        boolean energyShare = !energyWaste && eco.energyShared > 0.05f;
+        if (metalWaste || energyWaste || metalShare || energyShare) {
             if (metalWaste)
                 renderWasteLabel(gg, font, zones, left + 4, bottom, true, metalWasteRate);
+            else if (metalShare)
+                renderShareLabel(gg, font, zones, left + 4, bottom, true, eco.metalShared);
             if (energyWaste)
                 renderWasteLabel(gg, font, zones, left + totalW - 4, bottom, false, energyWasteRate);
+            else if (energyShare)
+                renderShareLabel(gg, font, zones, left + totalW - 4, bottom, false, eco.energyShared);
             bottom += 12;
         }
 
@@ -179,16 +186,17 @@ public final class EconomyBarRenderer {
         gg.drawString(font, exp, ex, y + 24, 0xFF5555, false);
     }
 
-    // Hysteresis so the label doesn't flicker as storage bounces off the cap between 4 Hz syncs: show after
-    // WASTE_SHOW_MS continuously at cap, keep for WASTE_HOLD_MS after it stops. The shown rate is smoothed.
+    // Hysteresis so the label doesn't flicker as the server's 1 s waste average bounces around zero: show after
+    // WASTE_SHOW_MS of continuous waste, keep for WASTE_HOLD_MS after it stops. The shown rate is smoothed.
     private static final long WASTE_SHOW_MS = 1000, WASTE_HOLD_MS = 1500;
     private static long metalWasteSince = -1, energyWasteSince = -1;
     private static long metalWasteLast = -1, energyWasteLast = -1;
     private static float metalWasteRate = 0, energyWasteRate = 0;
 
-    private static boolean updateWaste(boolean metal, int amount, float storage, float net) {
+    /** @param net per second truly wasted (overflow nobody on the team had room for), from the server */
+    private static boolean updateWaste(boolean metal, float net) {
         long now = System.currentTimeMillis();
-        boolean atCap = storage > 0 && amount >= storage - 1 && net > 0.05f;
+        boolean atCap = net > 0.05f;
         long since = metal ? metalWasteSince : energyWasteSince;
         long last = metal ? metalWasteLast : energyWasteLast;
         float rate = metal ? metalWasteRate : energyWasteRate;
@@ -219,6 +227,18 @@ public final class EconomyBarRenderer {
         gg.fill(x, y, x + w, y + 12, 0xC0101216);
         gg.fill(x, y + 11, x + w, y + 12, col);
         gg.drawString(font, s, x + 4, y + 2, col);
+        zones.add(RectZone.getZoneByLW(x, y, w, 12));
+    }
+
+    // "sharing +X/s": full storage, but the overflow is going to allies with room (BAR), so nothing is lost.
+    // Small and steady (no pulse) - it's information, not a warning
+    private static void renderShareLabel(GuiGraphics gg, Font font, List<RectZone> zones, int anchorX, int y,
+                                         boolean metal, float rate) {
+        String s = "sharing +" + fmt(rate) + "/s";
+        int w = font.width(s) + 8;
+        int x = metal ? anchorX : anchorX - w;
+        gg.fill(x, y, x + w, y + 12, 0xA0101216);
+        gg.drawString(font, s, x + 4, y + 2, 0x8FD18F);
         zones.add(RectZone.getZoneByLW(x, y, w, 12));
     }
 

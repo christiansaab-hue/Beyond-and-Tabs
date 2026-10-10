@@ -2502,5 +2502,18 @@
   "buildings.reignofnether.metal_extractor_tide": "Metal Extractor",
   "buildings.reignofnether.wind_generator_tide": "Wind Generator",
   "buildings.reignofnether.energy_converter_tide": "Brass Stove",
-  "sounds.reignofnether.tidewrought_calm": "Tidewrought theme"
+  "sounds.reignofnether.tidewrought_calm": "Tidewrought theme",
+  "buildings.reignofnether.storage_vault": "Storage Vault",
+  "buildings.reignofnether.storage_vault.tooltip1": "Raises storage by 2000 metal and 3000 energy, so income is banked instead of wasted.",
+  "buildings.reignofnether.storage_vault.tooltip2": "Fragile: if it falls, whatever it held above your new cap is lost.",
+  "buildings.villagers.reignofnether.storage_vault_villagers": "Treasury",
+  "buildings.monsters.reignofnether.storage_vault_monsters": "Ossuary Vault",
+  "buildings.piglins.reignofnether.storage_vault_piglins": "Plunder Pit",
+  "buildings.verdant_court.reignofnether.storage_vault_verdant": "Seed Cache",
+  "buildings.tidewrought.reignofnether.storage_vault_tide": "Bilge Hold",
+  "buildings.reignofnether.storage_vault_villagers": "Treasury",
+  "buildings.reignofnether.storage_vault_monsters": "Ossuary Vault",
+  "buildings.reignofnether.storage_vault_piglins": "Plunder Pit",
+  "buildings.reignofnether.storage_vault_verdant": "Seed Cache",
+  "buildings.reignofnether.storage_vault_tide": "Bilge Hold"
 }

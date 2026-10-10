@@ -107,6 +107,20 @@ public class BotPlayer {
         return Factions.VERDANT_COURT.equals(faction) ? Buildings.STORM_OAK : null;
     }
 
+    /** The faction's storage building (BAR storage), or null. Outside the Kit so adding it touched no kit. */
+    public static Building vaultFor(Faction faction) {
+        if (Factions.VILLAGERS.equals(faction)) return Buildings.STORAGE_VAULT_VILLAGERS;
+        if (Factions.MONSTERS.equals(faction)) return Buildings.STORAGE_VAULT_MONSTERS;
+        if (Factions.PIGLINS.equals(faction)) return Buildings.STORAGE_VAULT_PIGLINS;
+        if (Factions.VERDANT_COURT.equals(faction)) return Buildings.STORAGE_VAULT_VERDANT;
+        if (Factions.TIDEWROUGHT.equals(faction)) return Buildings.STORAGE_VAULT_TIDE;
+        return null;
+    }
+
+    // game time since when metal or energy has sat at the storage cap without a break (-1 = not at cap)
+    long atCapSince = -1;
+    static final long VAULT_AFTER_TICKS = 20 * 20;   // 20 s at the cap and the bot raises a vault
+
     public final String name;
     public final Faction faction;
     public final Difficulty difficulty;
@@ -210,6 +224,13 @@ public class BotPlayer {
         // 3b) reclaim: one idle worker walks to the nearest wreck in our territory (BAR players do this by habit)
         sendReclaimer(workers);
 
+        // storage watch (every think, whether or not a site is free): how long a pool has been pinned at its cap
+        if (atStorageCap()) {
+            if (atCapSince < 0)
+                atCapSince = gameTime;
+        } else
+            atCapSince = -1;
+
         // 4) expand the economy (a few sites at a time - more for harder bots - so the flow economy isn't buried)
         long minutes = (gameTime - startedAt) / (20 * 60);
         boolean tier2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
@@ -251,6 +272,15 @@ public class BotPlayer {
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             if (!done && energyFull() && count(buildings, converterFor()) < 1 + (int) (minutes / 6))
                 done = placeNear(level, converterFor(), layoutSlot(Layout.CONVERTER, count(buildings, converterFor())), workers, 1);
+            // BAR players build storage when they float: pinned at the cap for 20 s -> one vault, and the clock
+            // restarts so the next one needs another 20 s at the (now higher) cap. Capped so it never spams them
+            Building vault = vaultFor(faction);
+            if (!done && vault != null && atCapSince >= 0 && gameTime - atCapSince >= VAULT_AFTER_TICKS
+                    && count(buildings, vault) < 1 + (int) (minutes / 6)) {
+                done = placeNear(level, vault, layoutSlot(Layout.VAULT, count(buildings, vault)), workers, 1);
+                if (done)
+                    atCapSince = -1;
+            }
             if (!done && kit.farm() != null && farms < 1)
                 done = placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
             // (no houses: there is no supply any more, like BAR)
@@ -997,7 +1027,7 @@ public class BotPlayer {
         return n;
     }
 
-    enum Layout { WIND, CONVERTER, FARM, HOUSE, ARMY }
+    enum Layout { WIND, CONVERTER, VAULT, FARM, HOUSE, ARMY }
 
     /**
      * A tidy BAR-style base instead of buildings dropped at random: "back" is away from the nearest enemy.
@@ -1018,6 +1048,8 @@ public class BotPlayer {
         switch (kind) {
             case WIND -> { back = 14 + (index / 6) * 4; side = (index % 6 - 2.5) * 4; }
             case CONVERTER -> { back = 14 + 4 * 3 + 2; side = (index % 2 == 0 ? -1 : 1) * (14 + (index / 2) * 4); }
+            // vaults: a row past the converters, deepest in the base (they lose what they hold when they fall)
+            case VAULT -> { back = 14 + 4 * 3 + 7; side = (index % 2 == 0 ? 1 : -1) * (2 + (index / 2) * 4); }
             case FARM -> { back = 4 + index * 12; side = 27; }
             case HOUSE -> { back = (index / 2) * 8 - 4; side = (index % 2 == 0 ? -1 : 1) * 15 * (index % 4 < 2 ? 1 : -1); }
             default -> { back = -12; side = (index % 3 - 1) * 11; }
@@ -1100,6 +1132,15 @@ public class BotPlayer {
         for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
             if (r.ownerName.equals(name))
                 return r.getEnergy() > eco.energyStorage * 0.8f;
+        return false;
+    }
+
+    /** Metal or energy within 1% of its storage cap. */
+    boolean atStorageCap() {
+        var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name);
+        for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+            if (r.ownerName.equals(name))
+                return r.getMetal() >= eco.metalStorage * 0.99f || r.getEnergy() >= eco.energyStorage * 0.99f;
         return false;
     }
 

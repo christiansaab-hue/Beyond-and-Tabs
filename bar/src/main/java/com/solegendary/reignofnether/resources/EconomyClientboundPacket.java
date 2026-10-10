@@ -32,15 +32,22 @@ public class EconomyClientboundPacket {
     public float energyConverted; // energy/s drained by converters (part of energyExpense)
     public float metalConverted;  // metal/s made by converters (part of metalIncome)
     public float conversionCapacity; // energy/s the converters could drain at most
+    // overflow per second: sent to allies, and truly wasted (everyone on the team full) - the HUD's WASTING label
+    public float metalShared, energyShared, metalWasted, energyWasted;
 
     public static void sync(Resources res, EconomyServerEvents.PlayerEconomy eco) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new EconomyClientboundPacket(EconomyAction.SYNC,
+        EconomyClientboundPacket packet = new EconomyClientboundPacket(EconomyAction.SYNC,
             res.ownerName, res.ore, res.wood,
             eco.metalStorage, eco.energyStorage,
             eco.metalIncome + eco.metalConverted, eco.energyIncome,
             eco.metalExpense, eco.energyExpense,
             eco.stall, eco.energyConverted, eco.metalConverted, eco.conversionCapacity
-        ));
+        );
+        packet.metalShared = eco.metalShared;
+        packet.energyShared = eco.energyShared;
+        packet.metalWasted = eco.metalWasted;
+        packet.energyWasted = eco.energyWasted;
+        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
     }
 
     public EconomyClientboundPacket(EconomyAction action, String ownerName, int metal, int energy,
@@ -79,6 +86,10 @@ public class EconomyClientboundPacket {
         this.energyConverted = buffer.readFloat();
         this.metalConverted = buffer.readFloat();
         this.conversionCapacity = buffer.readFloat();
+        this.metalShared = buffer.readFloat();
+        this.energyShared = buffer.readFloat();
+        this.metalWasted = buffer.readFloat();
+        this.energyWasted = buffer.readFloat();
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -96,6 +107,10 @@ public class EconomyClientboundPacket {
         buffer.writeFloat(this.energyConverted);
         buffer.writeFloat(this.metalConverted);
         buffer.writeFloat(this.conversionCapacity);
+        buffer.writeFloat(this.metalShared);
+        buffer.writeFloat(this.energyShared);
+        buffer.writeFloat(this.metalWasted);
+        buffer.writeFloat(this.energyWasted);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

@@ -17,6 +17,9 @@ public class EconomyClientEvents {
         public float energyConverted = 0;
         public float metalConverted = 0;
         public float conversionCapacity = 0;
+        // overflow per second: sent to allies with room / truly wasted (EconomyServerEvents.shareOverflow)
+        public float metalShared = 0, energyShared = 0;
+        public float metalWasted = 0, energyWasted = 0;
     }
 
     private static final Map<String, ClientEconomy> economies = new HashMap<>();
@@ -45,6 +48,10 @@ public class EconomyClientEvents {
         eco.energyConverted = packet.energyConverted;
         eco.metalConverted = packet.metalConverted;
         eco.conversionCapacity = packet.conversionCapacity;
+        eco.metalShared = packet.metalShared;
+        eco.energyShared = packet.energyShared;
+        eco.metalWasted = packet.metalWasted;
+        eco.energyWasted = packet.energyWasted;
 
         // continuous spending doesn't send ADD_SUBTRACT packets, so set the absolute amounts here.
         // Any pending HUD animation (xToAdd) is kept so the displayed value still ends up at the server value.

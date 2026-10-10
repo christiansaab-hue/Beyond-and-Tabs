@@ -74,8 +74,9 @@ public class NotificationClientEvents {
         CONSTRUCTION_COMPLETE("construction_complete", 4_000, 0x8CFF8C, 30),
         RESEARCH_COMPLETE("research_complete", 4_000, -1, 30),   // ResearchClient already shows its own line
         IDLE_CONSTRUCTOR("idle_constructor", 15_000, 0xFFE070, 25),
-        METAL_FULL("metal_full", 30_000, 0xB4BEC8, 20),
-        ENERGY_FULL("energy_full", 30_000, 0xF0C83C, 20),
+        // playtest (lovish): "storage full" nagged all game. Once a minute per resource, and see STORAGE_QUIET_TICKS
+        METAL_FULL("metal_full", 60_000, 0xB4BEC8, 20),
+        ENERGY_FULL("energy_full", 60_000, 0xF0C83C, 20),
         // match moments: the game already shows a title for these, so voice only
         VICTORY("victory", 0, -1, 110),
         DEFEAT("defeat", 0, -1, 110),
@@ -115,6 +116,8 @@ public class NotificationClientEvents {
     // no alerts for the first few seconds of being an RTS player: joining syncs idle workers, capture owners and
     // storage in bulk, and those would otherwise all "change" at once
     private static final int WARMUP_TICKS = 200;
+    // no "storage full" in the first two minutes: the start pool sits near the cap before anything is spent on
+    private static final int STORAGE_QUIET_TICKS = 20 * 120;
     private static int rtsTicks = 0;
     private static boolean isRts = false;
     private static String myName = "";
@@ -294,26 +297,25 @@ public class NotificationClientEvents {
             fire(Alert.IDLE_CONSTRUCTOR, null);
         prevIdleWorkers = idle;
 
-        // economy - same "at cap with positive net" rule as the HUD's WASTING label (EconomyBarRenderer)
+        // economy - same rule as the HUD's WASTING label (EconomyBarRenderer): only true waste, i.e. overflow that
+        // no ally had room for. Full storage that is being shared with allies is not worth an alert
         Resources res = ResourcesClientEvents.getResources(myName);
         if (res == null)
             return;
         EconomyClientEvents.ClientEconomy eco = EconomyClientEvents.getEconomy(myName);
-        metalFullPolls = atCap(res.ore, eco.metalStorage, eco.metalIncome - eco.metalExpense) ? metalFullPolls + 1 : 0;
-        energyFullPolls = atCap(res.wood, eco.energyStorage, eco.energyIncome - eco.energyExpense) ? energyFullPolls + 1 : 0;
+        metalFullPolls = eco.metalWasted > 0.05f ? metalFullPolls + 1 : 0;
+        energyFullPolls = eco.energyWasted > 0.05f ? energyFullPolls + 1 : 0;
         stallPolls = eco.stall < 0.8f ? stallPolls + 1 : 0;
         if (!canAlert())
             return;
-        if (metalFullPolls >= SUSTAIN_POLLS)
-            fire(Alert.METAL_FULL, null);
-        if (energyFullPolls >= SUSTAIN_POLLS)
-            fire(Alert.ENERGY_FULL, null);
+        if (rtsTicks >= STORAGE_QUIET_TICKS) {
+            if (metalFullPolls >= SUSTAIN_POLLS)
+                fire(Alert.METAL_FULL, null);
+            if (energyFullPolls >= SUSTAIN_POLLS)
+                fire(Alert.ENERGY_FULL, null);
+        }
         if (stallPolls >= SUSTAIN_POLLS)
             fire(EconomyBarRenderer.shortOnMetal(res, eco) ? Alert.METAL_STALL : Alert.ENERGY_STALL, null);
-    }
-
-    private static boolean atCap(int amount, float storage, float net) {
-        return storage > 0 && amount >= storage - 1 && net > 0.05f;
     }
 
     // ------------------------------------------------------------------------------------------------------------
