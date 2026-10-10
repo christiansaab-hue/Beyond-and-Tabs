@@ -157,7 +157,7 @@ public final class BarFxClient {
                 flash(x2, y2, z2, 1.2f, .18f, 0xBFF6FF);
                 sparks(x2, y2, z2, 12, 5f, 0x9FF0FF, ux, uz);
                 ring(x2, groundOr(x2, y2, z2), z2, 2.4f, .4f, 0x9FF0FF);
-                shake(.08f, x2, y2, z2);
+                // no shake: repeated attacks (a Bone Colossus on a building) shook the screen nonstop
             }
             case BarFx.K_ARROW -> {
                 flash(mx, my, mz, .25f, .06f, 0xFFE0A0);
@@ -220,7 +220,7 @@ public final class BarFxClient {
                 int gc = groundColor(x, g, z);
                 for (int i = 0; i < 3; i++) dust(x + rnd(-.5f, .5f), g, z + rnd(-.5f, .5f), .35f, gc);
                 chunks(x, g + .1f, z, 2, 2.5f, gc, 2.5f);
-                shake(.04f, x, y, z);
+                // no shake on hits - with many units it never stops
             }
             default -> {   // arrows, thrown things
                 if (where == BarFx.AT_GROUND) {
@@ -268,7 +268,7 @@ public final class BarFxClient {
             scorch(x, g, z, .5f + r * .55f, 40, 0x16120E);
             if (r >= 2) crater(x, g, z, r * .45f, ground);
         }
-        shake(r * .12f, x, y, z);
+        if (r >= 2.5f) shake(r * .12f, x, y, z);   // only real blasts (creepers, commander death), not small pops
     }
 
     /** A unit falls. Constructs burst into sparks and leave a smoking wreck; living things leave a puff of dust. */
@@ -284,7 +284,7 @@ public final class BarFxClient {
                 for (int i = 0; i < 4; i++) { P p = smoke(x, cy, z, .3f * scale, 3f, 0x3A3A3E, .6f); p.vy = .6f; p.grow = 1.8f; }
                 emitter(x, y + .3f, z, 4 + scale * 2, .3f, .25f * scale, 0x34322F);
                 scorch(x, groundY(x, y + .5f, z), z, .5f + scale * .5f, 35, 0x16120E);
-                shake(.06f * scale, x, y, z);
+                // (no shake on unit deaths: a big fight would never stop shaking)
             }
             case BarFx.D_BONE -> {
                 chunks(x, cy, z, 5, 2.5f, 0xE8E4D0, 5f);
@@ -299,7 +299,7 @@ public final class BarFxClient {
                 int n = scale > 1.4f ? 6 : 3;
                 for (int i = 0; i < n; i++) dust(x + rnd(-.4f, .4f) * scale, y, z + rnd(-.4f, .4f) * scale, .25f * scale, c);
                 P p = smoke(x, cy, z, .2f * scale, 1.6f, 0x4A4440, .35f); p.vy = .4f; p.grow = 1.8f;
-                if (scale > 1.4f) shake(.1f, x, y, z);
+                // (no shake for big-unit deaths either)
             }
         }
     }
