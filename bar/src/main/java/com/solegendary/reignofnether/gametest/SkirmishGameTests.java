@@ -963,7 +963,41 @@ public class SkirmishGameTests {
             startUnits[i] = soakUnits(names.get(i)).size();
         int[] maxBuildings = new int[count], maxUnits = new int[count];
         boolean[] courtHall = { false };
+        // when the soak fails, say how each side's units left (death cause, place, time) and when a side left the
+        // match - CI only shows the failure message, so this is the only way to see a stall's cause
+        long t0 = level.getGameTime();
+        List<String> leaves = java.util.Collections.synchronizedList(new ArrayList<>());
+        long[] leftMatchAt = new long[count];
+        java.util.function.Consumer<net.minecraftforge.event.entity.living.LivingDeathEvent> onDeath = evt -> {
+            if (evt.getEntity().level() != level || !(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    || !names.contains(u.getOwnerName()) || leaves.size() >= 12)
+                return;
+            var le = evt.getEntity();
+            var src = evt.getSource();
+            leaves.add(u.getOwnerName().substring(14) + " " + net.minecraft.world.entity.EntityType.getKey(le.getType()).getPath()
+                + " died t" + (level.getGameTime() - t0) + " " + src.getMsgId()
+                + (src.getEntity() != null ? " by " + net.minecraft.world.entity.EntityType.getKey(src.getEntity().getType()).getPath() : "")
+                + " at " + le.blockPosition().toShortString()
+                + " cmdr=" + com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le));
+        };
+        java.util.function.Consumer<net.minecraftforge.event.entity.EntityLeaveLevelEvent> onLeave = evt -> {
+            if (evt.getLevel() != level || !(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    || !names.contains(u.getOwnerName()) || leaves.size() >= 12)
+                return;
+            var e = evt.getEntity();
+            if (e.getRemovalReason() == net.minecraft.world.entity.Entity.RemovalReason.KILLED)
+                return;   // reported by onDeath
+            leaves.add(u.getOwnerName().substring(14) + " " + net.minecraft.world.entity.EntityType.getKey(e.getType()).getPath()
+                + " left t" + (level.getGameTime() - t0) + " " + e.getRemovalReason() + " at " + e.blockPosition().toShortString());
+        };
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
+            false, net.minecraftforge.event.entity.living.LivingDeathEvent.class, onDeath);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
+            false, net.minecraftforge.event.entity.EntityLeaveLevelEvent.class, onLeave);
         Runnable sample = () -> {
+            for (int i = 0; i < count; i++)
+                if (leftMatchAt[i] == 0 && !com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(names.get(i)))
+                    leftMatchAt[i] = level.getGameTime() - t0;
             for (var bp : soakBuildings(court))
                 if (bp.getBuilding() == Buildings.HEARTWOOD_HALL)
                     courtHall[0] = true;
@@ -1002,8 +1036,18 @@ public class SkirmishGameTests {
                 failures.remove(n);
             }
             leftovers.forEach(net.minecraft.world.entity.Entity::discard);
-            if (!problems.isEmpty())
-                helper.fail(String.join("; ", problems));
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onLeave);
+            if (!problems.isEmpty()) {
+                StringBuilder diag = new StringBuilder(" | left match at t: ");
+                for (int i = 0; i < count; i++)
+                    diag.append(names.get(i).substring(14)).append('=').append(leftMatchAt[i]).append(' ');
+                diag.append("| starts:");
+                for (var st : starts)
+                    diag.append(' ').append(BlockPos.containing(st).toShortString());
+                diag.append(" | unit exits: ").append(leaves);
+                helper.fail(String.join("; ", problems) + diag);
+            }
             helper.succeed();
         });
     }
