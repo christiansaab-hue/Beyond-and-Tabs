@@ -1226,8 +1226,13 @@ public class HudClientEvents {
         // BAR-style top bar (metal | population | energy), centred at the top of the screen
         if (resources != null && MC.player != null) {
             EconomyClientEvents.ClientEconomy eco = EconomyClientEvents.getEconomy(selPlayerName);
+            // keep the bar clear of the control-group buttons in the top-left corner (playtest: they hid metal)
+            int ctrlGroupsW = 0;
+            for (ControlGroup cg : controlGroups)
+                if (!cg.isEmpty())
+                    ctrlGroupsW += iconFrameSize;
             economyBar = EconomyBarRenderer.render(evt.getGuiGraphics(), resources, eco, selPlayerName,
-                screenWidth, mouseX, mouseY, hudZones);
+                screenWidth, mouseX, mouseY, hudZones, ctrlGroupsW + 4);
         } else {
             economyBar = null;
         }

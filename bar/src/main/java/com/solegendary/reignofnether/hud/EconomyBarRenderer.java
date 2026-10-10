@@ -39,11 +39,25 @@ public final class EconomyBarRenderer {
      */
     public static Layout render(GuiGraphics gg, Resources resources, ClientEconomy eco, String owner,
                                 int screenWidth, int mouseX, int mouseY, List<RectZone> zones) {
+        return render(gg, resources, eco, owner, screenWidth, mouseX, mouseY, zones, 0);
+    }
+
+    /** @param reservedLeft pixels at the left edge to stay clear of (the control-group buttons) */
+    public static Layout render(GuiGraphics gg, Resources resources, ClientEconomy eco, String owner,
+                                int screenWidth, int mouseX, int mouseY, List<RectZone> zones, int reservedLeft) {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
         int panelW = Math.max(PANEL_W_MIN, Math.min(PANEL_W_MAX, (screenWidth - 200 - POP_W) / 2));
         int totalW = panelW * 2 + POP_W;
         int left = screenWidth / 2 - totalW / 2;
+        if (left < reservedLeft) {   // slide right past the control groups; shrink the panels if that runs off-screen
+            left = reservedLeft;
+            int room = screenWidth - 40 - left;   // leave the right-edge buttons alone
+            if (totalW > room) {
+                panelW = Math.max(90, (room - POP_W) / 2);
+                totalW = panelW * 2 + POP_W;
+            }
+        }
         int top = 0;
 
         // one dark strip for the whole bar
