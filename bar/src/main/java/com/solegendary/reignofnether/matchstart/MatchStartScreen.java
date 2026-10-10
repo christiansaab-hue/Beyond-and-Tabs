@@ -47,8 +47,11 @@ public class MatchStartScreen extends Screen {
     private static final int HEADER_H = 32;
     private static final int BOTTOM_H = 28;
     private static final int FRAME_SIZE = 22;
-    // faction tiles per slot row (4 live + Tidewrought preview + random); the row layout is sized from this
-    private static final int FACTION_TILES = 6;
+    // the faction chip in each slot row (icon + name, opens FactionPicker): replaces one tile per faction, which
+    // stopped fitting at six. Its width follows the roster so names stay readable at GUI scale 3
+    private static final int CHIP_MIN_W = 64;
+    private static final int CHIP_MAX_W = 128;
+    private static final int CHIP_H = 18;
     private static final int ICON_SIZE = 14;
     private static final int ROW_H = 26;
 
@@ -75,8 +78,15 @@ public class MatchStartScreen extends Screen {
     private int rosterScroll = 0;
     private int rosterContentH = 0;
     private int rosterViewH = 0;
+    private int rosterViewTop = 0, rosterViewBottom = 0;
 
     private record RowHit(StartPos pos, int x1, int y1, int x2, int y2) {}
+
+    // faction chips of rows the local player owns, rebuilt every frame like rowHits
+    private final List<RowHit> chipHits = new ArrayList<>();
+    private final FactionPicker picker = new FactionPicker();
+    // the slot the open picker belongs to (StartPos objects are replaced on every sync, the block pos is stable)
+    private net.minecraft.core.BlockPos pickerFor = null;
 
     public MatchStartScreen() {
         super(Component.literal("Match Setup"));
@@ -131,7 +141,15 @@ public class MatchStartScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         rowHits.clear();
+        chipHits.clear();
         hudButtons.clear();
+        validatePicker();
+        // while the faction list is open nothing beneath it may light up or show a tooltip
+        int realMouseX = mouseX, realMouseY = mouseY;
+        if (picker.isOpen()) {
+            mouseX = -10000;
+            mouseY = -10000;
+        }
 
         int leftBottom = this.height - MARGIN;
         int mapX1 = MARGIN;
@@ -183,9 +201,47 @@ public class MatchStartScreen extends Screen {
                 b.renderTooltip(g, mouseX, mouseY);
             }
         }
+
+        picker.render(g, this.font, realMouseX, realMouseY);
+    }
+
+    /** The slot the picker was opened for, if the local player still holds it; otherwise the picker closes. */
+    private StartPos pickerSlot() {
+        if (pickerFor == null) return null;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return null;
+        String name = mc.player.getName().getString();
+        for (StartPos sp : StartPosClientEvents.startPoses)
+            if (sp.pos.equals(pickerFor) && sp.enabled && sp.playerName.equals(name))
+                return sp;
+        return null;
+    }
+
+    private void validatePicker() {
+        if (picker.isOpen() && pickerSlot() == null) {
+            picker.close();
+            pickerFor = null;
+        }
+    }
+
+    private void openPicker(StartPos sp, int x1, int y1, int x2, int y2) {
+        pickerFor = sp.pos;
+        Faction current = sp.playerName.isBlank() ? Factions.NONE : sp.faction;
+        picker.open(x1, y1, x2, y2, this.width, this.height, FactionPicker.lobbyEntries(), current, f -> {
+            StartPos slot = pickerSlot();
+            pickerFor = null;
+            // picking the faction already chosen clears it, as clicking a selected tile did
+            if (slot != null) pickFaction(slot, f);
+        });
+    }
+
+    /** The local player's own slot row chip, used to open the picker from the keyboard. */
+    private RowHit ownChip() {
+        return chipHits.isEmpty() ? null : chipHits.get(0);
     }
 
     private boolean isMouseOverOverlay(int mx, int my) {
+        if (picker.isOpen()) return true;
         if (mx >= chatX1 && mx <= chatX2 && my >= chatY1 && my <= chatY2) return true;
         return GameruleClient.gamerulesMenuOpen;
     }
@@ -328,6 +384,8 @@ public class MatchStartScreen extends Screen {
         int viewTop = contentTop;
         int viewBottom = y2 - 4;
         rosterViewH = viewBottom - viewTop;
+        rosterViewTop = viewTop;
+        rosterViewBottom = viewBottom;
 
         boolean localSeated = mc.player != null && seatedPlayers.contains(localName);
         int contentH = 0;
@@ -416,17 +474,20 @@ public class MatchStartScreen extends Screen {
             g.fill(x, y, x + 2, rowBottom, ACCENT);
         }
 
+        int tileY = y + ((ROW_H - FRAME_SIZE) / 2) - 1;
+        int readyX = x + width - FRAME_SIZE - 2;
+        int chipW = Math.max(CHIP_MIN_W, Math.min(CHIP_MAX_W, width * 2 / 5));
+        int chipX2 = readyX - 4;
+        int chipX1 = chipX2 - chipW;
+        int chipY1 = y + (ROW_H - 2 - CHIP_H) / 2;
+        int chipY2 = chipY1 + CHIP_H;
+        int rowHitRight = chipX1 - 5;
+
         // Highlight clickable rows (empty slots or my slot's left area) like the spectate button
         if (sp.enabled && (empty || mine)) {
-            int rowHitRight = x + width - FRAME_SIZE * (FACTION_TILES - 1) - 2 * 2 - FRAME_SIZE - 6 - 8 - 16;
             boolean hovered = !overlayActive && mx >= x && mx <= rowHitRight && my >= y && my <= rowBottom;
             if (hovered) g.fill(x, y, rowHitRight, rowBottom, 0x32FFFFFF);
         }
-
-        int tileY = y + ((ROW_H - FRAME_SIZE) / 2) - 1;
-        int readyX = x + width - FRAME_SIZE - 2;
-        int factionTotalW = FRAME_SIZE * (FACTION_TILES - 1) + 2 * 2;
-        int factionStartX = readyX - 20 - factionTotalW;
 
         int headX = x + 6;
         int innerOffset = (FRAME_SIZE - ICON_SIZE) / 2;
@@ -451,22 +512,58 @@ public class MatchStartScreen extends Screen {
                 : sp.playerName;
         int nameCol = empty ? TEXT_DIM : TEXT_NORMAL;
         int nameX = headX + FRAME_SIZE + 6;
-        int nameMaxW = factionStartX - nameX - 6;
+        int nameMaxW = chipX1 - nameX - 6;
         String drawnName = this.font.plainSubstrByWidth(name, nameMaxW);
         g.drawString(this.font, drawnName, nameX, tileY + (FRAME_SIZE - this.font.lineHeight) / 2 + 1, nameCol, false);
 
-        Faction[] order = { Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT, Factions.TIDEWROUGHT, Factions.RANDOM };
-        int currentX = factionStartX - 6;
-        for (Faction f : order) {
-            renderFactionTile(g, sp, f, currentX, tileY, localName, mx, my);
-            currentX += FRAME_SIZE;
-        }
+        renderFactionChip(g, sp, mine, empty, chipX1, chipY1, chipX2, chipY2, mx, my, overlayActive);
         renderReadyTile(g, sp, readyX, tileY, localName, mx, my);
 
         if (sp.enabled && (empty || mine)) {
-            int rowHitRight = factionStartX - 5;
             rowHits.add(new RowHit(sp, x, y, rowHitRight, rowBottom));
         }
+        // only a chip inside the roster's visible (scissored) area can be clicked
+        if (mine && chipY1 >= rosterViewTop && chipY2 <= rosterViewBottom) {
+            chipHits.add(new RowHit(sp, chipX1, chipY1, chipX2, chipY2));
+        }
+    }
+
+    /**
+     * The slot's faction as one chip: icon + name. On your own slot it is a button that opens the faction list (an
+     * accent label prompts when nothing is chosen yet); on anyone else's it only shows their pick.
+     */
+    private void renderFactionChip(GuiGraphics g, StartPos sp, boolean mine, boolean empty,
+                                   int x1, int y1, int x2, int y2, int mx, int my, boolean overlayActive) {
+        boolean open = mine && picker.isOpen() && sp.pos.equals(pickerFor);
+        boolean hovered = mine && !overlayActive && mx >= x1 && mx < x2 && my >= y1 && my < y2;
+        int edge = open || hovered ? ACCENT : 0xFF3A3F46;
+        g.fill(x1 - 1, y1 - 1, x2 + 1, y2 + 1, edge);
+        g.fill(x1, y1, x2, y2, hovered ? 0xC0303640 : 0xC0181B20);
+
+        Faction f = empty ? Factions.NONE : sp.faction;
+        boolean chosen = f != Factions.NONE && f != Factions.NEUTRAL;
+        int textX = x1 + 4;
+        if (chosen) {
+            FactionPicker.renderIcon(g, f, x1 + 2, y1 + (CHIP_H - ICON_SIZE) / 2, ICON_SIZE, false);
+            textX = x1 + 2 + ICON_SIZE + 4;
+        }
+        String label;
+        int col;
+        if (chosen) {
+            label = MiscUtil.getFactionName(f);
+            col = mine ? TEXT_NORMAL : TEXT_DIM;
+        } else if (mine) {
+            label = I18n.get("matchstart.reignofnether.choose_faction");
+            col = ACCENT;
+        } else {
+            label = "-";
+            col = TEXT_DIM;
+        }
+        int arrowW = mine ? this.font.width("v") + 4 : 0;
+        int textY = y1 + (CHIP_H - this.font.lineHeight) / 2 + 1;
+        g.drawString(this.font, this.font.plainSubstrByWidth(label, x2 - textX - arrowW - 2), textX, textY, col, false);
+        if (mine)
+            g.drawString(this.font, "v", x2 - arrowW + 1, textY, open || hovered ? ACCENT : TEXT_DIM, false);
     }
 
     private void renderSpectatorRow(GuiGraphics g, String name, boolean isLocal,
@@ -479,40 +576,6 @@ public class MatchStartScreen extends Screen {
         String tag = Component.translatable("matchstart.reignofnether.spectator_tag").getString();
         int w = this.font.width(tag);
         g.drawString(this.font, tag, x + width - w - 8, y + 9, TEXT_DIM, false);
-    }
-
-    private void renderFactionTile(GuiGraphics g, StartPos sp, Faction f,
-                                   int x, int y, String localName, int mx, int my) {
-        boolean mine = !sp.playerName.isBlank() && sp.playerName.equals(localName);
-        ResourceLocation icon = f.icon;
-        if (f == Factions.RANDOM)
-            icon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/hud/question_mark.png");
-
-        if (f.preview) {
-            // announced, not built yet: greyed, never selectable, says so on hover
-            Button preview = new ButtonBuilder("Faction " + f.getName())
-                    .iconResource(icon)
-                    .isSelected(() -> false)
-                    .isEnabled(() -> false)
-                    .tooltipLines(List.of(fcs(MiscUtil.getFactionName(f)),
-                            fcs(I18n.get("matchstart.reignofnether.faction_coming_soon"))))
-                    .build();
-            preview.render(g, x, y, mx, my);
-            hudButtons.add(preview);
-            return;
-        }
-
-        Button button = new ButtonBuilder("Faction " + f.getName())
-                .iconResource(icon)
-                .isSelected(() -> sp.faction == f && !sp.playerName.isBlank())
-                .isEnabled(() -> mine)
-                .onLeftClick(() -> pickFaction(sp, f))
-                .tooltipLines(List.of(fcs(MiscUtil.getFactionName(f))))
-                .showSelectedFrameWhenDisabled()
-                .build();
-
-        button.render(g, x, y, mx, my);
-        hudButtons.add(button);
     }
 
     private void renderReadyTile(GuiGraphics g, StartPos sp, int x, int y,
@@ -658,6 +721,7 @@ public class MatchStartScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (picker.mouseScrolled(mouseX, mouseY, delta)) return true;
         int mx = (int) mouseX, my = (int) mouseY;
         if (mx >= rosX1 && mx <= rosX2 && my >= rosY1 && my <= rosY2) {
             rosterScroll -= (int) (delta * 18);
@@ -678,8 +742,22 @@ public class MatchStartScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // the open faction list takes every click (an entry picks, anything else closes it)
+        if (picker.mouseClicked(mouseX, mouseY, button)) {
+            if (!picker.isOpen()) pickerFor = null;
+            return true;
+        }
         int mx = (int) mouseX, my = (int) mouseY;
         boolean left = button == 0;
+
+        if (left && !GameruleClient.gamerulesMenuOpen) {
+            for (RowHit ch : chipHits) {
+                if (mx >= ch.x1 && mx < ch.x2 && my >= ch.y1 && my < ch.y2) {
+                    openPicker(ch.pos, ch.x1, ch.y1, ch.x2, ch.y2);
+                    return true;
+                }
+            }
+        }
 
         // Minimise / maximise toggle for chat card
         if (left) {
@@ -773,6 +851,19 @@ public class MatchStartScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (picker.isOpen()) {
+            picker.keyPressed(keyCode);
+            if (!picker.isOpen()) pickerFor = null;
+            return true;
+        }
+        // F opens your slot's faction list from the keyboard (not while typing in chat)
+        if (keyCode == GLFW.GLFW_KEY_F && (chatInput == null || !chatInput.isFocused())) {
+            RowHit own = ownChip();
+            if (own != null) {
+                openPicker(own.pos, own.x1, own.y1, own.x2, own.y2);
+                return true;
+            }
+        }
         if (chatInput != null && !chatMinimised) {
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
                 sendChatFromInput();

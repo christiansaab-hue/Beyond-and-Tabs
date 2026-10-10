@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
 import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.matchstart.SkirmishServerboundPacket;
 import com.solegendary.reignofnether.player.PlayerPalette;
 import com.solegendary.reignofnether.resources.MetalPatches;
 
@@ -2231,6 +2232,46 @@ public class SkirmishGameTests {
             net.minecraft.world.phys.Vec3.atCenterOf(helper.absolutePos(BlockPos.ZERO)), tide, 0);
         if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(botName))
             helper.fail("a bot was started as the preview Tidewrought");
+        helper.succeed();
+    }
+
+    /**
+     * The skirmish faction codes (SkirmishServerboundPacket.CODE_PATHS) behind the lobby's faction picker: every live
+     * or preview faction has a code and maps back to itself, the historic codes keep their meaning (0-2 the first
+     * three, 3 Random, 4 the Court, 5 the reserved Tidewrought), and the server only ever starts a live faction from
+     * any code (Random, preview, unknown all roll a live one). Pure static data, safe in parallel.
+     */
+    @GameTest(template = ARENA)
+    public static void skirmish_faction_codes_round_trip_for_every_faction(GameTestHelper helper) {
+        if (SkirmishServerboundPacket.RANDOM_CODE != 3)
+            helper.fail("the Random code moved off 3");
+        var fixed = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.RANDOM,
+            Factions.VERDANT_COURT, Factions.TIDEWROUGHT);
+        for (int c = 0; c < fixed.size(); c++)
+            if (SkirmishServerboundPacket.factionForCode(c) != fixed.get(c))
+                helper.fail("code " + c + " no longer names " + fixed.get(c).getName());
+        var rng = new java.util.Random(7);
+        for (var f : ReignOfNetherRegistries.FACTIONS) {
+            if (!Factions.isLive(f) && !f.preview)
+                continue;
+            int code = SkirmishServerboundPacket.codeOf(f);
+            if (code < 0)
+                helper.fail(f.getName() + " has no skirmish faction code, so the picker can't offer it");
+            if (SkirmishServerboundPacket.factionForCode(code) != f)
+                helper.fail(f.getName() + "'s code " + code + " does not map back to it");
+            var started = SkirmishServerboundPacket.factionOf(code, rng);
+            if (Factions.isLive(f) ? started != f : !Factions.isLive(started))
+                helper.fail("code " + code + " (" + f.getName() + ") started as " + started.getName());
+        }
+        for (int code : new int[]{ -1, 3, 5, 99 })
+            for (int i = 0; i < 50; i++)
+                if (!Factions.isLive(SkirmishServerboundPacket.factionOf(code, rng))) {
+                    helper.fail("code " + code + " started a faction that is not live");
+                    return;
+                }
+        if (SkirmishServerboundPacket.factionForCode(99) != Factions.NONE
+                || SkirmishServerboundPacket.codeOf(Factions.NEUTRAL) != -1)
+            helper.fail("unknown codes / factions without a code are not reported as such");
         helper.succeed();
     }
 

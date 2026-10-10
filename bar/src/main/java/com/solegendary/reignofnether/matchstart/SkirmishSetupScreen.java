@@ -1,6 +1,9 @@
 package com.solegendary.reignofnether.matchstart;
 
+import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.player.PlayerColors;
+import com.solegendary.reignofnether.util.MiscUtil;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,10 +25,8 @@ import java.util.stream.IntStream;
  * session so a rematch is one click. Teams are alliances: everyone on your team is your ally in the match.
  */
 public class SkirmishSetupScreen extends Screen {
-    // indexed by the packet's faction code (SkirmishServerboundPacket): 3 stays "Random", the Court took 4.
-    // FACTION_ORDER is the order the cycler walks them, with Random last as before
-    static final List<String> FACTIONS = List.of("Sunforged", "Gravebound", "Ironhide", "Random", "Verdant");
-    static final List<Integer> FACTION_ORDER = List.of(0, 1, 2, 4, 3);
+    // factions are chosen by packet code (SkirmishServerboundPacket.CODE_PATHS: 3 stays "Random", the Court took 4,
+    // 5 is the reserved Tidewrought) through the shared FactionPicker dropdown, which lists every coded faction
     static final List<String> DIFFICULTIES = List.of("Easy", "Medium", "Hard");
     static final List<String> ARENAS = List.of("Small", "Medium", "Large", "Huge", "Random");
     static final List<String> METALS = List.of("Lean", "Normal", "Rich", "Random");
@@ -40,7 +41,7 @@ public class SkirmishSetupScreen extends Screen {
 
     /** Everything the lobby decides; codes match SkirmishServerboundPacket. */
     public static class Settings {
-        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random, 4 Verdant
+        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random, 4 Verdant, 5 Tidewrought (reserved)
         public int colour = 1;           // index into PlayerColors.colors (0..PLAYER_COLOR_COUNT-1), or -1 random
         public int team = 0;             // 0 = Team 1, 1 = Team 2
         public final List<Bot> bots = new ArrayList<>();
@@ -88,6 +89,7 @@ public class SkirmishSetupScreen extends Screen {
     Object paletteFor = null;
     static final Object PLAYER = new Object();
     int palX, palY;
+    final FactionPicker picker = new FactionPicker();
 
     public SkirmishSetupScreen(Screen parent) {
         super(Component.translatable("quickbattle.reignofnether.title"));
@@ -108,6 +110,8 @@ public class SkirmishSetupScreen extends Screen {
     @Override
     protected void init() {
         swatches.clear();
+        factionIcons.clear();
+        picker.close();
         int totalW = Math.min(width - 16, 620);
         int left = width / 2 - totalW / 2;
         navW = 84;
@@ -181,17 +185,13 @@ public class SkirmishSetupScreen extends Screen {
 
         if (settings.team == team) {
             swatches.add(new Object[]{ x + 4, y + 5, PLAYER });
-            addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(FACTIONS.get(i)))
-                .withValues(FACTION_ORDER).withInitialValue(settings.faction)
-                .create(x + w - 150, y, 80, ROW_H - 2, Component.literal(""), (b, v) -> settings.faction = v));
+            addFactionButton(x, w, y, settings.faction, v -> settings.faction = v);
             y += ROW_H;
         }
         List<Bot> teamBots = settings.bots.stream().filter(b -> b.team == team).toList();
         for (Bot bot : teamBots) {
             swatches.add(new Object[]{ x + 4, y + 5, bot });
-            addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(FACTIONS.get(i)))
-                .withValues(FACTION_ORDER).withInitialValue(bot.faction)
-                .create(x + w - 150, y, 80, ROW_H - 2, Component.literal(""), (b, v) -> bot.faction = v));
+            addFactionButton(x, w, y, bot.faction, v -> bot.faction = v);
             addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(DIFFICULTIES.get(i)))
                 .withValues(range(3)).withInitialValue(bot.difficulty)
                 .create(x + w - 68, y, 50, ROW_H - 2, Component.literal(""), (b, v) -> bot.difficulty = v));
@@ -206,6 +206,44 @@ public class SkirmishSetupScreen extends Screen {
         return y + 4;
     }
 
+    // the faction button sits left of the difficulty cycler; up to 104 px (the old cycler was 80) so full names fit
+    static final int FACTION_BTN_MAX_W = 104, FACTION_BTN_MIN_W = 60;
+
+    /** The display faction for a code; an unknown code shows as Random, which is what the server makes of it. */
+    static Faction factionForCode(int code) {
+        Faction f = SkirmishServerboundPacket.factionForCode(code);
+        return f == Factions.NONE ? Factions.RANDOM : f;
+    }
+
+    /**
+     * A row's faction choice: a button showing the faction (icon drawn in render) that opens the faction list. Enter
+     * on the focused button opens it too, so the screen stays usable from the keyboard (Tab, Enter, arrows, Enter).
+     */
+    void addFactionButton(int rowX, int rowW, int by, int code, java.util.function.IntConsumer set) {
+        // right edge stays left of the difficulty cycler (x + w - 68); narrower rows (GUI scale 3 on small screens)
+        // shrink the button before it can run into the row's name
+        int bw = Math.max(FACTION_BTN_MIN_W, Math.min(FACTION_BTN_MAX_W, rowW - 72 - 90));
+        int bx = rowX + rowW - 72 - bw;
+        Faction shown = factionForCode(code);
+        addRenderableWidget(Button.builder(Component.literal(MiscUtil.getFactionName(shown)), b -> {
+            paletteFor = null;
+            picker.open(b.getX(), b.getY(), b.getX() + b.getWidth(), b.getY() + b.getHeight(), width, height,
+                FactionPicker.skirmishEntries(), shown, f -> {
+                    int c = SkirmishServerboundPacket.codeOf(f);
+                    set.accept(c >= 0 ? c : SkirmishServerboundPacket.RANDOM_CODE);
+                    rebuild();
+                    // keep keyboard focus on this row's button after the rebuild
+                    for (var child : children())
+                        if (child instanceof Button nb && nb.getX() == bx && nb.getY() == by)
+                            setFocused(nb);
+                });
+        }).bounds(bx, by, bw, ROW_H - 2).build());
+        factionIcons.add(new Object[]{ bx, by, shown });
+    }
+
+    /** Faction icons drawn on the left of each faction button: x, y of the button and the faction. */
+    final List<Object[]> factionIcons = new ArrayList<>();
+
     void rebuild() {
         clearWidgets();
         init();
@@ -213,6 +251,12 @@ public class SkirmishSetupScreen extends Screen {
 
     @Override
     public void render(GuiGraphics gg, int mx, int my, float pt) {
+        // while the faction list is open nothing beneath it may light up or show a tooltip
+        int realMx = mx, realMy = my;
+        if (picker.isOpen()) {
+            mx = -10000;
+            my = -10000;
+        }
         renderBackground(gg);
         gg.fill(navX - 4, top - 4, rightX + rightW + 4, bottom + 4, BG);
         gg.fill(navX - 4, top - 5, rightX + rightW + 4, top - 4, EDGE);
@@ -231,6 +275,10 @@ public class SkirmishSetupScreen extends Screen {
 
         super.render(gg, mx, my, pt);
 
+        // each faction button's icon, just left of it (vanilla buttons centre their label, so outside keeps it clear)
+        for (Object[] fi : factionIcons)
+            FactionPicker.renderIcon(gg, (Faction) fi[2], (Integer) fi[0] - 14, (Integer) fi[1] + (ROW_H - 2 - 12) / 2, 12, false);
+
         if (paletteFor != null) {
             int cols = PAL_PER_ROW, rows = (PlayerColors.PLAYER_COLOR_COUNT + cols - 1) / cols;
             int pw = cols * (PAL_SWATCH + PAL_GAP) + 6, ph = rows * (PAL_SWATCH + PAL_GAP) + 30;
@@ -248,6 +296,23 @@ public class SkirmishSetupScreen extends Screen {
             }
             gg.drawString(font, "right-click: random/auto", palX + 4, palY + ph - 11, DIM, false);
         }
+
+        picker.render(gg, font, realMx, realMy);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        if (picker.mouseScrolled(mx, my, delta))
+            return true;
+        return super.mouseScrolled(mx, my, delta);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // the open list swallows every key, Escape included (it closes the list, not the screen)
+        if (picker.keyPressed(keyCode))
+            return true;
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     void renderTeam(GuiGraphics gg, int team, int y) {
@@ -334,6 +399,8 @@ public class SkirmishSetupScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (picker.mouseClicked(mx, my, button))
+            return true;
         if (paletteFor != null) {
             int cols = PAL_PER_ROW;
             if (button == 1) {   // right-click anywhere in the popup: back to random/auto

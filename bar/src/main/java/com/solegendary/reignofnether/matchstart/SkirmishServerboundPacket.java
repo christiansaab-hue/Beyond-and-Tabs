@@ -9,6 +9,7 @@ import com.solegendary.reignofnether.registrars.PacketHandler;
 import com.solegendary.reignofnether.startpos.BattlefieldSetup;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
@@ -26,7 +27,8 @@ import java.util.function.Supplier;
  * configured bot at the chosen spawn distance.
  *
  * Faction codes: 0 Sunforged Kingdom (villagers), 1 Gravebound (monsters), 2 Ironhide Horde (piglins), 3 random,
- * 4 Verdant Court. 3 kept its meaning when the Court arrived (codes travel as bytes and persist in the lobby screen).
+ * 4 Verdant Court, 5 Tidewrought (reserved, preview). 3 kept its meaning when the Court arrived (codes travel as bytes
+ * and persist in the lobby screen); the table is CODE_PATHS.
  * Arena: 0 small, 1 medium, 2 large, 3 huge, 4 random.  Metal: 0 lean, 1 normal, 2 rich, 3 random.
  * Spawn distance: 0 close, 1 normal, 2 far.  Difficulty: 0 easy, 1 medium, 2 hard.
  */
@@ -86,16 +88,41 @@ public class SkirmishServerboundPacket {
         buf.writeByte(spawnDistance);
     }
 
-    static Faction factionOf(int code, Random rng) {
-        return switch (code) {
-            case 0 -> Factions.VILLAGERS;
-            case 1 -> Factions.MONSTERS;
-            case 2 -> Factions.PIGLINS;
-            case 4 -> Factions.VERDANT_COURT;
-            // 5 is reserved for the Tidewrought (design/tidewrought_plan.md); while it is a preview the code falls to
-            // random like any unknown one, so a modified client can't start it from the skirmish screen either
-            default -> Factions.randomLive(rng);
-        };
+    /** The code the "Random" entry sends; it kept 3 when the Court arrived. */
+    public static final int RANDOM_CODE = 3;
+
+    // faction code -> registry path, indexed by code. 3 is Random; 5 is reserved for the Tidewrought
+    // (design/tidewrought_plan.md). A new faction appends its path here, so every code already in a remembered lobby
+    // keeps its meaning and the lobby's picker lists it without further changes
+    static final List<String> CODE_PATHS = List.of("villagers", "monsters", "piglins", "random", "verdant_court", "tidewrought");
+
+    /** Number of codes in use (0 .. codeCount()-1), Random included. */
+    public static int codeCount() {
+        return CODE_PATHS.size();
+    }
+
+    /** The faction a code names, Factions.RANDOM for the Random code, NONE for an unknown code. Never rolls. */
+    public static Faction factionForCode(int code) {
+        if (code < 0 || code >= CODE_PATHS.size())
+            return Factions.NONE;
+        return Factions.getFaction(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, CODE_PATHS.get(code)));
+    }
+
+    /** The code for a faction (Random gives RANDOM_CODE), or -1 when the faction has none. */
+    public static int codeOf(Faction f) {
+        if (f == null || f.key == null || !ReignOfNether.MOD_ID.equals(f.key.getNamespace()))
+            return -1;
+        return CODE_PATHS.indexOf(f.key.getPath());
+    }
+
+    /**
+     * The faction a player or bot actually starts as. Only a live faction is honoured; Random, an unknown code and a
+     * preview faction (5, the Tidewrought, while it has no units) all roll a random live one, so a modified client
+     * can't start a preview from the skirmish screen either.
+     */
+    public static Faction factionOf(int code, Random rng) {
+        Faction f = factionForCode(code);
+        return Factions.isLive(f) ? f : Factions.randomLive(rng);
     }
 
     // the registry path ("villagers", "monsters", "piglins", "verdant_court") is what /bot add parses; an unknown faction is then
