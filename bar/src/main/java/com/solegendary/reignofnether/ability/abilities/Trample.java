@@ -90,6 +90,7 @@ public class Trample extends Ability {
             Vec3 at = origin.add(fwd.scale(i));
             sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, at.x, at.y + 0.2, at.z, 2, 1.0, 0.1, 1.0, 0.01);
         }
+        com.solegendary.reignofnether.barfx.BarFx.heavyImpact(sl, origin.add(fwd.scale(LENGTH)), 2.5f);
         this.setToMaxCooldown(unitUsing);
         AbilityClientboundPacket.sendSetCooldownPacket(self.getId(), this.action, this.cooldownMax);
     }

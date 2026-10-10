@@ -1748,6 +1748,76 @@ public class SkirmishGameTests {
         return n;
     }
 
+    /**
+     * Results-screen graphs: each sample records the owner's metal/energy income and army value (metal cost of their
+     * living units), the sample count grows one per call, and a long match stays capped with a doubled interval.
+     * Uses its own owner name and a private RTSPlayer, so parallel tests can't change its numbers.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void match_history_samples_income_and_army(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_historian";
+        var a = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var b = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (a == null || b == null) {
+            helper.fail("could not create vindicator units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 3));
+        a.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        b.moveTo(at.getX() + 1.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        a.setOwnerName(owner);
+        b.setOwnerName(owner);
+        level.addFreshEntity(a);
+        level.addFreshEntity(b);
+        var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner);
+        helper.runAfterDelay(3, () -> {
+            eco.metalIncome = 3f;
+            eco.energyIncome = 25f;
+            var player = com.solegendary.reignofnether.player.RTSPlayer.getNewBot(owner,
+                com.solegendary.reignofnether.faction.Factions.VILLAGERS);
+            var hist = player.history;
+            var players = List.of(player);
+            for (int i = 1; i <= 3; i++) {
+                com.solegendary.reignofnether.player.MatchHistory.sampleAll(players);
+                if (hist.size() != i)
+                    helper.fail("sample " + i + " not recorded, size " + hist.size());
+            }
+            float expectedArmy = a.getCost().metal() + b.getCost().metal();
+            if (Math.abs(hist.metal[2] - 3f) > 0.01f || Math.abs(hist.energy[2] - 25f) > 0.01f)
+                helper.fail("income sample wrong: " + hist.metal[2] + " metal/s, " + hist.energy[2] + " energy/s");
+            if (expectedArmy <= 0 || Math.abs(hist.army[2] - expectedArmy) > 0.5f)
+                helper.fail("army value " + hist.army[2] + ", expected " + expectedArmy);
+
+            // a dead unit no longer counts
+            a.discard();
+            com.solegendary.reignofnether.player.MatchHistory.sampleAll(players);
+            if (Math.abs(hist.army[3] - b.getCost().metal()) > 0.5f)
+                helper.fail("army value after a loss " + hist.army[3] + ", expected " + b.getCost().metal());
+
+            // a very long match: capped, interval doubled, the first sample kept
+            for (int i = 0; i < 500; i++)
+                hist.offer(1f, 2f, 3f);
+            int max = com.solegendary.reignofnether.player.MatchHistory.MAX_SAMPLES;
+            if (hist.size() > max || hist.size() < max / 2)
+                helper.fail("history not capped: " + hist.size() + " samples");
+            if (hist.getIntervalTicks() <= com.solegendary.reignofnether.player.MatchHistory.SAMPLE_TICKS)
+                helper.fail("interval did not grow on compaction: " + hist.getIntervalTicks());
+            if (Math.abs(hist.metal[0] - 3f) > 0.01f)
+                helper.fail("compaction lost the first sample: " + hist.metal[0]);
+            // the timeline must still span the whole match (samples * interval ~ calls * SAMPLE_TICKS)
+            long span = (long) (hist.size() - 1) * hist.getIntervalTicks();
+            long real = (long) (504 - 1) * com.solegendary.reignofnether.player.MatchHistory.SAMPLE_TICKS;
+            if (span > real || span < real - hist.getIntervalTicks())
+                helper.fail("compacted timeline " + span + " ticks does not match " + real);
+
+            eco.metalIncome = 0;
+            eco.energyIncome = 0;
+            b.discard();
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

@@ -128,6 +128,8 @@ public class MagmaRupture extends Ability {
             sl.sendParticles(ParticleTypes.FLAME, at.x, at.y + 0.3, at.z, 2, 0.3, 0.4, 0.3, 0.03);
         }
         Vec3 mid = from.add(seg.scale(0.5));
+        com.solegendary.reignofnether.barfx.BarFx.heavyImpact(sl, mid, 2f);
+        com.solegendary.reignofnether.barfx.BarFx.heavyImpact(sl, to, 2f);
         sl.playSound(null, BlockPos.containing(mid), SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 1.5f, 0.6f);
         sl.playSound(null, BlockPos.containing(mid), SoundEvents.LAVA_POP, SoundSource.HOSTILE, 3f, 0.8f);
         return hit;

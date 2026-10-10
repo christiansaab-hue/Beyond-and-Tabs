@@ -28,7 +28,8 @@ public final class BarFx {
     private BarFx() { }
 
     // ---- event types
-    public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6;
+    public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6,
+            SCORCH = 7;
 
     // ---- nanolathe beam tints (NANO kind): one per faction so a glance tells whose builders are at work
     public static final byte N_SUNFORGED = 0, N_GRAVEBOUND = 1, N_HORDE = 2;
@@ -45,6 +46,17 @@ public final class BarFx {
 
     // ---- death kinds
     public static final byte D_FLESH = 0, D_CONSTRUCT = 1, D_BONE = 2, D_SLIME = 3;
+
+    // ---- death flags: low 2 bits = faction debris tint, next 2 bits = cost tier (0 = not an RTS unit)
+    public static final byte F_NONE = 0, F_SUNFORGED = 1, F_GRAVEBOUND = 2, F_HORDE = 3;
+
+    /** Metal cost from which a dying unit counts as T2 / T3 for its death blast (T1 below). */
+    public static final int T2_METAL = 120, T3_METAL = 500;
+
+    /** Cost tier 1-3 from a unit's metal cost (death blast size). */
+    public static int tierOf(int metal) {
+        return metal >= T3_METAL ? 3 : metal >= T2_METAL ? 2 : 1;
+    }
 
     /** One effect event. Meaning of a/b/c depends on the type (see the emit helpers). */
     public static final class Event {
@@ -123,8 +135,27 @@ public final class BarFx {
 
     /** A unit / mob dies. width & height are its bounding box. */
     public static void death(Level level, Vec3 pos, byte kind, float width, float height) {
+        death(level, pos, kind, width, height, F_NONE, 0);
+    }
+
+    /**
+     * An RTS unit dies: faction (F_*) picks the debris tint, tier (1-3, from its metal cost) the size of the blast.
+     * tier 0 = a plain mob (the old untinted puff).
+     */
+    public static void death(Level level, Vec3 pos, byte kind, float width, float height, byte faction, int tier) {
         if (level == null || level.isClientSide() || pos == null) return;
-        emit(level, new Event(DEATH, kind, (byte) 0, (float) pos.x, (float) pos.y, (float) pos.z, width, height, 0));
+        byte flags = (byte) ((faction & 3) | ((Math.max(0, Math.min(3, tier)) & 3) << 2));
+        emit(level, new Event(DEATH, kind, flags, (float) pos.x, (float) pos.y, (float) pos.z, width, height, 0));
+    }
+
+    /**
+     * A heavy weapon lands (artillery shell, T3 ability): the client leaves a ring of dark smoke and a scorch mark
+     * that linger ~2 s. radius = the blast's reach in blocks.
+     */
+    public static void heavyImpact(Level level, Vec3 pos, float radius) {
+        if (level == null || level.isClientSide() || pos == null) return;
+        emit(level, new Event(SCORCH, (byte) 0, (byte) 0, (float) pos.x, (float) pos.y, (float) pos.z,
+                Math.max(.75f, Math.min(radius, 8f)), 0, 0));
     }
 
     /** One block of a building is knocked out (state = the block before it was removed, may be null). */

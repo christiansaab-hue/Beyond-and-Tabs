@@ -40,7 +40,14 @@ public final class BarFxClient {
     private static final Minecraft MC = Minecraft.getInstance();
 
     // particle kinds
-    static final int FLASH = 0, SMOKE = 1, SPARK = 2, DEBRIS = 3, FIRE = 4, RING = 5, BEAM = 6, DECAL = 7, EMITTER = 8;
+    static final int FLASH = 0, SMOKE = 1, SPARK = 2, DEBRIS = 3, FIRE = 4, RING = 5, BEAM = 6, DECAL = 7, EMITTER = 8,
+            DELAY = 9;   // invisible timer: a building collapse's secondary pop, fired when it expires
+
+    /**
+     * Per-packet (= per server tick) budget of full unit-death effects. A big 8v8 trade can kill dozens of units in
+     * one tick; past the budget a death only gets its flash, so the frame cost stays flat however many die.
+     */
+    static final int DEATH_BUDGET = 24;
     static final int MAX = 4000, MAX_DECALS = 260, MAX_DEBRIS = 900;
 
     static final class P {
@@ -96,7 +103,7 @@ public final class BarFxClient {
     private static void init(P p, int kind, float x, float y, float z, float life, float size, int color) {
         p.kind = kind; p.x = x; p.y = y; p.z = z; p.born = clock; p.life = Math.max(.01f, life); p.size = size; p.color = color;
         p.vx = p.vy = p.vz = 0; p.grow = 1; p.spin = 0; p.alpha = 1; p.ground = Float.NaN; p.groundKey = Integer.MIN_VALUE;
-        p.steady = false;
+        p.steady = false; p.crater = false; p.x2 = p.y2 = p.z2 = 0;
     }
 
     public static void clear() {
@@ -109,13 +116,19 @@ public final class BarFxClient {
         if (MC.level == null || events == null) return;
         try {
             boolean busy = live.size() > MAX * 3 / 4;
+            int deaths = 0;
             for (BarFx.Event e : events) {
                 if (e == null || !visible(e.x, e.y, e.z)) continue;
                 switch (e.type) {
                     case BarFx.SHOT -> { if (!busy || R.nextInt(3) == 0) shot(e.kind, e.x, e.y, e.z, e.a, e.b, e.c); }
                     case BarFx.IMPACT -> { if (!busy || R.nextInt(2) == 0) hit(e.kind, e.flags, e.x, e.y, e.z, e.a, e.c, e.b); }
                     case BarFx.EXPLOSION -> explosion(e.kind, e.x, e.y, e.z, e.a);
-                    case BarFx.DEATH -> death(e.kind, e.x, e.y, e.z, e.a, e.b);
+                    case BarFx.DEATH -> {
+                        // the flash always shows (it is what says "something died"); debris only within budget
+                        boolean full = deaths++ < (busy ? DEATH_BUDGET / 3 : DEATH_BUDGET);
+                        death(e.kind, e.flags & 3, (e.flags >> 2) & 3, e.x, e.y, e.z, e.a, e.b, full);
+                    }
+                    case BarFx.SCORCH -> scorchRing(e.x, e.y, e.z, e.a, busy);
                     case BarFx.BUILDING_PART -> buildingPart(e.x, e.y, e.z, (int) e.a);
                     case BarFx.COLLAPSE -> collapse(e.x, e.y, e.z, e.a, e.b);
                     case BarFx.NANO -> nano(e.kind, e.flags, e.x, e.y, e.z, e.a, e.b, e.c, busy);
@@ -202,7 +215,12 @@ public final class BarFxClient {
                 for (int i = 0; i < 2; i++) { P p = smoke(x, y + .2f, z, .25f, 2.2f, 0x3A3632, .55f); p.vy = .5f; p.grow = 1.8f; }
                 if (where == BarFx.AT_GROUND) scorch(x, y, z, .55f, 30, 0x16120E);
             }
-            case BarFx.K_BIG_FIREBALL, BarFx.K_TNT, BarFx.K_ROCKET -> flash(x, y, z, .9f, .1f, 0xFFD080);
+            case BarFx.K_BIG_FIREBALL, BarFx.K_TNT, BarFx.K_ROCKET -> {
+                flash(x, y, z, .9f, .1f, 0xFFD080);
+                // heavy shells landing on open ground leave a short-lived scorched ring (the blast itself, if any,
+                // comes as its own EXPLOSION event)
+                if (where == BarFx.AT_GROUND && kind == BarFx.K_BIG_FIREBALL) scorchRing(x, y, z, 1.2f * size, true);
+            }
             case BarFx.K_MAGIC -> {
                 flash(x, y, z, .9f, .15f, 0xD8B8FF);
                 sparks(x, y, z, 8, 3.5f, 0xD8B8FF, -dx, -dz);
@@ -271,13 +289,25 @@ public final class BarFxClient {
             scorch(x, g, z, .5f + r * .55f, 40, 0x16120E);
             if (r >= 2) crater(x, g, z, r * .45f, ground);
         }
+        if (onGround && r >= 2.5f) scorchRing(x, g, z, r * .8f, live.size() > MAX * 3 / 4);   // artillery-sized
         if (r >= 2.5f) shake(r * .12f, x, y, z);   // only real blasts (creepers, commander death), not small pops
     }
 
-    /** A unit falls. Constructs burst into sparks and leave a smoking wreck; living things leave a puff of dust. */
-    static void death(int kind, float x, float y, float z, float w, float h) {
+    /**
+     * A unit falls. Every death gets a short flash; then, by kind, constructs burst into sparks and leave a smoking
+     * wreck, bones scatter, slimes splatter and living things leave a puff of dust. RTS units also throw a puff of
+     * faction-tinted debris (Sunforged: gold and iron nuggets in white smoke; Gravebound: bone fragments and rising
+     * soul wisps; Horde: ember sparks in dark smoke) sized by cost tier: T1 small, T2 medium, T3 a proper blast with a
+     * brief light ring. Never any camera shake - a big fight would never stop shaking.
+     * full = false (over the per-tick budget): just the flash.
+     */
+    static void death(int kind, int faction, int tier, float x, float y, float z, float w, float h, boolean full) {
         float scale = Math.max(.4f, Math.min(4, Math.max(w, h * .6f)));
         float cy = y + h * .5f;
+        // tier scale: how much bigger than a T1 puff (tier 0 = plain mob, the old effect only)
+        float ts = tier >= 3 ? 2.6f : tier == 2 ? 1.6f : 1f;
+        flash(x, cy, z, (.35f + .2f * scale) * ts, tier >= 3 ? .22f : .1f, tier >= 3 ? 0xFFF0D0 : 0xFFE8C0);
+        if (!full) return;
         switch (kind) {
             case BarFx.D_CONSTRUCT -> {
                 flash(x, cy, z, .7f * scale, .16f, 0xFFD890);
@@ -287,7 +317,6 @@ public final class BarFxClient {
                 for (int i = 0; i < 4; i++) { P p = smoke(x, cy, z, .3f * scale, 3f, 0x3A3A3E, .6f); p.vy = .6f; p.grow = 1.8f; }
                 emitter(x, y + .3f, z, 4 + scale * 2, .3f, .25f * scale, 0x34322F);
                 scorch(x, groundY(x, y + .5f, z), z, .5f + scale * .5f, 35, 0x16120E);
-                // (no shake on unit deaths: a big fight would never stop shaking)
             }
             case BarFx.D_BONE -> {
                 chunks(x, cy, z, 5, 2.5f, 0xE8E4D0, 5f);
@@ -302,8 +331,85 @@ public final class BarFxClient {
                 int n = scale > 1.4f ? 6 : 3;
                 for (int i = 0; i < n; i++) dust(x + rnd(-.4f, .4f) * scale, y, z + rnd(-.4f, .4f) * scale, .25f * scale, c);
                 P p = smoke(x, cy, z, .2f * scale, 1.6f, 0x4A4440, .35f); p.vy = .4f; p.grow = 1.8f;
-                // (no shake for big-unit deaths either)
             }
+        }
+        if (tier > 0 && faction != BarFx.F_NONE) factionDebris(faction, tier, x, y, cy, z, scale);
+    }
+
+    /** The faction-tinted puff of a dying RTS unit (see {@link #death}). Particle counts scale with tier only. */
+    static void factionDebris(int faction, int tier, float x, float y, float cy, float z, float scale) {
+        int bits = tier >= 3 ? 14 : tier == 2 ? 7 : 3;          // debris chunks
+        int puffs = tier >= 3 ? 6 : tier == 2 ? 3 : 1;          // smoke puffs
+        float speed = tier >= 3 ? 4.5f : tier == 2 ? 3.2f : 2.2f;
+        float ps = (.18f + .08f * scale) * (tier >= 3 ? 1.8f : tier == 2 ? 1.3f : 1f);
+        switch (faction) {
+            case BarFx.F_SUNFORGED -> {
+                // gold and iron nuggets in a puff of white smoke
+                chunks(x, cy, z, (bits + 1) / 2, speed, 0xF2C230, 4f);
+                chunks(x, cy, z, bits / 2, speed, 0xC8C8C8, 4f);
+                sparks(x, cy, z, bits, speed, 0xFFE070, 0, 0);
+                for (int i = 0; i < puffs; i++) {
+                    P p = smoke(x + rnd(-.3f, .3f), cy, z + rnd(-.3f, .3f), ps, rnd(1.4f, 2.2f), 0xF4F0E6, .55f);
+                    p.vy = rnd(.4f, .8f); p.grow = 2f;
+                }
+            }
+            case BarFx.F_GRAVEBOUND -> {
+                // bone fragments and soul wisps drifting up
+                chunks(x, cy, z, bits, speed * .8f, 0xE8E2CC, 5f);
+                int wisps = tier >= 3 ? 8 : tier == 2 ? 4 : 2;
+                for (int i = 0; i < wisps; i++) {
+                    P f = add(FIRE, x + rnd(-.4f, .4f) * scale, cy + rnd(-.2f, .3f), z + rnd(-.4f, .4f) * scale,
+                            rnd(.9f, 1.6f), rnd(.12f, .22f) * (tier >= 3 ? 1.5f : 1f), 0x5FE6F0);
+                    f.vy = rnd(.8f, 1.6f); f.vx = rnd(-.3f, .3f); f.vz = rnd(-.3f, .3f); f.grow = 1.3f;
+                }
+                for (int i = 0; i < puffs; i++) {
+                    P p = smoke(x, cy, z, ps, rnd(1.2f, 1.8f), 0x6A7A80, .35f); p.vy = .5f; p.grow = 1.8f;
+                }
+            }
+            case BarFx.F_HORDE -> {
+                // ember sparks and dark smoke
+                sparks(x, cy, z, bits * 2, speed * 1.1f, 0xFF7A20, 0, 0);
+                chunks(x, cy, z, (bits + 1) / 2, speed, 0x3A2A22, 4f);
+                for (int i = 0; i < puffs; i++) {
+                    P p = smoke(x + rnd(-.3f, .3f), cy, z + rnd(-.3f, .3f), ps, rnd(1.8f, 2.8f), 0x2A2420, .6f);
+                    p.vy = rnd(.4f, .9f); p.grow = 2f;
+                }
+                P f = add(FIRE, x, cy, z, .4f, ps, 0xFF8A30); f.vy = 1; f.grow = 1.4f;
+            }
+            default -> { }
+        }
+        if (tier >= 3) {
+            // a proper blast: bright core, brief light ring along the ground, a scorch where it stood (no shake)
+            float g = groundOr(x, y, z);
+            int core = faction == BarFx.F_GRAVEBOUND ? 0x9FF0FF : faction == BarFx.F_HORDE ? 0xFFA040 : 0xFFE0A0;
+            flash(x, cy, z, 1.6f + scale * .6f, .3f, core);
+            ring(x, g, z, 3f + scale * 1.2f, .45f, core);
+            scorch(x, g, z, 1f + scale * .6f, 30, 0x16120E);
+        }
+    }
+
+    /**
+     * A heavy weapon landed (artillery, T3 abilities): a ring of low dark smoke puffs around the blast that lingers
+     * ~2 s, with a scorch mark under it. When busy the ring is thinner. Never shakes.
+     */
+    static void scorchRing(float x, float y, float z, float r, boolean busy) {
+        r = Math.max(.75f, Math.min(r, 8f));
+        float g = groundOr(x, y, z);
+        int n = Math.min(16, (int) (6 + r * 2));
+        if (busy) n = Math.max(4, n / 2);
+        float step = (float) (Math.PI * 2 / n), off = rnd(0, step);
+        for (int i = 0; i < n; i++) {
+            double a = off + i * step;
+            float rr = r * rnd(.8f, 1.05f);
+            P p = smoke(x + (float) Math.cos(a) * rr, g + .15f, z + (float) Math.sin(a) * rr, rnd(.3f, .45f) * (1 + r * .12f),
+                    rnd(1.8f, 2.2f), 0x2A2622, .55f);
+            // creep outwards and barely rise, so it reads as a ring on the ground, not a column
+            p.vx = (float) Math.cos(a) * .25f; p.vz = (float) Math.sin(a) * .25f; p.vy = rnd(.05f, .2f); p.grow = 1.5f;
+        }
+        P core = add(DECAL, x, g + .02f, z, 2.5f, r * .9f, 0x120E0A); core.alpha = .55f; core.spin = rnd(0, 6.28f);
+        if (!busy) for (int i = 0; i < 3; i++) {
+            P f = add(FIRE, x + rnd(-.4f, .4f) * r, g + .1f, z + rnd(-.4f, .4f) * r, rnd(.5f, .9f), rnd(.15f, .3f), 0xFF8A30);
+            f.vy = rnd(.3f, .7f); f.grow = 1.2f;
         }
     }
 
@@ -341,7 +447,50 @@ public final class BarFxClient {
         for (int i = 0; i < emitters; i++)
             emitter(x + rnd(-half, half) * .6f, g + .5f, z + rnd(-half, half) * .6f, rnd(10, 16), .25f, .6f, 0x2E2A26);
         scorch(x, g, z, half * 1.3f, 60, 0x1A1610);
-        shake(.25f + half * .04f, x, g, z);
+        // staged collapse: rubble raining down off the upper floors, then a few delayed secondary pops and a second
+        // dust billow over ~1.5 s, so a base going down reads as a collapse rather than one bang
+        int falling = (int) Math.min(24, 6 + half * 2);
+        for (int i = 0; i < falling; i++) {
+            P p = add(DEBRIS, x + rnd(-half, half) * .8f, g + rnd(.5f, 1f) * Math.max(2, height), z + rnd(-half, half) * .8f,
+                    rnd(8, 14), rnd(.15f, .35f), mix(0x8A7A68, i % 2 == 0 ? 0x000000 : 0xFFFFFF, rnd(0, .25f)));
+            p.vx = rnd(-.8f, .8f); p.vz = rnd(-.8f, .8f); p.vy = rnd(-1f, .5f); p.spin = rnd(-8, 8);
+            p.ax = rnd(-1, 1); p.ay = 1; p.az = rnd(-1, 1);
+            float l = (float) Math.sqrt(p.ax * p.ax + 1 + p.az * p.az); p.ax /= l; p.ay /= l; p.az /= l;
+        }
+        int pops = Math.min(6, 3 + (int) (half / 3));
+        for (int i = 0; i < pops; i++) {
+            float t = .3f + 1.2f * (i + rnd(0, .8f)) / pops;   // spread over 0.3 .. 1.5 s
+            P d = add(DELAY, x + rnd(-half, half) * .8f, g + rnd(.3f, .8f) * Math.max(1.5f, height), z + rnd(-half, half) * .8f,
+                    t, .6f + Math.min(half, 8) * .12f, 0xFFB060);
+            d.x2 = g;   // ground under the pop, for its dust
+        }
+        P billow = add(DELAY, x, g, z, .8f, half, 0xA89C8A); billow.x2 = g; billow.crater = true;   // crater = billow
+        shake(.25f + half * .04f, x, g, z);   // (unchanged: one gentle shake per building, never per unit)
+    }
+
+    /** A DELAY timer ran out: a secondary pop of a collapsing building, or (crater flag) its second dust billow. */
+    static void delayed(P d) {
+        if (live.size() > MAX * 3 / 4) return;   // busy frame: skip the extras, the main collapse already showed
+        float g = d.x2;
+        if (d.crater) {
+            float half = d.size;
+            for (int i = 0; i < 4 + half; i++) {
+                double a = R.nextDouble() * Math.PI * 2; float rr = half * rnd(.6f, 1.3f);
+                P p = smoke(d.x + (float) Math.cos(a) * rr, g + rnd(0, 1f), d.z + (float) Math.sin(a) * rr, rnd(.6f, 1.1f),
+                        rnd(3f, 4.5f), 0xB0A492, .5f);
+                p.vx = (float) Math.cos(a) * rnd(.5f, 1.4f); p.vz = (float) Math.sin(a) * rnd(.5f, 1.4f); p.vy = rnd(.1f, .4f); p.grow = 1.8f;
+            }
+            return;
+        }
+        float s = d.size;
+        flash(d.x, d.y, d.z, 1.2f * s + .6f, .18f, 0xFFFFFF);
+        flash(d.x, d.y, d.z, 1.6f * s + .6f, .3f, d.color);
+        sparks(d.x, d.y, d.z, (int) (8 + s * 8), 5, 0xFFE0A0, 0, 0);
+        chunks(d.x, d.y, d.z, (int) (3 + s * 4), 3.5f, 0x8A7A68, 10f);
+        for (int i = 0; i < 3; i++) {
+            P p = smoke(d.x, d.y, d.z, .5f * s + .3f, rnd(2.5f, 3.5f), 0x3A3632, .6f); p.vy = rnd(.4f, .9f); p.grow = 1.8f;
+        }
+        dust(d.x, g, d.z, .6f * s + .3f, 0xA89C8A);
     }
 
     /**
@@ -561,7 +710,10 @@ public final class BarFxClient {
         debrisCount = 0;
         for (int i = 0; i < live.size(); i++) {
             P p = live.get(i);
-            if (clock - p.born >= p.life) continue;
+            if (clock - p.born >= p.life) {
+                if (p.kind == DELAY) delayed(p);   // may append to live: handled later in this same pass
+                continue;
+            }
             step(p, dt);
             if (p.kind == DEBRIS) debrisCount++;
             live.set(w++, p);
@@ -596,7 +748,7 @@ public final class BarFxClient {
         // 4. light: flashes, fire, sparks, beams, rings
         begin(buffers, BarFxRenderTypes.ADDITIVE, mat);
         for (P p : live) {
-            if (p.kind == SMOKE || p.kind == DEBRIS || p.kind == EMITTER) continue;
+            if (p.kind == SMOKE || p.kind == DEBRIS || p.kind == EMITTER || p.kind == DELAY) continue;
             if (p.kind != BEAM && !near(p.x, p.y, p.z, p.size + 2)) continue;
             drawLight(p, (clock - p.born) / p.life);
         }

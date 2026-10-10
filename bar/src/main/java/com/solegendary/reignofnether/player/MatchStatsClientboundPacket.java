@@ -31,6 +31,9 @@ public class MatchStatsClientboundPacket {
         public final int damageDealt;
         public final int metalProduced;
         public final int metalReclaimed;
+        // results-screen graphs (MatchHistory): one point every historyIntervalTicks from the match start
+        public final int historyIntervalTicks;
+        public final float[] metalHistory, energyHistory, armyHistory;
 
         public MatchStatRow(String name, Faction faction, boolean winner, int teamId, int[] scores) {
             this(name, faction, winner, teamId, scores, 0, 0, 0);
@@ -38,6 +41,13 @@ public class MatchStatsClientboundPacket {
 
         public MatchStatRow(String name, Faction faction, boolean winner, int teamId, int[] scores,
                             int damageDealt, int metalProduced, int metalReclaimed) {
+            this(name, faction, winner, teamId, scores, damageDealt, metalProduced, metalReclaimed,
+                    MatchHistory.SAMPLE_TICKS, null, null, null);
+        }
+
+        public MatchStatRow(String name, Faction faction, boolean winner, int teamId, int[] scores,
+                            int damageDealt, int metalProduced, int metalReclaimed, int historyIntervalTicks,
+                            float[] metalHistory, float[] energyHistory, float[] armyHistory) {
             this.name = name;
             this.faction = faction != null ? faction : Factions.NONE; // encode() dereferences faction.key
             this.winner = winner;
@@ -46,6 +56,10 @@ public class MatchStatsClientboundPacket {
             this.damageDealt = damageDealt;
             this.metalProduced = metalProduced;
             this.metalReclaimed = metalReclaimed;
+            this.historyIntervalTicks = Math.max(1, historyIntervalTicks);
+            this.metalHistory = metalHistory != null ? metalHistory : new float[0];
+            this.energyHistory = energyHistory != null ? energyHistory : new float[0];
+            this.armyHistory = armyHistory != null ? armyHistory : new float[0];
         }
 
         // bounds-checked: a row from an older/newer score enum must not crash the results screen
@@ -80,7 +94,10 @@ public class MatchStatsClientboundPacket {
             int damage = buffer.readVarInt();
             int metalMade = buffer.readVarInt();
             int metalReclaimed = buffer.readVarInt();
-            this.rows.add(new MatchStatRow(name, faction, winner, teamId, scores, damage, metalMade, metalReclaimed));
+            int interval = buffer.readVarInt();
+            float[] metal = readHistory(buffer), energy = readHistory(buffer), army = readHistory(buffer);
+            this.rows.add(new MatchStatRow(name, faction, winner, teamId, scores, damage, metalMade, metalReclaimed,
+                    interval, metal, energy, army));
         }
     }
 
@@ -96,7 +113,29 @@ public class MatchStatsClientboundPacket {
             buffer.writeVarInt(Math.max(0, row.damageDealt));
             buffer.writeVarInt(Math.max(0, row.metalProduced));
             buffer.writeVarInt(Math.max(0, row.metalReclaimed));
+            buffer.writeVarInt(row.historyIntervalTicks);
+            writeHistory(buffer, row.metalHistory);
+            writeHistory(buffer, row.energyHistory);
+            writeHistory(buffer, row.armyHistory);
         }
+    }
+
+    // bounded both ways: a hostile/garbled length can't make the client allocate a huge array
+    private static void writeHistory(FriendlyByteBuf buffer, float[] h) {
+        int n = Math.min(h.length, MatchHistory.MAX_SAMPLES);
+        buffer.writeVarInt(n);
+        for (int i = 0; i < n; i++)
+            buffer.writeFloat(h[i]);
+    }
+
+    private static float[] readHistory(FriendlyByteBuf buffer) {
+        int n = buffer.readVarInt();
+        if (n < 0 || n > MatchHistory.MAX_SAMPLES)
+            throw new IllegalArgumentException("bad match history length " + n);
+        float[] h = new float[n];
+        for (int i = 0; i < n; i++)
+            h[i] = buffer.readFloat();
+        return h;
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

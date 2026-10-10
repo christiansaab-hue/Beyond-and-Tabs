@@ -164,7 +164,21 @@ public class BarFxServerEvents {
                 kind = BarFx.D_SLIME;
             if (e instanceof Creeper)
                 return; // creepers report their own explosion
-            BarFx.death(e.level(), e.position(), kind, e.getBbWidth(), e.getBbHeight());
+            // RTS units get faction-tinted debris and a blast sized by what they cost (T1 puff .. T3 blast)
+            byte faction = BarFx.F_NONE;
+            int tier = 0;
+            if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) {
+                var cost = u.getCost();
+                tier = BarFx.tierOf(cost == null ? 0 : cost.metal());
+                var f = com.solegendary.reignofnether.faction.Factions.getFaction(u);
+                if (f != null && f.equals(com.solegendary.reignofnether.faction.Factions.VILLAGERS))
+                    faction = BarFx.F_SUNFORGED;
+                else if (f != null && f.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS))
+                    faction = BarFx.F_GRAVEBOUND;
+                else if (f != null && f.equals(com.solegendary.reignofnether.faction.Factions.PIGLINS))
+                    faction = BarFx.F_HORDE;
+            }
+            BarFx.death(e.level(), e.position(), kind, e.getBbWidth(), e.getBbHeight(), faction, tier);
         } catch (Exception ignored) { }
     }
 

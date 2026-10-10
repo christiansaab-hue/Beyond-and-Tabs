@@ -147,6 +147,7 @@ public class CryptTide extends Ability {
             spawnFang(sl, self, x, sl.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(x), Mth.floor(z)), z, i % 4);
         }
         sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, centre.x, centre.y + 0.3, centre.z, 20, RADIUS * 0.5, 0.2, RADIUS * 0.5, 0.02);
+        com.solegendary.reignofnether.barfx.BarFx.heavyImpact(sl, centre, (float) RADIUS);
         sl.playSound(null, BlockPos.containing(centre), SoundEvents.SKELETON_HURT, SoundSource.HOSTILE, 2f, 0.5f);
         return hit;
     }

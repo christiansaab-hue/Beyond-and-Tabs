@@ -107,6 +107,9 @@ public class SolarLance extends Ability {
                 sl.sendParticles(ParticleTypes.FLAME, at.x, at.y - 1, at.z, 2, 0.8, 0.1, 0.8, 0.01);
         }
         sl.playSound(null, self.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 4f, 0.7f);
+        // scorched ground where the lance burns out (and halfway): a T3 shot should leave a mark for a moment
+        com.solegendary.reignofnether.barfx.BarFx.heavyImpact(sl, from.add(to).scale(0.5).subtract(0, 1.5, 0), 2f);
+        com.solegendary.reignofnether.barfx.BarFx.heavyImpact(sl, to.subtract(0, 1.5, 0), 2.5f);
         return hit;
     }
 }

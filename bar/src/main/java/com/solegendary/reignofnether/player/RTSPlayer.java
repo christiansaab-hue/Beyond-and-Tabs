@@ -38,6 +38,8 @@ public class RTSPlayer {
     public float damageDealt = 0;
     public float metalProduced = 0;
     public float metalReclaimed = 0;
+    // metal/energy income and army value over time, for the results screen graphs (bounded, see MatchHistory)
+    public final MatchHistory history = new MatchHistory();
 
     public static RTSPlayer getNewScenarioPlayer(String playerName, Faction faction, int id, int scenarioRoleIndex) {
         RTSPlayer rtsPlayer = new RTSPlayer(playerName, faction, id);

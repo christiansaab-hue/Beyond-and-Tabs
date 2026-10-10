@@ -252,6 +252,9 @@ public class PlayerServerEvents {
                     rtsGameTicks = 0;
                 } else {
                     rtsGameTicks += 1;
+                    // results-screen graphs: one sample at the start and every 30 s after (bounded per player)
+                    if ((rtsGameTicks - 1) % MatchHistory.SAMPLE_TICKS == 0)
+                        MatchHistory.sampleAll(rtsPlayers);
                     if (rtsGameTicks % 200 == 0) {
                         PlayerClientboundPacket.syncRtsGameTime(rtsGameTicks);
                     }
@@ -1247,7 +1250,9 @@ public class PlayerServerEvents {
             rows.add(new MatchStatsClientboundPacket.MatchStatRow(
                     p.name, p.faction, winnerNames.contains(p.name), p.startPosColorId,
                     p.scores.getScoreListAsArray(),
-                    Math.round(p.damageDealt), Math.round(p.metalProduced), Math.round(p.metalReclaimed)));
+                    Math.round(p.damageDealt), Math.round(p.metalProduced), Math.round(p.metalReclaimed),
+                    p.history.getIntervalTicks(), p.history.metalSamples(), p.history.energySamples(),
+                    p.history.armySamples()));
         MatchStatsClientboundPacket.broadcast(rtsGameTicks, rows);
     }
 
