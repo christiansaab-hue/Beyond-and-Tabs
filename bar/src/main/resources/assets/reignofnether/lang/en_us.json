@@ -2414,6 +2414,7 @@
   "entity.reignofnether.hive_keeper_unit": "Hive Keeper",
   "entity.reignofnether.hive_keeper_unit.tooltip1": "Releases a swarm of poisonous bees at nearby enemies. Strong against crowds of cheap units.",
   "block.reignofnether.vine_snare": "Vine Snare",
+  "block.reignofnether.thicket": "Thicket",
   "entity.reignofnether.leafblade_unit": "Leafblade",
   "entity.reignofnether.leafblade_unit.tooltip1": "A fast elven raider. Leaf Dash darts onto a target, cutting whatever it passes.",
   "entity.reignofnether.thornbow_unit": "Thornbow",

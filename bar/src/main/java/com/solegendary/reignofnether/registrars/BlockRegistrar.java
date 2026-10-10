@@ -147,6 +147,23 @@ public class BlockRegistrar {
                     .sound(SoundType.CAVE_VINES)
                     .pushReaction(PushReaction.DESTROY)));
 
+    // Verdant Court Thicket (PlantThicket / Overgrowth, slice 3 Living Terrain): a walk-through azalea bush that hides
+    // its side's units, slows enemies, burns and can be cut. No block item: only Seedshapers and the Warden grow it.
+    // Replaceable, so it never blocks a building's footprint; not view-blocking, so it never darkens the ground
+    public static final RegistryObject<com.solegendary.reignofnether.blocks.ThicketBlock> THICKET = registerBlock("thicket",
+            () -> new com.solegendary.reignofnether.blocks.ThicketBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT)
+                    .replaceable()
+                    .noCollission()
+                    .noOcclusion()
+                    .forceSolidOff()
+                    .noLootTable()
+                    .strength(0.2F)
+                    .ignitedByLava()
+                    .isViewBlocking((bs, bg, bp) -> false)
+                    .isSuffocating((bs, bg, bp) -> false)
+                    .sound(SoundType.AZALEA_LEAVES)
+                    .pushReaction(PushReaction.DESTROY)));
+
     public static final RegistryObject<Block> RTS_START_BLOCK_BLUE = registerBlock("rts_start_block_blue", () ->
             new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_BLUE)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);

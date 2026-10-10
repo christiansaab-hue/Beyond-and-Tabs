@@ -176,5 +176,7 @@ public enum UnitAction {
     LEAF_DASH,            // Beyond and Tabs: Verdant Court Leafblade gap-closing dash
     AWAKEN_THICKET,       // Beyond and Tabs: Verdant Court Elder Druid temporary treant
     STAG_LEAP,            // Beyond and Tabs: Verdant Court Stag Lancer leaping charge
-    PLANT_VINE_SNARE      // Beyond and Tabs: Verdant Court Seedshaper hidden root trap
+    PLANT_VINE_SNARE,     // Beyond and Tabs: Verdant Court Seedshaper hidden root trap
+    PLANT_THICKET,        // Beyond and Tabs: Verdant Court Seedshaper 3x3 cover thicket (Living Terrain)
+    OVERGROWTH            // Beyond and Tabs: Verdant Court Grove Warden instant thicket ring + root
 }

@@ -68,6 +68,9 @@ public class SeedshaperUnit extends Vindicator implements Unit, WorkerUnit, Atta
         // slice 2: every Seedshaper can plant Vine Snares (hotkey8: the Court's build menu uses slots 1/6 and 5-7)
         ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.PlantVineSnare(),
                 com.solegendary.reignofnether.keybinds.Keybindings.hotkey8);
+        // slice 3 (Living Terrain): 3x3 cover thickets
+        ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.PlantThicket(),
+                com.solegendary.reignofnether.keybinds.Keybindings.hotkey9);
     }
 
     //region
