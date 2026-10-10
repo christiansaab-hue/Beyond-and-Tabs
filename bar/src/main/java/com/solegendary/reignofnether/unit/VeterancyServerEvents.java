@@ -69,6 +69,7 @@ public class VeterancyServerEvents {
         float hpFrac = unit.getHealth() / unit.getMaxHealth();
         setModifier(unit.getAttribute(Attributes.MAX_HEALTH), HP_MOD, "bt_veteran_hp", HP_PER_RANK * after);
         setModifier(unit.getAttribute(Attributes.ATTACK_DAMAGE), DMG_MOD, "bt_veteran_dmg", DMG_PER_RANK * after);
+        setModifier(unit.getAttribute(com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_DAMAGE.get()), DMG_MOD, "bt_veteran_dmg", DMG_PER_RANK * after);   // what units really deal
         unit.setHealth(unit.getMaxHealth() * hpFrac);
         if (unit.level() instanceof ServerLevel sl) {
             sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, unit.getX(), unit.getY() + unit.getBbHeight() + 0.3,

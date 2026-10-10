@@ -138,7 +138,8 @@ public class CommanderDGun extends Ability {
         Vec3 to = from.add(dir.scale(RANGE));
 
         for (LivingEntity le : hits(self, owner, from, to))
-            le.hurt(sl.damageSources().mobAttack(self),
+            // indirect magic, not mobAttack: RoN rewrites mob-attack damage to the attacker's melee damage
+            le.hurt(sl.damageSources().indirectMagic(self, self),
                 CommanderServerEvents.isCommander(le) ? COMMANDER_DAMAGE : DAMAGE);
 
         Kind kind = kindFor(unitUsing);

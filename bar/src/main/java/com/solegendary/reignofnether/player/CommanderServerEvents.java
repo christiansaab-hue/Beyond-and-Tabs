@@ -47,6 +47,10 @@ public class CommanderServerEvents {
         AttributeInstance dmg = le.getAttribute(Attributes.ATTACK_DAMAGE);
         if (dmg != null && dmg.getModifier(DMG_MOD) == null)
             dmg.addPermanentModifier(new AttributeModifier(DMG_MOD, "commander_dmg", 6.0, AttributeModifier.Operation.ADDITION));
+        // unit damage really comes from RoN's own attack attribute (LivingEntityMixin.actuallyHurt)
+        AttributeInstance ronDmg = le.getAttribute(com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_DAMAGE.get());
+        if (ronDmg != null && ronDmg.getModifier(DMG_MOD) == null)
+            ronDmg.addPermanentModifier(new AttributeModifier(DMG_MOD, "commander_dmg", 6.0, AttributeModifier.Operation.ADDITION));
     }
 
     /** Gives a commander its faction's signature ability and D-gun once (both sides: the client needs it for the button). */

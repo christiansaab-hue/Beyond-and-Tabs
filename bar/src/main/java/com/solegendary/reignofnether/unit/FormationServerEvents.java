@@ -11,9 +11,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.ArrayList;
@@ -24,11 +22,11 @@ import java.util.Set;
 /**
  * Sunforged Kingdom signature (design-factions.md): <b>Formation</b>. A Sunforged ranged unit standing within
  * {@link #RADIUS} blocks of at least {@link #MIN_GUARDS} of its owner's Sunforged melee fighters (the commander
- * counts) is "in formation": its projectiles hit for +{@link #BONUS}. Ranged behind a line of halberds and
+ * counts) is "in formation": its attacks hit for +{@link #BONUS} (a modifier on RoN's attack attribute). Ranged behind a line of halberds and
  * paladins is the Kingdom's whole game; caught alone in the open, its crossbows are ordinary.
  *
  * The full design also gives formations +4 range around a banner-bearer; that waits for the banner-bearer unit.
- * Cost: recomputed once a second over Sunforged fighters only; the hurt hook is a set lookup.
+ * Cost: recomputed once a second over Sunforged fighters only; modifiers change only when the state flips.
  */
 public class FormationServerEvents {
 
@@ -64,6 +62,7 @@ public class FormationServerEvents {
 
     /** Recomputes who is in formation. Public for the game test. */
     public static void update(ServerLevel level) {
+        Set<Integer> was = new HashSet<>(inFormation);
         inFormation.clear();
         List<LivingEntity> ranged = new ArrayList<>(), guards = new ArrayList<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
@@ -74,8 +73,6 @@ public class FormationServerEvents {
             else if (isGuard(le))
                 guards.add(le);
         }
-        if (ranged.isEmpty() || guards.size() < MIN_GUARDS)
-            return;
         double r2 = RADIUS * RADIUS;
         for (LivingEntity shooter : ranged) {
             String owner = ((Unit) shooter).getOwnerName();
@@ -91,16 +88,28 @@ public class FormationServerEvents {
                     shooter.getZ(), 1, 0.1, 0.05, 0.1, 0);
             }
         }
+        // the bonus rides on RoN's own attack attribute, which is what unit projectiles deal (LivingEntityMixin)
+        for (LivingEntity shooter : ranged) {
+            boolean on = inFormation.contains(shooter.getId());
+            if (on != was.contains(shooter.getId()))
+                setBonus(shooter, on);
+        }
+        for (Integer id : was)
+            if (!inFormation.contains(id) && level.getEntity(id) instanceof LivingEntity gone)
+                setBonus(gone, false);
     }
 
-    /** Runs late so it multiplies whatever the unit's own rules settled on. */
-    @SubscribeEvent(priority = EventPriority.LOW)
-    public static void onHurt(LivingHurtEvent evt) {
-        var src = evt.getSource();
-        if (src.getEntity() == null || src.getDirectEntity() == null || src.getDirectEntity() == src.getEntity())
-            return;   // only projectiles: the shooter is the cause, the arrow/bolt is the direct entity
-        if (inFormation.contains(src.getEntity().getId()))
-            evt.setAmount(evt.getAmount() * (1 + BONUS));
+    static final java.util.UUID MOD = java.util.UUID.fromString("d4e2a3f5-6b7c-4d8e-9fa0-1b2c3d4e5f01");
+
+    static void setBonus(LivingEntity le, boolean on) {
+        var attr = le.getAttribute(com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_DAMAGE.get());
+        if (attr == null)
+            return;
+        if (attr.getModifier(MOD) != null)
+            attr.removeModifier(MOD);
+        if (on)
+            attr.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(MOD,
+                "bt_formation", BONUS, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_TOTAL));
     }
 
     @SubscribeEvent

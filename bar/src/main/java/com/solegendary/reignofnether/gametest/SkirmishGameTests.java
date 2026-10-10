@@ -309,8 +309,8 @@ public class SkirmishGameTests {
         helper.runAfterDelay(5, () -> {
             float friendHp = friend.getHealth(), offHp = offline.getHealth();
             dgun.use(level, commander, BlockPos.containing(at.getX() + 12, at.getY(), at.getZ()));
-            if (enemy.isAlive() && enemy.getHealth() >= enemy.getMaxHealth())
-                helper.fail("D-gun did not hurt the enemy on its line");
+            if (enemy.isAlive() && enemy.getMaxHealth() - enemy.getHealth() < 40)
+                helper.fail("D-gun barely hurt the enemy on its line: " + enemy.getHealth() + "/" + enemy.getMaxHealth());
             if (friend.getHealth() < friendHp)
                 helper.fail("D-gun hurt a friendly unit");
             if (offline.getHealth() < offHp)
@@ -339,7 +339,7 @@ public class SkirmishGameTests {
         grunt.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
         grunt.setOwnerName("gametest_horde_charge");
         level.addFreshEntity(grunt);
-        var dmgAttr = net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE;
+        var dmgAttr = com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_DAMAGE.get();
         helper.runAfterDelay(2, () -> {
             double base = grunt.getAttributeValue(dmgAttr);
             com.solegendary.reignofnether.unit.MomentumServerEvents.sampleAll(level);
@@ -386,8 +386,11 @@ public class SkirmishGameTests {
         }
         helper.runAfterDelay(3, () -> {
             com.solegendary.reignofnether.unit.FormationServerEvents.update(level);
+            var ronAttack = com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_DAMAGE.get();
             if (!com.solegendary.reignofnether.unit.FormationServerEvents.isInFormation(bow))
                 helper.fail("crossbow with two guards beside it is not in formation");
+            if (bow.getAttributeValue(ronAttack) <= lone.getAttributeValue(ronAttack) + 0.001)
+                helper.fail("formation gave the crossbow no attack bonus");
             if (com.solegendary.reignofnether.unit.FormationServerEvents.isInFormation(lone))
                 helper.fail("a lone crossbow counts as in formation");
             for (var e : List.of(bow, lone, g1, g2))
@@ -481,7 +484,7 @@ public class SkirmishGameTests {
         level.addFreshEntity(foe);
         helper.runAfterDelay(3, () -> {
             double baseHp = vet.getMaxHealth();
-            boolean hurt = foe.hurt(level.damageSources().mobAttack(vet), 10000f);
+            boolean hurt = foe.hurt(level.damageSources().indirectMagic(vet, vet), 10000f);   // mobAttack is rewritten to melee damage
             if (!foe.isDeadOrDying()) {   // the real kill path didn't land: report why, then test the rule directly
                 helper.fail("foe survived a 10000 hit (hurt=" + hurt + ", hp=" + foe.getHealth() + ", invulnerable="
                     + foe.isInvulnerable() + ", invTime=" + foe.invulnerableTime + ")");

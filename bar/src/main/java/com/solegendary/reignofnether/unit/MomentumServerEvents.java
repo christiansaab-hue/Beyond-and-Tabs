@@ -13,7 +13,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -117,7 +117,8 @@ public class MomentumServerEvents {
         if (stepped == s.applied)
             return;
         s.applied = stepped;
-        setModifier(le.getAttribute(Attributes.ATTACK_DAMAGE), DMG_MOD, "horde_momentum_dmg",
+        // unit damage is computed from RoN's own attack attribute (LivingEntityMixin.actuallyHurt), not vanilla's
+        setModifier(le.getAttribute(com.solegendary.reignofnether.registrars.AttributeRegistrar.ATTACK_DAMAGE.get()), DMG_MOD, "horde_momentum_dmg",
             MAX_DAMAGE_BONUS * stepped, AttributeModifier.Operation.MULTIPLY_TOTAL);
         setModifier(le.getAttribute(Attributes.ATTACK_KNOCKBACK), KB_MOD, "horde_momentum_kb",
             MAX_KNOCKBACK * stepped, AttributeModifier.Operation.ADDITION);
@@ -132,9 +133,12 @@ public class MomentumServerEvents {
             attr.addTransientModifier(new AttributeModifier(id, name, amount, op));
     }
 
-    /** Landing a blow spends the charge. */
+    /**
+     * Landing a blow spends the charge. LivingDamageEvent, not LivingHurtEvent: RoN computes unit damage itself
+     * and skips the hurt event, but still fires this one after the damage (with the bonus) was worked out.
+     */
     @SubscribeEvent
-    public static void onHurt(LivingHurtEvent evt) {
+    public static void onHurt(LivingDamageEvent evt) {
         if (!(evt.getSource().getEntity() instanceof LivingEntity attacker) || attacker.level().isClientSide())
             return;
         State s = states.get(attacker.getId());
