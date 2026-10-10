@@ -242,12 +242,47 @@ public class BotPlayer {
             }
         }
 
+        // 7b) take the nearest capturable site we don't hold (from minute 4): send a few idle fighters to stand on it
+        if (minutes >= 4 && claimSite(army))
+            return;
+
         // 8) between waves, sweep the territory (from minute 3, so early armies stay home to defend)
         if (minutes >= 3)
             sweepTerritory(army, buildings);
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /** Sends up to 4 idle fighters to the nearest capturable site this bot (and its allies) don't own. */
+    boolean claimSite(List<LivingEntity> army) {
+        if (home == null)
+            return false;
+        net.minecraft.world.entity.Entity best = null;
+        double bestD = 130 * 130;
+        for (var p : com.solegendary.reignofnether.startpos.CapturePointServerEvents.getPoints()) {
+            String o = com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(p);
+            if (p.isRemoved() || name.equals(o) || (!o.isEmpty() && AlliancesServerEvents.isAllied(name, o)))
+                continue;
+            double d = p.blockPosition().distSqr(home);
+            if (d < bestD) {
+                bestD = d;
+                best = p;
+            }
+        }
+        if (best == null)
+            return false;
+        List<LivingEntity> idle = new ArrayList<>();
+        for (LivingEntity le : army) {
+            if (le.distanceToSqr(best) < 36)
+                return false;   // already holding it
+            if (le instanceof Unit u && u.isIdle() && idle.size() < 4)
+                idle.add(le);
+        }
+        if (idle.size() < 2)
+            return false;
+        order(idle, UnitAction.ATTACK_MOVE, best.blockPosition());
+        return true;
+    }
 
     void trainWorkers(BuildingPlacement capitol, int workerCount) {
         if (workerCount >= targetWorkers() || !(capitol instanceof ProductionPlacement pp) || !capitol.isBuilt)
