@@ -1004,9 +1004,11 @@ public class UnitServerEvents {
             }
         }
 
-        // ignore added weapon damage for workers
+        // ignore added weapon damage for workers (melee only: a worker-commander's D-gun or ability damage
+        // must not be squashed down to its sword hit)
         if (evt.getSource().getEntity() instanceof WorkerUnit && evt.getSource()
-            .getEntity() instanceof AttackerUnit attackerUnit) {
+            .getEntity() instanceof AttackerUnit attackerUnit
+            && evt.getSource().is(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK)) {
             evt.setAmount(attackerUnit.getUnitAttackDamage());
         }
 
