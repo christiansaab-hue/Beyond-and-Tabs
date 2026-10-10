@@ -26,7 +26,7 @@ import java.util.stream.IntStream;
  */
 public class SkirmishSetupScreen extends Screen {
     // factions are chosen by packet code (SkirmishServerboundPacket.CODE_PATHS: 3 stays "Random", the Court took 4,
-    // 5 is the reserved Tidewrought) through the shared FactionPicker dropdown, which lists every coded faction
+    // the Tidewrought 5) through the shared FactionPicker dropdown, which lists every coded faction
     static final List<String> DIFFICULTIES = List.of("Easy", "Medium", "Hard");
     static final List<String> ARENAS = List.of("Small", "Medium", "Large", "Huge", "Random");
     static final List<String> METALS = List.of("Lean", "Normal", "Rich", "Random");
@@ -41,7 +41,7 @@ public class SkirmishSetupScreen extends Screen {
 
     /** Everything the lobby decides; codes match SkirmishServerboundPacket. */
     public static class Settings {
-        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random, 4 Verdant, 5 Tidewrought (reserved)
+        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random, 4 Verdant, 5 Tidewrought
         public int colour = 1;           // index into PlayerColors.colors (0..PLAYER_COLOR_COUNT-1), or -1 random
         public int team = 0;             // 0 = Team 1, 1 = Team 2
         public final List<Bot> bots = new ArrayList<>();

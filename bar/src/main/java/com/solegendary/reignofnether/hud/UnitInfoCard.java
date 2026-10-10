@@ -79,7 +79,12 @@ public final class UnitInfoCard {
         Map.entry("ElderTreantUnit", Role.TANK), Map.entry("StagLancerUnit", Role.RAIDER),
         Map.entry("ShadeRangerUnit", Role.ARTILLERY),
         // the Wisp Choir is a ranged skirmisher (its anti-air bonus is on the damage line), the Bloom Priestess a healer
-        Map.entry("WispChoirUnit", Role.SKIRMISHER), Map.entry("BloomPriestessUnit", Role.SUPPORT)
+        Map.entry("WispChoirUnit", Role.SKIRMISHER), Map.entry("BloomPriestessUnit", Role.SUPPORT),
+        // Tidewrought: the Reef Guard (80 HP, shield) holds the line, the Bombard Crew is splash artillery, the Tide
+        // Priest a non-fighting support, the Cutlass Raider and the Gull Spotter raiders; the Shipwright is a worker
+        Map.entry("ReefGuardUnit", Role.TANK), Map.entry("BombardCrewUnit", Role.ARTILLERY),
+        Map.entry("TidePriestUnit", Role.SUPPORT), Map.entry("CutlassRaiderUnit", Role.RAIDER),
+        Map.entry("GullSpotterUnit", Role.RAIDER)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

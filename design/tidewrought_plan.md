@@ -74,6 +74,30 @@ cap evicts the owner's oldest pool; a Tidewrought unit on a tidepool regenerates
 enemy on the same cell does not, and the modifier is removed on leaving; a Tidepool cell classifies as
 `KIND_TIDEPOOL` and is walkable for every mobility class; the four-live-factions test grows to five.
 
+#### Slice 1 - as built (branch `tidewrought-slice-1`)
+Units and buildings live in `unit/units/tide/` and `building/buildings/tide/`; deviations from the table above are
+marked **(changed)**.
+
+| Piece | Where | Notes |
+|---|---|---|
+| Shipwright / Admiral | `ShipwrightUnit` (copy of `SeedshaperUnit`), `ShipwrightRenderer` | 85 food, 25 HP. Admiral = first Shipwright (`CommanderServerEvents`), livery: brass-dyed cap + teal coat. |
+| Broadside | `CommanderDGun.Kind.BROADSIDE`, `broadside()/broadsideHits()` | 6 impacts, 2.5 blocks apart, 4 ticks apart (`TaskSchedulerServerEvents`), r2 each, D-gun damage once per unit per volley, `indirectMagic` source (no explosion: no terrain, no friends). |
+| Riptide | `CommanderAbility.Kind.RIPTIDE`, `riptide()` | 7-block cone, 40 deg half-angle, 4 dmg + knockback 1.4, x2 on targets standing in water/on a pool (`TidesServerEvents.isWet`). Faces the aimed spot, else the commander's target, else the nearest foe in reach. |
+| Gull Spotter | `GullSpotterUnit extends EntitySeagull`, AM `RenderSeagull` | 50 food, 12 HP, 0.34 speed, sight 26, no attack; AM goals cleared, `setFlying` pinned true, never picks up/eats items, no ambient squawk. |
+| Cutlass Raider | `CutlassRaiderUnit extends VindicatorUnit implements TidalUnit` | 130 food (= Leafblade), 55 HP, 5.5 dmg. Ambush: `TidalUnit.onLeftWater` (called by the Tides pass on the wet->dry step) primes +40% on the next hit within 3 s, read in `getUnitAttackDamage`. |
+| Reef Guard | `ReefGuardUnit extends VindicatorUnit implements TidalUnit` | 130f/40o, 80 HP, ranged resist 0.45, trident + shield. **(changed)** shield is passive (ToggleShield is Brute-only code); wet regen 3 HP/s via `TidalUnit.tidesRegenBonus`. |
+| Bombard Crew | `BombardCrewUnit` (copy of `PillagerUnit` on the bow-cooldown goal), `BombardShell` entity | 100f/80w/40o, 35 HP, range 22, min range 6, 9 splash dmg r2.5 (half at the rim) every 4 s; shell = `ThrowableItemProjectile` solved for vanilla drag/gravity, passes through friends, dents enemy buildings (`destroyRandomBlocks`), no terrain damage. Attack Ground ability. |
+| Tide Priest | `TidePriestUnit` (copy of `MoonwellBearerUnit`), `RaiseTidepool` ability | 70f/60w/40o, 35 HP. Raise Tidepool: 10 blocks, r2, 30 s, 40 energy, 20 s cooldown; a refused raise costs nothing and shows `lastRefusal()` on the HUD. |
+| Wreck Harbour / Slipway | `WreckHarbour`, `Slipway`; `wreck_harbour.nbt`, `slipway.nbt` | capitol slot 1 (trains Shipwright, Gull Spotter, Tier 2), lab slot 6 (Cutlass, Reef Guard, Bombard, Priest). Tier 3 not offered; Tier 2 only refits extractors until the Drydock. |
+| Economy | `MetalExtractor/WindGenerator/EnergyConverter("_tide")` | `"_tide"` palette in `tools/gen_structures.py` (waxed copper, dead coral, prismarine, mangrove/spruce); mangrove hub gets teal sails (`WindmillRenderClientEvents`). |
+| Look | `FactionTraits.TIDEWROUGHT`, `BarFx.F_TIDE`/`N_TIDE` | brass/teal debris + splash particles, teal nanolathe, chimney smoke; skins/portraits by `tools/gen_tide_skins.py` (reuses the Court's toolkit). Calm theme = vanilla underwater music. |
+| Bot | `BotPlayer.kitFor`, `tideHabits` | T1 kit (null T2/T3); Tide Priests follow the army and raise a pool at its centre when a foe is within 16 blocks (energy reserve 100); the Admiral fires Riptide at the nearest foe once 2+ are in reach. `/rts bot ... tidewrought|tide`. |
+
+GameTests: `tidewrought_is_live_and_the_four_other_factions_are_intact`, `tidewrought_capitol_places_and_the_admiral_spawns`,
+`tidewrought_units_are_made_and_attack`, `tide_priest_raises_a_pool`, `tidewrought_broadside_hits_foes_not_friends`,
+`tidewrought_riptide_knocks_foes_back_harder_in_a_pool`, `tidewrought_cutlass_ambush_and_reef_guard_regen`; the bot soak
+grew a fourth (Tidewrought) bot.
+
 ### Slice 2 - rest of T1 (M)
 | Unit | Body | Extend | Mechanic |
 |---|---|---|---|

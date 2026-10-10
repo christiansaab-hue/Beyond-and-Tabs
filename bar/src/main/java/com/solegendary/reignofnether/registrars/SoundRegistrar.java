@@ -91,6 +91,11 @@ public class SoundRegistrar {
             SOUND_EVENTS.register("verdant_court_calm", () ->
                     SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "verdant_court_calm")));
 
+    // the Tidewrought's calm theme: vanilla's underwater music (Axolotl, Dragon Fish, Shuniji) via an event reference
+    public static final RegistryObject<SoundEvent> TIDEWROUGHT_CALM_THEME_SONG =
+            SOUND_EVENTS.register("tidewrought_calm", () ->
+                    SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tidewrought_calm")));
+
     public static final RegistryObject<SoundEvent> WRAITH_AMBIENT =
             SOUND_EVENTS.register("wraith_ambient", () ->
                     SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wraith_ambient")));

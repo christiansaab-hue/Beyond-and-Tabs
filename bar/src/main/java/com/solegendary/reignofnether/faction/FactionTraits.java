@@ -197,23 +197,30 @@ public final class FactionTraits {
         .build();
 
     /**
-     * Tidewrought (preview, design/tidewrought_plan.md): corsairs and tide-priests in teal and brass - shipwreck
-     * timber, prismarine and copper. Slice 0 sets only the look (accent, livery, banner, scaffold, wreck), so the
-     * faction is never dressed or built as anyone else. Commander kit, debris and quick-build stay at the neutral
-     * defaults until slice 1. The Tides core (tidepools + the wet buff) is switched on with {@code tidal()}; it is
-     * inert while the faction has no units.
+     * Tidewrought (design/tidewrought_plan.md): corsairs and tide-priests in teal and brass - shipwreck timber,
+     * prismarine and copper. Slice 1 makes it playable: the Admiral's Broadside (a walking cannonade instead of a
+     * line) and Riptide (a cone of surf that throws foes back, twice as hard where they stand in water), brass-and-spray
+     * death debris and a teal nanolathe, ship's-stove smoke over working buildings and the Shipwrights' quick-build
+     * extractor. The Tides core (tidepools + the wet buff) is switched on with {@code tidal()}.
      */
+    // Livery: like the Court, only the commander (a brass-dyed leather cap standing in for the Admiral's tricorne, and
+    // a teal coat) and the role-based legs and boots - the units wear their own drawn clothes (tools/gen_tide_skins.py)
+    // and a leather hood over them hid the corsair hats and kelp robes from the RTS camera.
     public static final FactionTraits TIDEWROUGHT = new Builder("tidewrought")
         .accent(0xFF3CC8BE)
         .livery(new Livery(0x1E7F7A, 0xC9A23E,
             Piece.vanilla(Items.LEATHER_HELMET), Piece.vanilla(Items.LEATHER_CHESTPLATE),
-            Piece.vanilla(Items.LEATHER_CHESTPLATE),
-            Piece.vanilla(Items.LEATHER_HELMET), Piece.vanilla(Items.LEATHER_CHESTPLATE),
-            new Piece(null, null), Piece.vanilla(Items.CHAINMAIL_CHESTPLATE)))
+            new Piece(null, null),
+            new Piece(null, null), new Piece(null, null),
+            new Piece(null, null), new Piece(null, null)))
         .banner(Blocks.CYAN_WOOL.defaultBlockState(), Blocks.CUT_COPPER.defaultBlockState())
         .scaffold(Blocks.STRIPPED_MANGROVE_LOG.defaultBlockState(), Blocks.PRISMARINE_BRICKS.defaultBlockState(), ScaffoldDecor.NONE)
+        .ambience(Ambience.CHIMNEY_SMOKE)
+        .fx(BarFx.N_TIDE, BarFx.F_TIDE)
+        .commander(CommanderDGun.Kind.BROADSIDE, CommanderAbility.Kind.RIPTIDE)
         .wreck(Blocks.DARK_PRISMARINE.defaultBlockState(), 1f)
         .tidal()
+        .extractor(() -> Buildings.METAL_EXTRACTOR_TIDE)
         .build();
 
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)

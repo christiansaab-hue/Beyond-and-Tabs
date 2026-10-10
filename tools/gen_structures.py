@@ -94,6 +94,7 @@ class Structure:
 #   "_dark"   Gravebound (monsters): deepslate, dark oak, chains, soul fire
 #   "_nether" Ironhide Horde (piglins): mud brick, rust-red terracotta, bone and dark timber
 #   "_verdant" Verdant Court: moss and mossy stone, living oak, verdant froglights, lanterns, iron/oxidised-copper silver
+#   "_tide"   Tidewrought: sandstone apron, prismarine, mangrove/spruce ship timber, WAXED copper, dead coral, lanterns
 # accent/lamp are Chipped blocks. They are decoration only (a frieze, hanging lamps): if Chipped is absent they
 # load as air and the building still stands and works. Structural and foundation blocks stay vanilla.
 PALETTES = {
@@ -134,6 +135,20 @@ PALETTES = {
         furnace="smoker", bars="iron_bars",
         accent="verdant_froglight", lamp="lantern",
         core="campfire", pillar="stripped_oak_log", band="oxidized_copper",
+    ),
+    # Tidewrought (design/tidewrought_plan.md section 5). Everything must stay as built for a whole match: copper is
+    # WAXED (unwaxed copper oxidises on random ticks and would re-colour the building), coral is DEAD (live coral dies
+    # out of water - a block change mid-match), no kelp/sea pickles (they pop off dry ground). The hub is a stripped
+    # mangrove log (WindmillRenderClientEvents gives it teal sails on spruce spars); the stove core is a soul campfire
+    # for a sea-teal flame. 1.20.1 has no copper grates, so the bars stay iron.
+    "_tide": dict(
+        pad="smooth_sandstone", pad_corner="packed_mud", ring="prismarine_bricks",
+        stair="prismarine_brick_stairs", wall="prismarine_wall", slab="prismarine_brick_slab",
+        metal="waxed_cut_copper", body="stripped_spruce_wood", cap="spruce_planks",
+        cap_stair="spruce_stairs", cap_slab="spruce_slab", hub="stripped_mangrove_log",
+        furnace="blast_furnace", bars="iron_bars",
+        accent="dead_brain_coral_block", lamp="lantern",
+        core="soul_campfire", pillar="stripped_mangrove_log", band="waxed_cut_copper",
     ),
 }
 
@@ -767,6 +782,127 @@ def storm_oak():
     return s
 
 
+# ---- Tidewrought: Wreck Harbour (capitol) and Slipway (T1 lab) -----------------------------------------------
+# y=0 holds the classes' startingBlockTypes (smooth sandstone, prismarine bricks). Same rules as the Court's: nothing
+# hangs (the build runs bottom-up), copper is waxed and coral dead (section 5 of the plan), no water anywhere.
+DRY = dict(waterlogged="false")
+
+
+def wreck_harbour():
+    """A beached galleon made a harbour: a sandstone apron in a prismarine kerb, the hull lying along z with its
+    stern open to the -z entrance - a dark-prismarine keel strake, spruce and mangrove planking, a stripped-mangrove
+    gunwale with waxed-copper fittings - a broken mainmast with its yard and a torn teal sail, a crow's nest, barrels
+    and dried kelp on the deck, dead coral grown over the hull and lanterns standing on the rail. 11 x 10 x 11."""
+    W = 11
+    s = Structure(W, 10, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "prismarine_bricks" if edge else "smooth_sandstone")
+    # the hull outline: half-width per z (stern at z=1 is open as the door, bow comes to a point at z=9)
+    half = {1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3, 7: 2, 8: 1, 9: 0}
+    for z, hw in half.items():
+        for x in (c - hw, c + hw):
+            if z == 1 and abs(x - c) < 3:
+                continue
+            s.set(x, 1, z, "dark_prismarine")                       # the keel strake, barnacled
+            s.set(x, 2, z, "spruce_planks")
+            s.set(x, 3, z, "mangrove_planks")
+            s.set(x, 4, z, "stripped_mangrove_log", axis="z" if hw >= 2 else "x")   # the gunwale
+        if z == 1:   # stern posts either side of the door, a transom beam over it
+            for y in range(1, 5):
+                s.set(c - 3, y, 1, "stripped_mangrove_log", axis="y")
+                s.set(c + 3, y, 1, "stripped_mangrove_log", axis="y")
+            for x in range(c - 2, c + 3):
+                s.set(x, 5, 1, "stripped_mangrove_log", axis="x")
+            s.set(c, 6, 1, "waxed_cut_copper")                       # the stern lantern's brass mount
+            s.set(c, 7, 1, "lantern", hanging="false", **DRY)
+    # the bowsprit poking out over the kerb
+    s.set(c, 4, 10, "stripped_spruce_log", axis="z")
+    # waxed copper fittings at the gunwale corners, lanterns standing on the rail
+    for (x, z) in [(c - 3, 3), (c + 3, 3), (c - 3, 6), (c + 3, 6)]:
+        s.set(x, 5, z, "waxed_cut_copper")
+    for (x, z) in [(c - 3, 4), (c + 3, 5)]:
+        s.set(x, 5, z, "lantern", hanging="false", **DRY)
+    # the broken mainmast, its yard and a torn teal sail, a crow's nest of slabs at the top
+    for y in range(1, 10):
+        s.set(c, y, 5, "stripped_spruce_log", axis="y")
+    for x in range(c - 3, c + 3):          # one arm of the yard is snapped short
+        s.set(x, 7, 5, "stripped_spruce_log", axis="x")
+    for x in range(c - 2, c + 2):
+        for y in (5, 6):
+            if (x, y) != (c - 2, 5):       # the torn corner
+                s.set(x, y, 4, "cyan_wool")
+    for (dx, dz) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        s.set(c + dx, 8, 5 + dz, "spruce_slab", type="bottom", **DRY)
+    # on deck: barrels, dried kelp bales, a chest of salvage
+    for (x, z) in [(c - 2, 7), (c + 2, 2), (c - 2, 2)]:
+        s.set(x, 1, z, "barrel", facing="up", open="false")
+    for (x, z) in [(c + 2, 6), (c + 1, 7)]:
+        s.set(x, 1, z, "dried_kelp_block")
+    s.set(c + 2, 1, 3, "chest", facing="west", type="single", **DRY)
+    # dead coral grown over the hull and the apron
+    for (x, y, z) in [(c - 3, 1, 4), (c + 3, 1, 7), (c + 2, 1, 8), (c - 3, 2, 6)]:
+        if (x, y, z) in s.blocks:
+            s.set(x, y, z, "dead_tube_coral_block")
+    for (x, z) in [(1, 2), (W - 2, 3), (2, W - 2), (W - 2, W - 2), (1, 8)]:
+        s.set(x, 1, z, "dead_brain_coral_fan", **DRY)
+    for (x, z) in [(W - 2, 1), (1, W - 3)]:
+        s.set(x, 1, z, "dead_fire_coral", **DRY)
+    # mooring posts at the entrance with lanterns
+    for x in (1, W - 2):
+        s.set(x, 1, 0, "stripped_mangrove_log", axis="y")
+        s.set(x, 2, 0, "lantern", hanging="false", **DRY)
+    fill_air(s)
+    return s
+
+
+def slipway():
+    """The Tidewrought's yard: a sandstone floor in a prismarine kerb, a timber launching ramp of two mangrove rails
+    running toward the -z entrance with a half-built hull on its spruce-fence cradle, a cargo crane on a waxed-copper
+    foot in one corner, anchors (anvils) and barrels, dead coral and lanterns. 9 x 7 x 9."""
+    W = 9
+    s = Structure(W, 7, W)
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "prismarine_bricks" if edge else "smooth_sandstone")
+    # the ramp rails, the cradle posts and the half-built hull on them
+    for z in range(1, W - 1):
+        s.set(2, 1, z, "stripped_mangrove_log", axis="z")
+        s.set(6, 1, z, "stripped_mangrove_log", axis="z")
+    for z in (2, 4, 6):
+        s.set(3, 1, z, "spruce_fence", **DRY)
+        s.set(5, 1, z, "spruce_fence", **DRY)
+    for z in range(2, 7):
+        s.set(4, 1, z, "dark_prismarine")                  # the keel
+        s.set(3, 2, z, "spruce_planks")
+        s.set(5, 2, z, "spruce_planks")
+        if z % 2 == 0:
+            s.set(3, 3, z, "mangrove_planks")             # ribs still showing between the strakes
+            s.set(5, 3, z, "mangrove_planks")
+    s.set(4, 2, 7, "spruce_planks")                       # the bow
+    s.set(4, 3, 7, "stripped_spruce_log", axis="y")
+    # the cargo crane: a mast on a waxed copper foot, a boom over the hull (nothing hangs from it)
+    s.set(7, 1, 7, "waxed_cut_copper")
+    for y in range(2, 6):
+        s.set(7, y, 7, "stripped_spruce_log", axis="y")
+    for x in range(4, 8):
+        s.set(x, 6, 7, "stripped_spruce_log", axis="x")
+    # anchors, barrels and a lantern at each side of the entrance
+    s.set(1, 1, 6, "anvil", facing="north")
+    s.set(1, 1, 3, "barrel", facing="up", open="false")
+    s.set(7, 1, 2, "barrel", facing="up", open="false")
+    s.set(7, 1, 4, "dried_kelp_block")
+    for x in (1, W - 2):
+        s.set(x, 1, 1, "lantern", hanging="false", **DRY)
+    for (x, z) in [(1, 7), (7, 5)]:
+        s.set(x, 1, z, "dead_horn_coral_fan", **DRY)
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -783,3 +919,5 @@ if __name__ == "__main__":
         circle_of_elders().write(f"{out}/circle_of_elders.nbt")
         heart_of_the_wild().write(f"{out}/heart_of_the_wild.nbt")
         storm_oak().write(f"{out}/storm_oak.nbt")
+        wreck_harbour().write(f"{out}/wreck_harbour.nbt")
+        slipway().write(f"{out}/slipway.nbt")

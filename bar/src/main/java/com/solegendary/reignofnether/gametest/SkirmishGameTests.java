@@ -905,29 +905,33 @@ public class SkirmishGameTests {
     static final int SOAK_TICKS = 20 * 60 * 4;   // four game-minutes of bot-vs-bot play
 
     /**
-     * Soak: a Sunforged (villagers), a Gravebound (monsters) and a Verdant Court bot play each other headless for four
-     * game-minutes. Each must grow (lay buildings or train units) and no brain may throw. The bases sit
+     * Soak: a Sunforged (villagers), a Gravebound (monsters), a Verdant Court and a Tidewrought bot play each other
+     * headless for four game-minutes. Each must grow (lay buildings or train units) and no brain may throw. The bases sit
      * ~1500 blocks from the test grid on dry ground so their battlefield (lanes, patches, ring wall <= 520 blocks)
      * never reaches the other tests' arenas. The Court rides in this soak rather than its own: bases started in the
      * same few seconds form ONE battlefield (BattlefieldSetup), so a second soak elsewhere would join this one into
      * an arena spanning the test grid. It also checks the Court's start through startRTSBot: three Seedshapers, the
-     * first one the Grove Warden carrying Thornburst and Wildstride, and its capitol is a Heartwood Hall.
+     * first one the Grove Warden carrying Thornburst and Wildstride, and its capitol is a Heartwood Hall - and the
+     * Tidewrought's the same way (three Shipwrights, the Admiral with Broadside and Riptide, a Wreck Harbour), which
+     * also proves a Tidewrought bot builds (3+ buildings like every side) on a dry map.
      */
     @GameTest(template = ARENA, timeoutTicks = SOAK_TICKS + 600)
     public static void bots_play_each_other_without_errors(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        String kingdom = "gametest_soak_kingdom", grave = "gametest_soak_grave", court = "gametest_soak_court";
+        String kingdom = "gametest_soak_kingdom", grave = "gametest_soak_grave", court = "gametest_soak_court",
+            tide = "gametest_soak_tide";
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
-        net.minecraft.world.phys.Vec3[] starts = soakStarts(level, origin.getX() + 1500, origin.getZ(), 3);
+        net.minecraft.world.phys.Vec3[] starts = soakStarts(level, origin.getX() + 1500, origin.getZ(), 4);
         if (starts == null) {
-            helper.fail("no dry ground for three bot bases near x=" + (origin.getX() + 1500));
+            helper.fail("no dry ground for four bot bases near x=" + (origin.getX() + 1500));
             return;
         }
         var bots = com.solegendary.reignofnether.bot.BotServerEvents.brains;
         var failures = com.solegendary.reignofnether.bot.BotServerEvents.thinkFailures;
-        List<String> names = List.of(kingdom, grave, court);
+        List<String> names = List.of(kingdom, grave, court, tide);
         var factions = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
-            com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.VERDANT_COURT);
+            com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.VERDANT_COURT,
+            com.solegendary.reignofnether.faction.Factions.TIDEWROUGHT);
         final int count = names.size();
         for (int i = 0; i < count; i++) {
             failures.remove(names.get(i));
@@ -963,12 +967,33 @@ public class SkirmishGameTests {
                     }
             if (!thornburst || !wildstride)
                 problemsAtStart.add("the Grove Warden is missing its D-gun (" + thornburst + ") or Wildstride (" + wildstride + ")");
+            // and the Tidewrought's: three Shipwrights, the first the Admiral with Broadside and Riptide
+            List<net.minecraft.world.entity.LivingEntity> tideStart = soakUnits(tide);
+            long shipwrights = tideStart.stream().filter(e -> e.getType()
+                == com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get()).count();
+            if (shipwrights != 3 || tideStart.size() != 3)
+                problemsAtStart.add("the Tidewrought bot should start with 3 Shipwrights, got " + tideStart.size() + " units ("
+                    + shipwrights + " Shipwrights)");
+            boolean broadside = false, riptide = false;
+            for (var e : tideStart)
+                if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(e)
+                        && e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    for (var a : u.getAbilities().get()) {
+                        if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun)
+                            broadside = true;
+                        if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility
+                                && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(u)
+                                == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RIPTIDE)
+                            riptide = true;
+                    }
+            if (!broadside || !riptide)
+                problemsAtStart.add("the Admiral is missing its D-gun (" + broadside + ") or Riptide (" + riptide + ")");
         });
         int[] startUnits = new int[count];
         for (int i = 0; i < count; i++)
             startUnits[i] = soakUnits(names.get(i)).size();
         int[] maxBuildings = new int[count], maxUnits = new int[count];
-        boolean[] courtHall = { false };
+        boolean[] courtHall = { false }, tideHarbour = { false };
         // when the soak fails, say how each side's units left (death cause, place, time) and when a side left the
         // match - CI only shows the failure message, so this is the only way to see a stall's cause
         long t0 = level.getGameTime();
@@ -1007,6 +1032,9 @@ public class SkirmishGameTests {
             for (var bp : soakBuildings(court))
                 if (bp.getBuilding() == Buildings.HEARTWOOD_HALL)
                     courtHall[0] = true;
+            for (var bp : soakBuildings(tide))
+                if (bp.getBuilding() == Buildings.WRECK_HARBOUR)
+                    tideHarbour[0] = true;
             for (int i = 0; i < count; i++) {
                 maxBuildings[i] = Math.max(maxBuildings[i], soakBuildings(names.get(i)).size());
                 maxUnits[i] = Math.max(maxUnits[i], soakUnits(names.get(i)).size());
@@ -1026,6 +1054,8 @@ public class SkirmishGameTests {
             List<String> problems = new ArrayList<>(problemsAtStart);
             if (!courtHall[0])
                 problems.add(court + " never laid its Heartwood Hall");
+            if (!tideHarbour[0])
+                problems.add(tide + " never laid its Wreck Harbour");
             for (int i = 0; i < count; i++) {
                 String n = names.get(i);
                 Throwable err = failures.get(n);
@@ -2068,6 +2098,7 @@ public class SkirmishGameTests {
         }
         List<com.solegendary.reignofnether.faction.Faction> live = new ArrayList<>(old);
         live.add(verdant);
+        live.add(Factions.TIDEWROUGHT);   // live since its slice 1: "Random" must reach it too
         for (var f : live) {
             if (!Factions.isLive(f)) {
                 helper.fail(f.getName() + " is not a live faction");
@@ -2124,7 +2155,8 @@ public class SkirmishGameTests {
      */
     @GameTest(template = ARENA)
     public static void every_faction_has_its_own_traits_and_verdant_is_not_sunforged(GameTestHelper helper) {
-        var factions = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT);
+        var factions = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT,
+            Factions.TIDEWROUGHT);
         for (var f : factions)
             if (!FactionTraits.hasExplicit(f))
                 helper.fail(f.getName() + " has no explicit FactionTraits entry");
@@ -2174,64 +2206,99 @@ public class SkirmishGameTests {
     }
 
     /**
-     * Tidewrought slice 0 (design/tidewrought_plan.md): announced as a preview after the Court. The four live factions
-     * must be untouched, and the Tidewrought must be impossible to play - not playable, not live, never picked by
-     * "Random", refused by the bot start - while already wearing its own teal-and-brass traits, not anyone else's.
-     * Static data plus one refused bot start under a unique name, so it is safe to run in parallel.
+     * Tidewrought slice 1 (design/tidewrought_plan.md): the faction is live - playable, in "Random", with a capitol, a
+     * worker and a bot kit that agree, its units registered to it - and the four other live factions are untouched
+     * (same capitols, workers, bot kits, D-guns and signatures). It is registered after the Court so no older id moved,
+     * and it wears its own teal-and-brass traits with its own commander kit (Broadside, Riptide), debris, nanolathe and
+     * quick-build extractor. Static data only, safe in parallel.
      */
     @GameTest(template = ARENA)
-    public static void tidewrought_is_a_preview_and_the_four_live_factions_are_intact(GameTestHelper helper) {
+    public static void tidewrought_is_live_and_the_four_other_factions_are_intact(GameTestHelper helper) {
         var tide = Factions.TIDEWROUGHT;
         if (tide == null) {
             helper.fail("the Tidewrought is not registered");
             return;
         }
-        var live = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT);
-        for (var f : live) {
-            if (!Factions.isLive(f))
-                helper.fail(f.getName() + " is no longer a live faction");
-            if (!Factions.PLAYABLE_FACTIONS.contains(f.key))
-                helper.fail(f.getName() + " dropped out of the playable list");
-            if (com.solegendary.reignofnether.bot.BotPlayer.kitFor(f) == null)
-                helper.fail(f.getName() + " lost its bot kit");
+        var others = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT);
+        List<Building> capitols = List.of(Buildings.TOWN_CENTRE, Buildings.MAUSOLEUM, Buildings.CENTRAL_PORTAL, Buildings.HEARTWOOD_HALL);
+        List<net.minecraft.world.entity.EntityType<?>> workers = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get());
+        var dguns = List.of(com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SUNFIRE,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SOULREAPER,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.BLOODSTORM,
+            com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.THORNBURST);
+        var signatures = List.of(com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RALLY,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.DREAD,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.WAR_HORN,
+            com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.WILDSTRIDE);
+        for (int i = 0; i < others.size(); i++) {
+            var f = others.get(i);
+            if (!Factions.isLive(f) || !Factions.PLAYABLE_FACTIONS.contains(f.key))
+                helper.fail(f.getName() + " is no longer a live, playable faction");
+            if (ReignOfNetherRegistries.BUILDING.get(f.capitolBuilding) != capitols.get(i))
+                helper.fail(f.getName() + "'s capitol changed to " + f.capitolBuilding);
+            if (!net.minecraft.world.entity.EntityType.getKey(workers.get(i)).equals(f.workerEntityType))
+                helper.fail(f.getName() + "'s worker changed to " + f.workerEntityType);
+            var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(f);
+            if (kit == null || kit.capitol() != capitols.get(i))
+                helper.fail(f.getName() + " lost its bot kit or its kit builds another capitol");
+            var t = FactionTraits.of(f);
+            if (t.dgunKind != dguns.get(i) || t.commanderAbility != signatures.get(i) || t.tidal)
+                helper.fail(f.getName() + "'s commander kit changed or it turned tidal");
         }
-        if (!tide.preview || tide.playable || Factions.isLive(tide))
-            helper.fail("the Tidewrought must be a preview, unplayable and not live");
-        if (Factions.PLAYABLE_FACTIONS.contains(tide.key) || Factions.CLASSIC_FACTIONS.contains(tide.key)
-                || Factions.SURVIVAL_FACTIONS.contains(tide.key))
-            helper.fail("the Tidewrought leaked into the playable, classic or survival list");
-        if (tide.capitolBuilding != null || tide.workerEntityType != null)
-            helper.fail("the preview Tidewrought already has a capitol or worker");
+        if (tide.preview || !tide.playable || !Factions.isLive(tide) || !Factions.PLAYABLE_FACTIONS.contains(tide.key))
+            helper.fail("the Tidewrought is not a live, playable faction");
+        if (Factions.CLASSIC_FACTIONS.contains(tide.key) || Factions.SURVIVAL_FACTIONS.contains(tide.key))
+            helper.fail("the Tidewrought leaked into the classic or survival list before it has a cube map / wave");
+        if (ReignOfNetherRegistries.BUILDING.get(tide.capitolBuilding) != Buildings.WRECK_HARBOUR)
+            helper.fail("the Tidewrought's capitol is not the Wreck Harbour: " + tide.capitolBuilding);
+        if (!net.minecraft.world.entity.EntityType.getKey(com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get())
+                .equals(tide.workerEntityType))
+            helper.fail("the Tidewrought's worker is not the Shipwright: " + tide.workerEntityType);
+        var tideKit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(tide);
+        if (tideKit == null || tideKit.capitol() != Buildings.WRECK_HARBOUR || tideKit.armyBuilding() != Buildings.SLIPWAY)
+            helper.fail("the Tidewrought bot kit is missing or builds the wrong capitol / lab");
+        else if (tideKit.t2Lab() != null || tideKit.t3Building() != null)
+            helper.fail("the slice-1 Tidewrought kit points at a T2/T3 that does not exist yet");
         if (Factions.getFaction(tide.key) != tide || !"tidewrought".equals(tide.getName()))
             helper.fail("the Tidewrought does not resolve by its key");
         if (ReignOfNetherRegistries.FACTIONS.getId(tide) < ReignOfNetherRegistries.FACTIONS.getId(Factions.VERDANT_COURT))
             helper.fail("the Tidewrought was registered before the Verdant Court and shifted its id");
+        // "Random" reaches all five
         var rng = new java.util.Random(5);
-        for (int i = 0; i < 400; i++)
-            if (Factions.randomLive(rng) == tide) {
-                helper.fail("Random picked the preview Tidewrought");
-                break;
-            }
-        // its own look, never another faction's (the old "otherwise villagers" fall-through)
+        Set<String> seen = new HashSet<>();
+        for (int i = 0; i < 500; i++)
+            seen.add(Factions.randomLive(rng).getName());
+        if (!seen.contains("tidewrought") || seen.size() != 5)
+            helper.fail("random should reach the five live factions, saw " + seen);
+        // every unit it trains belongs to it (that is how its look and Tides are chosen)
+        for (var type : List.of(com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.GULL_SPOTTER_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.CUTLASS_RAIDER_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.REEF_GUARD_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.BOMBARD_CREW_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.TIDE_PRIEST_UNIT.get()))
+            if (!tide.key.equals(Factions.ENTITY_FACTION.get(net.minecraft.world.entity.EntityType.getKey(type))))
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(type) + " is not registered to the Tidewrought");
+        // its own look and kit, never another faction's
         if (!FactionTraits.hasExplicit(tide))
             helper.fail("the Tidewrought has no explicit FactionTraits entry");
         var t = FactionTraits.of(tide);
-        for (var f : live) {
+        for (var f : others) {
             var o = FactionTraits.of(f);
             if (t == o || t.wreckBlock == o.wreckBlock || t.scaffoldPole == o.scaffoldPole
-                    || (t.bannerCloth == o.bannerCloth && t.bannerTrim == o.bannerTrim))
+                    || (t.bannerCloth == o.bannerCloth && t.bannerTrim == o.bannerTrim) || t.deathDebris == o.deathDebris
+                    || t.nanoTint == o.nanoTint)
                 helper.fail("the Tidewrought borrows " + f.getName() + "'s look");
         }
-        if (t.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.PLAIN
-                || t.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.NONE
-                || t.formation || t.momentum || t.metalExtractor.get() != null)
-            helper.fail("the preview Tidewrought picked up another faction's commander kit or mechanic");
-        // the server refuses to start one, even when asked directly (bots skip the lobby's greyed tile)
-        String botName = "tide_preview_" + helper.absolutePos(BlockPos.ZERO).asLong();
-        com.solegendary.reignofnether.player.PlayerServerEvents.startRTSBot(helper.getLevel(), botName,
-            net.minecraft.world.phys.Vec3.atCenterOf(helper.absolutePos(BlockPos.ZERO)), tide, 0);
-        if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(botName))
-            helper.fail("a bot was started as the preview Tidewrought");
+        if (t.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.BROADSIDE
+                || t.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RIPTIDE)
+            helper.fail("the Admiral's kit should be Broadside + Riptide, is " + t.dgunKind + " + " + t.commanderAbility);
+        if (!t.tidal || t.formation || t.momentum || t.metalExtractor.get() != Buildings.METAL_EXTRACTOR_TIDE)
+            helper.fail("the Tidewrought lost Tides, picked up another faction's mechanic, or has the wrong quick-build extractor");
         helper.succeed();
     }
 
@@ -3408,8 +3475,10 @@ public class SkirmishGameTests {
     public static void death_fx_packet_carries_all_four_factions(GameTestHelper helper) {
         byte[] tints = {
             com.solegendary.reignofnether.barfx.BarFx.F_SUNFORGED, com.solegendary.reignofnether.barfx.BarFx.F_GRAVEBOUND,
-            com.solegendary.reignofnether.barfx.BarFx.F_HORDE, com.solegendary.reignofnether.barfx.BarFx.F_VERDANT };
-        var live = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT);
+            com.solegendary.reignofnether.barfx.BarFx.F_HORDE, com.solegendary.reignofnether.barfx.BarFx.F_VERDANT,
+            com.solegendary.reignofnether.barfx.BarFx.F_TIDE };
+        var live = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT,
+            Factions.TIDEWROUGHT);
         for (int i = 0; i < live.size(); i++)
             if (FactionTraits.of(live.get(i)).deathDebris != tints[i]) {
                 helper.fail(live.get(i).getName() + " has debris tint " + FactionTraits.of(live.get(i)).deathDebris
@@ -4337,6 +4406,447 @@ public class SkirmishGameTests {
                 com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
             }
         });
+    }
+
+    // ------------------------------------------------------------------ Tidewrought slice 1 (playable T1)
+
+    /**
+     * The Tidewrought's start, the way a readied player start does it (PlayerServerEvents.startRTS without the player):
+     * its worker type spawns, the first one becomes the Admiral with Broadside and Riptide, and its capitol foundation
+     * is laid at the start position and survives as a site. Also checks every "_tide" economy blueprint (and the refit
+     * extractor, which no building owns) loads on the server. Runs on its own sand platform high above the arena.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void tidewrought_capitol_places_and_the_admiral_spawns(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var tide = Factions.TIDEWROUGHT;
+        String owner = "gametest_tide_start_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 200;
+        int cx = base.getX() + 60, cz = base.getZ() - 60;   // clear of the other platform tests (the Court's is at -60/+60, y 220)
+        for (int dx = -9; dx <= 9; dx++)
+            for (int dz = -9; dz <= 9; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.SANDSTONE.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.SAND.defaultBlockState(), 3);
+            }
+        for (String nbt : List.of("metal_extractor_tide", "metal_extractor_t2_tide", "wind_generator_tide",
+                "energy_converter_tide", "wreck_harbour", "slipway"))
+            if (com.solegendary.reignofnether.building.BuildingBlockData.getBuildingNbt(nbt,
+                    level.getServer().getResourceManager()) == null)
+                helper.fail("the Tidewrought structure " + nbt + " is missing from data/");
+        var workerType = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getValue(tide.workerEntityType);
+        net.minecraft.world.entity.Entity first = workerType == null ? null : workerType.create(level);
+        if (!(first instanceof com.solegendary.reignofnether.unit.units.tide.ShipwrightUnit admiral)) {
+            helper.fail("the Tidewrought worker type does not make a Shipwright: " + tide.workerEntityType);
+            return;
+        }
+        admiral.setOwnerName(owner);
+        admiral.moveTo(cx + 0.5, y + 1, cz - 7.5, 0, 0);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(admiral);
+        level.addFreshEntity(admiral);
+        boolean dgun = false, riptide = false;
+        for (var a : admiral.getAbilities().get()) {
+            dgun |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun;
+            riptide |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility
+                && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(admiral)
+                    == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RIPTIDE;
+        }
+        if (!dgun || !riptide)
+            helper.fail("the Admiral lacks its D-gun (" + dgun + ") or Riptide (" + riptide + ")");
+        if (!com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(admiral) || !admiral.canBreatheUnderwater())
+            helper.fail("the Admiral is not tagged as the commander, or can drown");
+        Building capitol = ReignOfNetherRegistries.BUILDING.get(tide.capitolBuilding);
+        var blocks = capitol.getRelativeBlockData(level);
+        BlockPos origin = com.solegendary.reignofnether.player.PlayerServerEvents.getBuildingOriginPos(
+            new BlockPos(cx, y, cz), blocks);
+        var placement = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(capitol, origin,
+            Rotation.NONE, owner, new int[] { admiral.getId() }, false, false, true, true);
+        if (placement == null) {
+            admiral.discard();
+            helper.fail("the Wreck Harbour could not be placed at a readied start");
+            return;
+        }
+        helper.runAfterDelay(40, () -> {
+            try {
+                if (placement.isDestroyedServerside
+                        || !com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().contains(placement))
+                    helper.fail("the Wreck Harbour site was destroyed right after being placed");
+                if (!placement.getBuilding().isCapitol || placement.getBuilding() != Buildings.WRECK_HARBOUR)
+                    helper.fail("the placed capitol is " + placement.getBuilding().name);
+                helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(placement);
+                admiral.discard();
+            }
+        });
+    }
+
+    /**
+     * Every Tidewrought unit can be made: the four fighters (Shipwright, Cutlass Raider, Reef Guard, Bombard Crew),
+     * each ordered onto its own enemy Villager, land a blow (melee or a mortar shell) within the window; the Gull Spotter
+     * is a flying scout with no attack and the Tide Priest a non-fighting support carrying Raise Tidepool. Every unit
+     * is tidal (Tides) and cannot drown. One row of the arena per attacker; the Bombard stands outside its dead zone.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 320)
+    public static void tidewrought_units_are_made_and_attack(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_atk_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        List<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>> reg = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.CUTLASS_RAIDER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.REEF_GUARD_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.BOMBARD_CREW_UNIT.get());
+        List<net.minecraft.world.entity.Mob> attackers = new ArrayList<>(), foes = new ArrayList<>();
+        // the non-fighters: made, owned, tidal - never added to the level
+        var gull = com.solegendary.reignofnether.registrars.EntityRegistrar.GULL_SPOTTER_UNIT.get().create(level);
+        var priest = com.solegendary.reignofnether.registrars.EntityRegistrar.TIDE_PRIEST_UNIT.get().create(level);
+        if (!(gull instanceof com.solegendary.reignofnether.unit.units.tide.GullSpotterUnit g) || !g.isScout()
+                || !g.isFlying() || g instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit)
+            helper.fail("the Gull Spotter is not an unarmed flying scout");
+        if (!(priest instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit p)
+                || p instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit
+                || p.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.RaiseTidepool))
+            helper.fail("the Tide Priest is not a non-fighting support with Raise Tidepool");
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(gull, priest))
+            if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) {
+                u.setOwnerName(owner);
+                if (!com.solegendary.reignofnether.tide.TidesServerEvents.isTidal(e) || !e.canBreatheUnderwater())
+                    helper.fail(net.minecraft.world.entity.EntityType.getKey(e.getType()) + " is not tidal or can drown");
+            }
+        if (gull != null) gull.discard();
+        if (priest != null) priest.discard();
+        openGround(helper, 0, 0, 15, 15);
+        for (int i = 0; i < reg.size(); i++) {
+            var atk = reg.get(i).create(level);
+            var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+            if (!(atk instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit) || foe == null) {
+                helper.fail("could not create " + net.minecraft.world.entity.EntityType.getKey(reg.get(i)) + " as an attacker");
+                for (var e : attackers) e.discard();
+                for (var e : foes) e.discard();
+                return;
+            }
+            boolean ranged = atk instanceof com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit;
+            BlockPos row = helper.absolutePos(new BlockPos(ranged ? 1 : 4, 2, 1 + i * 4));
+            atk.moveTo(row.getX() + 0.5, row.getY(), row.getZ() + 0.5, -90, 0);
+            foe.moveTo(row.getX() + (ranged ? 11.5 : 2.5), row.getY(), row.getZ() + 0.5, 90, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).setOwnerName(owner);
+            foe.setOwnerName(foeOwner);
+            if (!com.solegendary.reignofnether.tide.TidesServerEvents.isTidal(atk) || !atk.canBreatheUnderwater())
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(reg.get(i)) + " is not tidal or can drown");
+            level.addFreshEntity(atk);
+            level.addFreshEntity(foe);
+            attackers.add(atk);
+            foes.add(foe);
+        }
+        helper.runAfterDelay(3, () -> {
+            for (int i = 0; i < attackers.size(); i++)
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+        });
+        boolean[] landed = new boolean[attackers.size()];
+        for (int t = 4; t < 300; t++)
+            helper.runAfterDelay(t, () -> {
+                for (int i = 0; i < attackers.size(); i++) {
+                    var atk = attackers.get(i);
+                    var hit = atk.getLastHurtMob();
+                    if (hit instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && foeOwner.equals(u.getOwnerName()))
+                        landed[i] = true;
+                    if (foes.get(i).getLastHurtByMob() == atk || foes.get(i).getHealth() < foes.get(i).getMaxHealth())
+                        landed[i] = true;
+                }
+            });
+        helper.runAfterDelay(300, () -> {
+            List<String> problems = new ArrayList<>();
+            for (int i = 0; i < attackers.size(); i++)
+                if (!landed[i])
+                    problems.add(net.minecraft.world.entity.EntityType.getKey(reg.get(i)).getPath() + " never hit its target");
+            for (var e : attackers) e.discard();
+            for (var e : foes) e.discard();
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Tide Priest: Raise Tidepool raises a pool (registered to the priest's owner, cells on the ground near the aimed
+     * spot), pays its energy and starts its cooldown; with no energy left a second cast is refused and raises nothing.
+     * The priest is never added to the level.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tide_priest_raises_a_pool(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_priest_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 14, 14);
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        pool.addEnergy(com.solegendary.reignofnether.ability.abilities.RaiseTidepool.ENERGY_COST + 10);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var priest = com.solegendary.reignofnether.registrars.EntityRegistrar.TIDE_PRIEST_UNIT.get().create(level);
+        try {
+            if (priest == null) {
+                helper.fail("could not create a Tide Priest");
+                return;
+            }
+            priest.setOwnerName(owner);
+            BlockPos at = helper.absolutePos(new BlockPos(3, 2, 7));
+            priest.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            com.solegendary.reignofnether.ability.abilities.RaiseTidepool raise = null;
+            for (var a : priest.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.RaiseTidepool r)
+                    raise = r;
+            if (raise == null) {
+                helper.fail("the Tide Priest has no Raise Tidepool");
+                return;
+            }
+            BlockPos aim = helper.absolutePos(new BlockPos(9, 1, 7));   // the ground block, 6 blocks off
+            raise.use(level, priest, aim);
+            var pools = com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner);
+            if (pools.isEmpty()) {
+                helper.fail("Raise Tidepool raised nothing: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+                return;
+            }
+            var p = pools.get(0);
+            if (p.cellCount() < 9 || p.centre.distSqr(aim.above()) > 4)
+                helper.fail("the pool is too small or in the wrong place: " + p.cellCount() + " cells at " + p.centre);
+            var tide = com.solegendary.reignofnether.registrars.BlockRegistrar.TIDEPOOL.get();
+            if (!level.getBlockState(aim.above()).is(tide))
+                helper.fail("no tidepool cell on the aimed ground");
+            if (pool.getEnergy() > 10.01)
+                helper.fail("Raise Tidepool did not charge its energy: " + pool.getEnergy());
+            if (raise.isOffCooldown(priest))
+                helper.fail("Raise Tidepool did not go on cooldown");
+            // out of energy: refused, nothing raised (the registry cap is not the limit here)
+            var refused = com.solegendary.reignofnether.ability.abilities.RaiseTidepool.cast(level, priest,
+                helper.absolutePos(new BlockPos(9, 1, 12)));
+            if (refused != null || com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner).size() != 1)
+                helper.fail("a cast without the energy for it still raised a pool");
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            if (priest != null)
+                priest.discard();
+        }
+    }
+
+    /**
+     * The Admiral's Broadside: the walking cannonade hits the enemy on its path (D-gun damage), spares the friend on the
+     * same path and the enemy behind the Admiral, charges energy and cools down. The shots land over several ticks, so
+     * the check runs after the last one.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void tidewrought_broadside_hits_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_broadside_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        pool.addEnergy(500);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var admiral = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get().create(level);
+        var onPath = vill.create(level);      // 5 blocks down the line
+        var friend = vill.create(level);      // 7.5 blocks down the line, ours
+        var behind = vill.create(level);      // behind the Admiral
+        if (admiral == null || onPath == null || friend == null || behind == null) {
+            helper.fail("could not create the Broadside test units");
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 7));
+        admiral.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+        onPath.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 8.0, at.getY(), at.getZ() + 0.5, 0, 0);
+        behind.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        admiral.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        onPath.setOwnerName(foeOwner);
+        behind.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(admiral, onPath, friend, behind);
+        for (var e : all)
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(admiral);
+        com.solegendary.reignofnether.ability.abilities.CommanderDGun dgun = null;
+        for (var a : admiral.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun d)
+                dgun = d;
+        if (dgun == null || com.solegendary.reignofnether.ability.abilities.CommanderDGun.kindFor(admiral)
+                != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.BROADSIDE) {
+            helper.fail("the Admiral has no Broadside D-gun");
+            for (var e : all) e.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            return;
+        }
+        final var broadside = dgun;
+        float[] hp = new float[3];
+        helper.runAfterDelay(5, () -> {
+            for (var e : List.of(onPath, friend, behind))
+                e.moveTo(e.getX(), at.getY(), e.getZ(), e.getYRot(), 0);   // pinned where the test put them
+            hp[0] = onPath.getHealth(); hp[1] = friend.getHealth(); hp[2] = behind.getHealth();
+            broadside.use(level, admiral, BlockPos.containing(at.getX() + 12, at.getY(), at.getZ()));
+            if (pool.getEnergy() > 500 - com.solegendary.reignofnether.ability.abilities.CommanderDGun.ENERGY_COST + 0.01)
+                helper.fail("Broadside did not charge energy: " + pool.getEnergy());
+            if (broadside.isOffCooldown(admiral))
+                helper.fail("Broadside did not go on cooldown");
+        });
+        int last = 5 + (com.solegendary.reignofnether.ability.abilities.CommanderDGun.BROADSIDE_SHOTS - 1)
+            * com.solegendary.reignofnether.ability.abilities.CommanderDGun.BROADSIDE_DELAY + 15;
+        helper.runAfterDelay(last, () -> {
+            try {
+                if (onPath.isAlive() && hp[0] - onPath.getHealth() < 40)
+                    helper.fail("Broadside barely hurt the enemy on its path: " + onPath.getHealth() + " of " + hp[0]);
+                if (friend.getHealth() < hp[1])
+                    helper.fail("Broadside hurt a friendly unit");
+                if (behind.getHealth() < hp[2])
+                    helper.fail("Broadside hurt an enemy behind the Admiral");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            }
+        });
+    }
+
+    /**
+     * The Admiral's Riptide: of two enemies equally far into the cone, the one standing on a tidepool is thrown back
+     * clearly harder than the one on dry ground; a friend in the cone is neither hurt nor shoved; an enemy behind the
+     * Admiral is untouched. Velocities are read right after the cast, before a tick moves anyone.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tidewrought_riptide_knocks_foes_back_harder_in_a_pool(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_riptide_" + helper.absolutePos(BlockPos.ZERO).asLong(), foeOwner = owner + "_foe";
+        openGround(helper, 0, 0, 15, 15);
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 7));
+        BlockPos wetSpot = at.offset(4, 0, 2), drySpot = at.offset(4, 0, -2);
+        var poolRaised = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner, wetSpot, 1, 400);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var admiral = com.solegendary.reignofnether.registrars.EntityRegistrar.SHIPWRIGHT_UNIT.get().create(level);
+        var wet = vill.create(level);
+        var dry = vill.create(level);
+        var friend = vill.create(level);
+        var behind = vill.create(level);
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>();
+        for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(admiral, wet, dry, friend, behind))
+            if (e != null)
+                all.add(e);
+        if (poolRaised == null || all.size() != 5) {
+            helper.fail("could not set up the Riptide test (pool " + poolRaised + ")");
+            for (var e : all) e.discard();
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            return;
+        }
+        admiral.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        wet.setOwnerName(foeOwner);
+        dry.setOwnerName(foeOwner);
+        behind.setOwnerName(foeOwner);
+        Runnable place = () -> {
+            admiral.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
+            wet.moveTo(wetSpot.getX() + 0.5, wetSpot.getY(), wetSpot.getZ() + 0.5, 0, 0);
+            dry.moveTo(drySpot.getX() + 0.5, drySpot.getY(), drySpot.getZ() + 0.5, 0, 0);
+            friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            behind.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            for (var e : all)
+                e.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        };
+        place.run();
+        for (var e : all)
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(admiral);
+        com.solegendary.reignofnether.ability.abilities.CommanderAbility sig = null;
+        for (var a : admiral.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility c)
+                sig = c;
+        if (sig == null) {
+            helper.fail("the Admiral has no signature ability");
+            for (var e : all) e.discard();
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            return;
+        }
+        final var riptide = sig;
+        helper.runAfterDelay(5, () -> {
+            try {
+                place.run();
+                if (!com.solegendary.reignofnether.tide.TidesServerEvents.isWet(wet) || com.solegendary.reignofnether.tide.TidesServerEvents.isWet(dry))
+                    helper.fail("test setup: the wet foe is not on the pool or the dry one is");
+                float friendHp = friend.getHealth(), behindHp = behind.getHealth();
+                riptide.use(level, admiral, at.offset(6, -1, 0));
+                double vWet = wet.getDeltaMovement().horizontalDistance(), vDry = dry.getDeltaMovement().horizontalDistance();
+                if (vDry < 0.3)
+                    helper.fail("Riptide barely moved the dry enemy: " + vDry);
+                if (vWet < vDry * 1.4)
+                    helper.fail("Riptide did not throw the enemy in the pool harder: wet " + vWet + " vs dry " + vDry);
+                if (wet.getHealth() >= wet.getMaxHealth() || dry.getHealth() >= dry.getMaxHealth())
+                    helper.fail("Riptide did not hurt the enemies in its cone");
+                if (wet.getX() - admiral.getX() < 0 || wet.getDeltaMovement().x <= 0)
+                    helper.fail("Riptide pushed the enemy the wrong way");
+                if (friend.getHealth() < friendHp || friend.getDeltaMovement().horizontalDistance() > 0.05)
+                    helper.fail("Riptide hurt or shoved a friendly unit");
+                if (behind.getHealth() < behindHp || behind.getDeltaMovement().horizontalDistance() > 0.05)
+                    helper.fail("Riptide hit an enemy behind the Admiral");
+                if (riptide.isOffCooldown(admiral))
+                    helper.fail("Riptide did not go on cooldown");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+                com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            }
+        });
+    }
+
+    /**
+     * Cutlass Raider Ambush and Reef Guard regen, through the real Tides pass: a Raider stepping off a tidepool is primed
+     * (40% more damage on its next hit, gone once the window closes); on the pool a Reef Guard heals more per pass than a
+     * Raider. Units are never added to the level; tidal-ness comes from their faction.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tidewrought_cutlass_ambush_and_reef_guard_regen(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_ambush_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 12, 8);
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        var p = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner, at, 1, 400);
+        var raider = com.solegendary.reignofnether.registrars.EntityRegistrar.CUTLASS_RAIDER_UNIT.get().create(level);
+        var guard = com.solegendary.reignofnether.registrars.EntityRegistrar.REEF_GUARD_UNIT.get().create(level);
+        try {
+            if (p == null || raider == null || guard == null) {
+                helper.fail("could not set up the Ambush / regen test");
+                return;
+            }
+            raider.setOwnerName(owner);
+            guard.setOwnerName(owner);
+            for (var u : List.of(raider, guard)) {
+                u.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+                u.setHealth(u.getMaxHealth() - 10);
+            }
+            float base = raider.getUnitAttackDamage();
+            if (raider.isAmbushPrimed())
+                helper.fail("a fresh Cutlass Raider starts with its Ambush primed");
+            float rHp = raider.getHealth(), gHp = guard.getHealth();
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(raider);
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(guard);
+            float rHeal = raider.getHealth() - rHp, gHeal = guard.getHealth() - gHp;
+            if (rHeal <= 0 || gHeal <= rHeal)
+                helper.fail("on a pool the Reef Guard should out-heal the Raider: guard +" + gHeal + ", raider +" + rHeal);
+            // step off the pool: the pass sees it and primes the Ambush
+            raider.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(raider);
+            if (!raider.isAmbushPrimed())
+                helper.fail("stepping off a tidepool did not prime the Ambush");
+            float primed = raider.getUnitAttackDamage();
+            if (Math.abs(primed - base * (1 + com.solegendary.reignofnether.unit.units.tide.CutlassRaiderUnit.AMBUSH_BONUS)) > 0.01)
+                helper.fail("the Ambush hit does " + primed + ", expected " + base + " x1.4");
+            // the window closes on its own
+            raider.onLeftWater(level.getGameTime() - com.solegendary.reignofnether.unit.units.tide.CutlassRaiderUnit.AMBUSH_TICKS - 1);
+            if (raider.isAmbushPrimed() || raider.getUnitAttackDamage() != base)
+                helper.fail("the Ambush outlived its window");
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            if (raider != null) raider.discard();
+            if (guard != null) guard.discard();
+        }
     }
 
     static ResourceLocation rl(String path) {

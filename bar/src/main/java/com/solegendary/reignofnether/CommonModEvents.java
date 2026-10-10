@@ -71,6 +71,13 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.createAttributes().build());
         // Verdant Court
         evt.put(EntityRegistrar.SEEDSHAPER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SeedshaperUnit.createAttributes().build());
+        // Tidewrought
+        evt.put(EntityRegistrar.SHIPWRIGHT_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.ShipwrightUnit.createAttributes().build());
+        evt.put(EntityRegistrar.GULL_SPOTTER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.GullSpotterUnit.createAttributes().build());
+        evt.put(EntityRegistrar.CUTLASS_RAIDER_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.CutlassRaiderUnit.createAttributes().build());
+        evt.put(EntityRegistrar.REEF_GUARD_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.ReefGuardUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BOMBARD_CREW_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.BombardCrewUnit.createAttributes().build());
+        evt.put(EntityRegistrar.TIDE_PRIEST_UNIT.get(), com.solegendary.reignofnether.unit.units.tide.TidePriestUnit.createAttributes().build());
         evt.put(EntityRegistrar.FOX_COURIER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.FoxCourierUnit.createAttributes().build());
         evt.put(EntityRegistrar.MOONWELL_BEARER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit.createAttributes().build());
         evt.put(EntityRegistrar.OWL_WATCHER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.OwlWatcherUnit.createAttributes().build());
@@ -180,6 +187,12 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.WISP_CHOIR_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.BLOOM_PRIESTESS_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEEDSHAPER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SHIPWRIGHT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.GULL_SPOTTER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.CUTLASS_RAIDER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.REEF_GUARD_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.BOMBARD_CREW_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.TIDE_PRIEST_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MOONWELL_BEARER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.OWL_WATCHER_UNIT_SPAWN_EGG);

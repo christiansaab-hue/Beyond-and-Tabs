@@ -33,7 +33,7 @@ public final class BarFx {
 
     // ---- nanolathe beam tints (NANO kind): one per faction so a glance tells whose builders are at work
     // (N_NEUTRAL: factions without their own tint - they used to borrow Sunforged gold; see FactionTraits)
-    public static final byte N_SUNFORGED = 0, N_GRAVEBOUND = 1, N_HORDE = 2, N_NEUTRAL = 3, N_VERDANT = 4;
+    public static final byte N_SUNFORGED = 0, N_GRAVEBOUND = 1, N_HORDE = 2, N_NEUTRAL = 3, N_VERDANT = 4, N_TIDE = 5;
 
     /** Minimum ticks between two nano beams from the same worker (a beam lives a little longer, so they overlap). */
     public static final int NANO_INTERVAL = 8;
@@ -50,8 +50,9 @@ public final class BarFx {
 
     // ---- death flags: low 3 bits = faction debris tint, next 2 bits = cost tier (0 = not an RTS unit).
     // The faction field was 2 bits until the Verdant Court needed a fifth value (F_NONE + three factions filled it);
-    // 3 bits leave room for factions 5-7 of design-factions.md. The flags byte still has 3 spare bits.
-    public static final byte F_NONE = 0, F_SUNFORGED = 1, F_GRAVEBOUND = 2, F_HORDE = 3, F_VERDANT = 4;
+    // 3 bits leave room for factions 5-7 of design-factions.md (the Tidewrought took 5). The flags byte still has 3
+    // spare bits.
+    public static final byte F_NONE = 0, F_SUNFORGED = 1, F_GRAVEBOUND = 2, F_HORDE = 3, F_VERDANT = 4, F_TIDE = 5;
     static final int FACTION_BITS = 3, FACTION_MASK = (1 << FACTION_BITS) - 1;
 
     /** Packs a death event's flags: faction debris tint (F_*, 0-7) and cost tier (0-3). Public for the game test. */

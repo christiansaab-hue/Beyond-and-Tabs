@@ -61,6 +61,12 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
         UnitCosts.WORLD_TREE_WALKER.define(BUILDER);
         UnitCosts.SEEDSHAPER.define(BUILDER);
+        UnitCosts.SHIPWRIGHT.define(BUILDER);
+        UnitCosts.GULL_SPOTTER.define(BUILDER);
+        UnitCosts.CUTLASS_RAIDER.define(BUILDER);
+        UnitCosts.REEF_GUARD.define(BUILDER);
+        UnitCosts.BOMBARD_CREW.define(BUILDER);
+        UnitCosts.TIDE_PRIEST.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
         UnitCosts.OWL_WATCHER.define(BUILDER);
@@ -129,6 +135,8 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.TOWN_CENTRE.define(BUILDER);
         BuildingCosts.HEARTWOOD_HALL.define(BUILDER);
         BuildingCosts.GROVE.define(BUILDER);
+        BuildingCosts.WRECK_HARBOUR.define(BUILDER);
+        BuildingCosts.SLIPWAY.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -270,6 +278,15 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry WORLD_TREE_WALKER = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.WORLD_TREE_WALKER, "World Tree Walker Config");
         // Verdant Court (T1, balanced against the other factions' T1 - see ResourceCosts)
         public static final ResourceCostConfigEntry SEEDSHAPER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.SEEDSHAPER, "Seedshaper Config");
+        // Tidewrought (T1, costed against the other factions' T1: worker = every worker, Gull = Scout Dog, Cutlass =
+        // Leafblade, Reef Guard between the Halberdier and the Treant, Bombard a Pillager plus a little ore for its splash
+        // and reach, Tide Priest = Moonwell Bearer; see tools/balance_audit.py and design/tidewrought_plan.md)
+        public static final ResourceCostConfigEntry SHIPWRIGHT = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.SHIPWRIGHT, "Shipwright Config");
+        public static final ResourceCostConfigEntry GULL_SPOTTER = ResourceCostConfigEntry.Unit(50,0,0,15,1, ResourceCosts.GULL_SPOTTER, "Gull Spotter Config");
+        public static final ResourceCostConfigEntry CUTLASS_RAIDER = ResourceCostConfigEntry.Unit(130,0,0,26,2, ResourceCosts.CUTLASS_RAIDER, "Cutlass Raider Config");
+        public static final ResourceCostConfigEntry REEF_GUARD = ResourceCostConfigEntry.Unit(130,0,40,30,3, ResourceCosts.REEF_GUARD, "Reef Guard Config");
+        public static final ResourceCostConfigEntry BOMBARD_CREW = ResourceCostConfigEntry.Unit(100,80,40,34,3, ResourceCosts.BOMBARD_CREW, "Bombard Crew Config");
+        public static final ResourceCostConfigEntry TIDE_PRIEST = ResourceCostConfigEntry.Unit(70,60,40,30,2, ResourceCosts.TIDE_PRIEST, "Tide Priest Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
         // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
         // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper
@@ -357,6 +374,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry TOWN_CENTRE = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.TOWN_CENTRE, "Town Centre Config");
         public static final ResourceCostConfigEntry HEARTWOOD_HALL = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.HEARTWOOD_HALL, "Heartwood Hall Config");
         public static final ResourceCostConfigEntry GROVE = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.GROVE, "Grove Config");
+        public static final ResourceCostConfigEntry WRECK_HARBOUR = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.WRECK_HARBOUR, "Wreck Harbour Config");
+        public static final ResourceCostConfigEntry SLIPWAY = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.SLIPWAY, "Slipway Config");
         public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, 10, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
         public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
         public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.BARRACKS, "Barracks Config");

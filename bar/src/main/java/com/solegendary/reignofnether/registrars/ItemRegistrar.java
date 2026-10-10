@@ -77,6 +77,31 @@ public class ItemRegistrar {
                     0x523632, 0x647E51, new Item.Properties()));
 
     // Verdant Court
+    // Tidewrought
+    public static final RegistryObject<ForgeSpawnEggItem> SHIPWRIGHT_UNIT_SPAWN_EGG =
+            ITEMS.register("shipwright_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SHIPWRIGHT_UNIT,
+                    0x1E7F7A, 0xC9A23E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> GULL_SPOTTER_UNIT_SPAWN_EGG =
+            ITEMS.register("gull_spotter_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.GULL_SPOTTER_UNIT,
+                    0xF2F2EE, 0x8A9AA8, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> CUTLASS_RAIDER_UNIT_SPAWN_EGG =
+            ITEMS.register("cutlass_raider_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.CUTLASS_RAIDER_UNIT,
+                    0x2A6F74, 0xB8B8B8, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> REEF_GUARD_UNIT_SPAWN_EGG =
+            ITEMS.register("reef_guard_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.REEF_GUARD_UNIT,
+                    0xB08A3A, 0xE07A6A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> BOMBARD_CREW_UNIT_SPAWN_EGG =
+            ITEMS.register("bombard_crew_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BOMBARD_CREW_UNIT,
+                    0x3A4A50, 0xC9A23E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> TIDE_PRIEST_UNIT_SPAWN_EGG =
+            ITEMS.register("tide_priest_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.TIDE_PRIEST_UNIT,
+                    0x2E8A6A, 0x3CC8BE, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
             ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,
                     0x6B8F3E, 0xC8B496, new Item.Properties()));

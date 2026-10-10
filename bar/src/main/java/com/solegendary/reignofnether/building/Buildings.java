@@ -83,6 +83,13 @@ public class Buildings {
     // Verdant Court T2 defence (registered last: no existing building's id moves)
     public static final com.solegendary.reignofnether.building.buildings.verdant.StormOak STORM_OAK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storm_oak"), new com.solegendary.reignofnether.building.buildings.verdant.StormOak());
 
+    // Tidewrought (design/tidewrought_plan.md, slice 1); registered last so no existing building's id moves
+    public static final com.solegendary.reignofnether.building.buildings.tide.WreckHarbour WRECK_HARBOUR = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wreck_harbour"), new com.solegendary.reignofnether.building.buildings.tide.WreckHarbour());
+    public static final com.solegendary.reignofnether.building.buildings.tide.Slipway SLIPWAY = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "slipway"), new com.solegendary.reignofnether.building.buildings.tide.Slipway());
+    public static final com.solegendary.reignofnether.building.buildings.shared.MetalExtractor METAL_EXTRACTOR_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "metal_extractor_tide"), new com.solegendary.reignofnether.building.buildings.shared.MetalExtractor("_tide"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.WindGenerator WIND_GENERATOR_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_tide"), new com.solegendary.reignofnether.building.buildings.shared.WindGenerator("_tide"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.EnergyConverter ENERGY_CONVERTER_TIDE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "energy_converter_tide"), new com.solegendary.reignofnether.building.buildings.shared.EnergyConverter("_tide"));
+
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);
     }

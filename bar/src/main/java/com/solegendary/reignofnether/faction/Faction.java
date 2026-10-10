@@ -28,7 +28,8 @@ public class Faction {
 	public boolean playable = true;
 	// a faction that is announced in the lobby (greyed tile, "coming soon") but has no units or buildings yet;
 	// the server refuses to start or reserve it, so nothing downstream ever meets a faction without a capitol.
-	// (No faction uses it right now - the Verdant Court went live in its slice 1 - but factions 5-7 will.)
+	// (No faction uses it right now - the Verdant Court and the Tidewrought went live in their slice 1 - but
+	// factions 6-7 will.)
 	public boolean preview = false;
 	// look and mechanics data (FactionTraits); null = no explicit entry, FactionTraits.of() then gives the neutral one
 	FactionTraits traits = null;

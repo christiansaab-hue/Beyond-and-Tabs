@@ -88,6 +88,17 @@ public class BotPlayer {
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
                         ProductionItems.BLOOM_PRIESTESS),   // the Wisp Choir is queued only against flyers (queueAntiAir)
                 Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
+        // the Tidewrought have T1 only so far (slice 1): no farm, house, tower, T2 lab or T3 - every use of those
+        // checks for null, so the bot plays a T1 economy and army (Tide Priests ride along: tideHabits) and its Tier 2
+        // research only refits extractors
+        if (faction.equals(Factions.TIDEWROUGHT))
+            return new Kit(Buildings.WRECK_HARBOUR, null, null,
+                Buildings.METAL_EXTRACTOR_TIDE, Buildings.WIND_GENERATOR_TIDE, Buildings.SLIPWAY,
+                null, ProductionItems.SHIPWRIGHT,
+                List.of(ProductionItems.CUTLASS_RAIDER, ProductionItems.REEF_GUARD, ProductionItems.REEF_GUARD,
+                        ProductionItems.BOMBARD_CREW, ProductionItems.TIDE_PRIEST),
+                null, null, List.of(),
+                null, null, Buildings.ENERGY_CONVERTER_TIDE);
         return null;
     }
 
@@ -292,6 +303,7 @@ public class BotPlayer {
         // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
         verdantHabits(level, mine, army, workers, buildings, gameTime, minutes);
         verdantThickets(level, army, workers, gameTime, minutes);
+        tideHabits(level, mine, army);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too
@@ -468,16 +480,30 @@ public class BotPlayer {
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility) || !a.isOffCooldown(u))
                     continue;
+                // Riptide is a short cone, not an aura: count foes within its reach and aim it at the nearest one
+                boolean riptide = com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(u)
+                        == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.RIPTIDE;
+                double reach = riptide ? com.solegendary.reignofnether.ability.abilities.CommanderAbility.RIPTIDE_RANGE : 14;
                 int enemies = 0;
-                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), 14, scan)) {
-                    if (!(other instanceof Unit ou) || !other.isAlive() || other.distanceToSqr(le) > 14 * 14)
+                LivingEntity nearest = null;
+                double best = Double.MAX_VALUE;
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), reach, scan)) {
+                    if (!(other instanceof Unit ou) || !other.isAlive())
+                        continue;
+                    double d = other.distanceToSqr(le);
+                    if (d > reach * reach)
                         continue;
                     String o = ou.getOwnerName();
-                    if (o != null && !o.equals(name) && !AlliancesServerEvents.isAllied(name, o))
+                    if (o != null && !o.equals(name) && !AlliancesServerEvents.isAllied(name, o)) {
                         enemies++;
+                        if (d < best) {
+                            best = d;
+                            nearest = other;
+                        }
+                    }
                 }
-                if (enemies >= 3)
-                    a.use(level, u, le.blockPosition());
+                if (enemies >= (riptide ? 2 : 3))
+                    a.use(level, u, riptide ? nearest.blockPosition() : le.blockPosition());
             }
             useOvergrowth(level, le, u);
             fireDGun(level, le, u);
@@ -657,7 +683,8 @@ public class BotPlayer {
                 // Moonwell Bearers and Bloom Priestesses: healers, not fighters (neither is an AttackerUnit, so the
                 // army list never holds them and they would otherwise idle at the lab)
                 if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
-                        && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit))
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit)
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit))
                     continue;
                 Unit mb = (Unit) le;
                 if (centre == null)
@@ -718,6 +745,54 @@ public class BotPlayer {
                 a.use(level, u, MiscUtil.getHighestNonAirBlock(level, at));
                 lastSnareAt = gameTime;
                 return;
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ Tidewrought habits (slice 1)
+
+    /**
+     * For any bot whose units carry Raise Tidepool (the Tidewrought's Tide Priests, which follow the army like the
+     * Court's healers - see verdantHabits): when the army has an enemy within 16 blocks of its centre, a priest off
+     * cooldown raises a pool there, under the fight, so the line regenerates and the raiders get their Ambush; with
+     * no army to cover, a priest under attack raises one at its own feet. Only with an energy reserve (100 + the cost),
+     * so a bot never stalls its economy on water. Cheap: one centroid pass and one grid query per priest off cooldown.
+     */
+    void tideHabits(ServerLevel level, List<LivingEntity> mine, List<LivingEntity> army) {
+        BlockPos centre = null;
+        boolean fight = false;
+        for (LivingEntity le : mine) {
+            if (!(le instanceof Unit u) || u.getAbilities() == null)
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.RaiseTidepool) || !a.isOffCooldown(u))
+                    continue;
+                boolean canPay = false;
+                for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+                    if (r.ownerName.equals(name))
+                        canPay = r.getEnergy() >= com.solegendary.reignofnether.ability.abilities.RaiseTidepool.ENERGY_COST + 100;
+                if (!canPay)
+                    return;
+                if (centre == null && !army.isEmpty()) {
+                    double cx = 0, cz = 0;
+                    for (LivingEntity f : army) { cx += f.getX(); cz += f.getZ(); }
+                    centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
+                    for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, centre.getX(), centre.getZ(), 16, scan))
+                        if (isEnemyUnit(other) && other.distanceToSqr(centre.getX(), other.getY(), centre.getZ()) < 16 * 16) {
+                            fight = true;
+                            break;
+                        }
+                }
+                BlockPos at = null;
+                if (fight && le.distanceToSqr(centre.getX(), le.getY(), centre.getZ()) <=
+                        com.solegendary.reignofnether.ability.abilities.RaiseTidepool.RANGE * com.solegendary.reignofnether.ability.abilities.RaiseTidepool.RANGE)
+                    at = centre;
+                else if (army.isEmpty() && le.getLastHurtByMob() != null && le.tickCount - le.getLastHurtByMobTimestamp() < 60)
+                    at = le.getOnPos();
+                if (at != null) {
+                    a.use(level, u, at);
+                    return;   // one pool per think: the per-player cap is 4, don't spend it all at once
+                }
             }
         }
     }

@@ -155,6 +155,14 @@ public class ProductionItems {
     public static final ResearchBeaconLevel4 RESEARCH_BEACON_LEVEL_4 = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "beacon_level_4"), new ResearchBeaconLevel4());
     public static final ResearchBeaconLevel5 RESEARCH_BEACON_LEVEL_5 = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "beacon_level_5"), new ResearchBeaconLevel5());
 
+    // Tidewrought (slice 1), registered last so no existing production item's id moves
+    public static final com.solegendary.reignofnether.unit.units.tide.ShipwrightProd SHIPWRIGHT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shipwright"), new com.solegendary.reignofnether.unit.units.tide.ShipwrightProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.GullSpotterProd GULL_SPOTTER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "gull_spotter"), new com.solegendary.reignofnether.unit.units.tide.GullSpotterProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.CutlassRaiderProd CUTLASS_RAIDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "cutlass_raider"), new com.solegendary.reignofnether.unit.units.tide.CutlassRaiderProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.ReefGuardProd REEF_GUARD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "reef_guard"), new com.solegendary.reignofnether.unit.units.tide.ReefGuardProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.BombardCrewProd BOMBARD_CREW = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bombard_crew"), new com.solegendary.reignofnether.unit.units.tide.BombardCrewProd());
+    public static final com.solegendary.reignofnether.unit.units.tide.TidePriestProd TIDE_PRIEST = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "tide_priest"), new com.solegendary.reignofnether.unit.units.tide.TidePriestProd());
+
     private static <T extends ProductionItem> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.PRODUCTION_ITEM, id, building);
     }
@@ -207,6 +215,12 @@ public class ProductionItems {
         LEAFBLADE,
         THORNBOW,
         SENTINEL_TREANT,
+        SHIPWRIGHT,
+        GULL_SPOTTER,
+        CUTLASS_RAIDER,
+        REEF_GUARD,
+        BOMBARD_CREW,
+        TIDE_PRIEST,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

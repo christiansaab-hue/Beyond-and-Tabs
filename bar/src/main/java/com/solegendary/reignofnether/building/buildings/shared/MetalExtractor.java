@@ -30,7 +30,7 @@ public class MetalExtractor extends com.solegendary.reignofnether.building.produ
     public final static float T2_METAL_INCOME = 7.0f;
     public final static ResourceCost cost = ResourceCosts.METAL_EXTRACTOR;
 
-    /** "" (Kingdom), "_dark" (The Fallen), "_nether" (The Gilded Legion) or "_verdant" (Verdant Court); picks the faction's structure skin. */
+    /** "" (Kingdom), "_dark" (The Fallen), "_nether" (The Gilded Legion), "_verdant" (Verdant Court) or "_tide" (Tidewrought); picks the faction's structure skin. */
     public final String variant;
 
     public MetalExtractor() {

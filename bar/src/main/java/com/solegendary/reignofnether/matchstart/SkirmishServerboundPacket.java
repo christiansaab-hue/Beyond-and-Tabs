@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * configured bot at the chosen spawn distance.
  *
  * Faction codes: 0 Sunforged Kingdom (villagers), 1 Gravebound (monsters), 2 Ironhide Horde (piglins), 3 random,
- * 4 Verdant Court, 5 Tidewrought (reserved, preview). 3 kept its meaning when the Court arrived (codes travel as bytes
+ * 4 Verdant Court, 5 Tidewrought (live since its slice 1). 3 kept its meaning when the Court arrived (codes travel as bytes
  * and persist in the lobby screen); the table is CODE_PATHS.
  * Arena: 0 small, 1 medium, 2 large, 3 huge, 4 random.  Metal: 0 lean, 1 normal, 2 rich, 3 random.
  * Spawn distance: 0 close, 1 normal, 2 far.  Difficulty: 0 easy, 1 medium, 2 hard.
@@ -91,7 +91,7 @@ public class SkirmishServerboundPacket {
     /** The code the "Random" entry sends; it kept 3 when the Court arrived. */
     public static final int RANDOM_CODE = 3;
 
-    // faction code -> registry path, indexed by code. 3 is Random; 5 is reserved for the Tidewrought
+    // faction code -> registry path, indexed by code. 3 is Random; 5 is the Tidewrought
     // (design/tidewrought_plan.md). A new faction appends its path here, so every code already in a remembered lobby
     // keeps its meaning and the lobby's picker lists it without further changes
     static final List<String> CODE_PATHS = List.of("villagers", "monsters", "piglins", "random", "verdant_court", "tidewrought");
@@ -117,8 +117,8 @@ public class SkirmishServerboundPacket {
 
     /**
      * The faction a player or bot actually starts as. Only a live faction is honoured; Random, an unknown code and a
-     * preview faction (5, the Tidewrought, while it has no units) all roll a random live one, so a modified client
-     * can't start a preview from the skirmish screen either.
+     * preview faction (none right now; the Tidewrought on 5 was one until its slice 1) all roll a random live one, so a
+     * modified client can't start a preview from the skirmish screen either.
      */
     public static Faction factionOf(int code, Random rng) {
         Faction f = factionForCode(code);
