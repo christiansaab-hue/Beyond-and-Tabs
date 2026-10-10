@@ -134,7 +134,9 @@ public class UnitDressServerEvents {
         if (commander) return new Kit(resolve(l.commanderHelm()), resolve(l.commanderChest()), Items.LEATHER_LEGGINGS);
         if (worker) return new Kit(null, resolve(l.workerChest()), null);
         if (ranged) return new Kit(resolve(l.rangedHead()), resolve(l.rangedChest()), null);
-        return new Kit(resolve(l.meleeHead()), resolve(l.meleeChest()), Items.LEATHER_LEGGINGS);
+        // no melee chest piece = the faction's skins carry their own clothes (Verdant): leggings would hide the robe too
+        Item meleeChest = resolve(l.meleeChest());
+        return new Kit(resolve(l.meleeHead()), meleeChest, meleeChest == null ? null : Items.LEATHER_LEGGINGS);
     }
 
     static void equip(Mob mob, EquipmentSlot slot, Item item, int colour) {

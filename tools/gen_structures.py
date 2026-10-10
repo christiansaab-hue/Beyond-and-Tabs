@@ -686,6 +686,87 @@ def heart_of_the_wild():
     return s
 
 
+def storm_oak():
+    """The Court's T2 defence: a gnarled old oak that calls lightning. A mossy stone plinth, mangrove roots clawing out
+    from a flared foot, a trunk that twists as it climbs (shifting a block every couple of rows, the joints doubled so it
+    reads as one living trunk), a band of oxidised copper runes round its waist (the Court's silver), two crooked limbs,
+    a dark ragged crown with froglights flickering inside and a lightning rod at the very top - the bolt's source
+    (StormOakPlacement strikes from the rod). Nothing hangs (the build order runs bottom-up). 7 x 15 x 7."""
+    W, H = 7, 15
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            corner = x in (0, W - 1) and z in (0, W - 1)
+            s.set(x, 0, z, "rooted_dirt" if corner else "mossy_stone_bricks" if edge else "moss_block")
+    s.set(c, 0, c, "calcite")
+    # the flared foot: 3x3 of wood, then a plus, banded with copper runes
+    for y in (1, 2):
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                if y == 2 and dx and dz:
+                    continue
+                s.set(c + dx, y, c + dz, "oak_wood", axis="y")
+    for (dx, dz) in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
+        s.set(c + dx, 3, c + dz, "oak_wood", axis="y")
+    for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+        s.set(c + dx, 4, c + dz, "oxidized_cut_copper")
+    s.set(c, 4, c, "oak_wood", axis="y")
+    # roots clawing out to the plinth's corners and sides
+    for (dx, dz) in [(2, 2), (-2, 2), (2, -2), (-2, -2), (2, 0), (-2, 0), (0, 2), (0, -2)]:
+        if (c + dx, 1, c + dz) not in s.blocks:
+            s.set(c + dx, 1, c + dz, "mangrove_roots", waterlogged="false")
+    for (dx, dz) in [(2, 0), (-2, 0), (0, 2)]:                 # the side roots climb the foot
+        s.set(c + dx, 2, c + dz, "mangrove_roots", waterlogged="false")
+    # the twisting trunk: (x, z) per row; where it shifts both columns are wood at that row
+    path = {5: (c, c), 6: (c, c), 7: (c + 1, c), 8: (c + 1, c), 9: (c + 1, c + 1), 10: (c, c + 1), 11: (c, c + 1), 12: (c, c)}
+    prev = (c, c)
+    for y in range(5, 13):
+        x, z = path[y]
+        s.set(x, y, z, "oak_log", axis="y")
+        if (x, z) != prev:
+            s.set(prev[0], y, prev[1], "oak_wood", axis="y")
+        prev = (x, z)
+    # two crooked limbs: one low toward -x, one higher toward -z, each ending in a leaf knot
+    for i, (x, y, z) in enumerate([(c, 8, c), (c - 1, 8, c), (c - 2, 9, c)]):
+        if (x, y, z) not in s.blocks:
+            s.set(x, y, z, "oak_log", axis="x")
+    for (x, y, z) in [(c, 10, c), (c, 10, c - 1), (c, 11, c - 2)]:
+        if (x, y, z) not in s.blocks:
+            s.set(x, y, z, "oak_log", axis="z")
+    # the ragged crown: dark oak leaves round the top, holes left on purpose (a storm-torn oak, not a ball)
+    for y, r in [(10, 2.2), (11, 3.0), (12, 2.8), (13, 1.8)]:
+        for x in range(W):
+            for z in range(W):
+                d = ((x - c) ** 2 + (z - c) ** 2) ** 0.5
+                if d <= r and (x, y, z) not in s.blocks and (x * 5 + z * 7 + y * 3) % 7 != 0:
+                    leaf = "azalea_leaves" if (x * 3 + z + y) % 5 == 0 else "dark_oak_leaves"
+                    s.set(x, y, z, leaf, **LEAF)
+    for (x, y, z) in [(c - 2, 10, c), (c, 11, c - 2)]:      # leaf knots at the limb ends
+        for (dx, dz) in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
+            p = (x + dx, y + 1, z + dz)
+            if 0 <= p[0] < W and 0 <= p[2] < W and p not in s.blocks:
+                s.set(*p, "dark_oak_leaves", **LEAF)
+    # froglights flickering in the crown, the rod on the crown's peak
+    for (x, y, z) in [(c + 2, 11, c), (c - 1, 12, c + 2), (c - 2, 11, c - 1)]:
+        s.set(x, y, z, "verdant_froglight", axis="y")
+    s.set(c, 13, c, "oak_log", axis="y")
+    s.set(c, 14, c, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    # lanterns standing on mossy walls at two corners of the plinth, moss carpet and ferns
+    for (x, z) in [(1, 1), (W - 2, W - 2)]:
+        s.set(x, 1, z, "mossy_cobblestone_wall")
+        s.set(x, 2, z, "lantern", hanging="false", waterlogged="false")
+    for (x, z) in [(1, W - 2), (W - 2, 1)]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "fern")
+    for (x, z) in [(1, 3), (5, 3), (3, 5)]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "moss_carpet")
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -701,3 +782,4 @@ if __name__ == "__main__":
         grove().write(f"{out}/grove.nbt")
         circle_of_elders().write(f"{out}/circle_of_elders.nbt")
         heart_of_the_wild().write(f"{out}/heart_of_the_wild.nbt")
+        storm_oak().write(f"{out}/storm_oak.nbt")

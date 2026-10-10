@@ -84,6 +84,13 @@ public class SoundRegistrar {
             SOUND_EVENTS.register("soul_resonance_calm", () ->
                     SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "soul_resonance_calm")));
 
+    // Verdant Court calm theme: no audio file of our own. sounds.json points this event at vanilla's own
+    // music.overworld.flower_forest pool (the 1.20 forest tracks that ship with the game), so the Court gets a gentle
+    // woodland theme of its own instead of borrowing the Kingdom's, with nothing copyrighted added to the jar.
+    public static final RegistryObject<SoundEvent> VERDANT_CALM_THEME_SONG =
+            SOUND_EVENTS.register("verdant_court_calm", () ->
+                    SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "verdant_court_calm")));
+
     public static final RegistryObject<SoundEvent> WRAITH_AMBIENT =
             SOUND_EVENTS.register("wraith_ambient", () ->
                     SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wraith_ambient")));

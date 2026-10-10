@@ -91,6 +91,11 @@ public class BotPlayer {
         return null;
     }
 
+    /** The faction's static T2 defence the bot raises after Tier 2, or null (only the Court has one so far). */
+    public static Building t2TowerFor(Faction faction) {
+        return Factions.VERDANT_COURT.equals(faction) ? Buildings.STORM_OAK : null;
+    }
+
     public final String name;
     public final Faction faction;
     public final Difficulty difficulty;
@@ -211,6 +216,21 @@ public class BotPlayer {
             // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
             if (!done && tier2 && kit.t2Lab() != null && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1)
                 done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
+            // a T2 defence (the Court's Storm Oak) once the T2 lab stands: one, a second from minute 12, both a dozen
+            // blocks from home toward the nearest enemy (the second offset to the side so they cover a wider front)
+            Building t2Tower = t2TowerFor(faction);
+            int t2Towers = t2Tower == null ? 0 : count(buildings, t2Tower);
+            if (!done && t2Tower != null && tier2 && count(buildings, kit.t2Lab()) >= 1 && t2Towers < (minutes >= 12 ? 2 : 1)) {
+                BlockPos threat = nearestEnemyBuilding(home);
+                BlockPos want = home;
+                if (threat != null) {
+                    double dx = threat.getX() - home.getX(), dz = threat.getZ() - home.getZ();
+                    double len = Math.max(1, Math.hypot(dx, dz));
+                    int side = t2Towers == 0 ? 0 : 9;
+                    want = home.offset((int) (dx / len * 12 - dz / len * side), 0, (int) (dz / len * 12 + dx / len * side));
+                }
+                done = placeNear(level, t2Tower, want, workers, 1);
+            }
             if (!done && patch != null) {
                 done = placeExtractor(level, patch, workers);
                 if (!done)

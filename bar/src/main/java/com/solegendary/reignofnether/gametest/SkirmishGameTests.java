@@ -3858,6 +3858,95 @@ public class SkirmishGameTests {
         });
     }
 
+    /**
+     * The Storm Oak (Verdant T2 defence): a built oak whose owner has Tier 2 strikes an enemy in range - the one standing
+     * in a group rather than a closer loner - never its owner's unit, then waits out its cooldown; without Tier 2 it
+     * stays dormant. The placement is never put in the world (invisible to parallel tests) and the strike is limited
+     * to this test's foe, so another test's units nearby can't be picked.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_storm_oak_strikes_foe_not_friend_and_respects_cooldown(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_storm_oak", foeOwner = "gametest_storm_oak_foe";
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(Buildings.STORM_OAK, level,
+            helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.StormOakPlacement oak)) {
+            helper.fail("the Storm Oak is not a StormOakPlacement: " + bp);
+            return;
+        }
+        if (!Factions.VERDANT_COURT.equals(Buildings.STORM_OAK.getFaction()))
+            helper.fail("the Storm Oak is not a Verdant Court building");
+        if (com.solegendary.reignofnether.bot.BotPlayer.t2TowerFor(Factions.VERDANT_COURT) != Buildings.STORM_OAK)
+            helper.fail("the Verdant bot does not raise Storm Oaks");
+        oak.isBuilt = true;
+        var treant = com.solegendary.reignofnether.registrars.EntityRegistrar.SENTINEL_TREANT_UNIT.get();
+        var loner = treant.create(level);
+        var packA = treant.create(level);
+        var packB = treant.create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.SENTINEL_TREANT_UNIT.get().create(level);
+        if (loner == null || packA == null || packB == null || friend == null) {
+            helper.fail("could not create the Storm Oak test units");
+            return;
+        }
+        BlockPos c = oak.centrePos;
+        int gy = helper.absolutePos(new BlockPos(0, 2, 0)).getY();
+        friend.moveTo(c.getX() + 0.5, gy, c.getZ() + 2.5, 0, 0);       // the closest unit of all: must never be hit
+        loner.moveTo(c.getX() + 4.5, gy, c.getZ() + 0.5, 0, 0);        // a closer enemy on its own
+        packA.moveTo(c.getX() + 0.5, gy, c.getZ() + 9.5, 0, 0);        // two enemies together, farther away
+        packB.moveTo(c.getX() + 1.5, gy, c.getZ() + 9.5, 0, 0);
+        friend.setOwnerName(owner);
+        for (var e : List.of(loner, packA, packB))
+            e.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(friend, loner, packA, packB);
+        for (var e : all)
+            level.addFreshEntity(e);
+        // all in this one tick, then discarded: the treants (enemies of every other test's units) must never live long
+        // enough for a neighbouring test's archer to pick one as a target
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        {
+            try {
+                float friendHp = friend.getHealth();
+                if (oak.strike(level, foeOwner) != null)
+                    helper.fail("the Storm Oak struck without Tier 2");
+                com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                    com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+                // the friend is the only unit the oak may see: nothing to strike
+                if (oak.strike(level, owner) != null)
+                    helper.fail("the Storm Oak struck its owner's unit");
+                var hit = oak.strike(level, foeOwner);
+                if (hit == null) {
+                    helper.fail("the Storm Oak struck nothing with three enemies in range");
+                    return;
+                }
+                if (hit != packA && hit != packB)
+                    helper.fail("the Storm Oak struck the lone enemy instead of the group");
+                if (hit.getHealth() >= hit.getMaxHealth())
+                    helper.fail("the bolt did no damage");
+                if (friend.getHealth() < friendHp)
+                    helper.fail("the bolt hurt a friendly unit");
+                // cooldown: no second bolt until COOLDOWN_TICKS have passed
+                hit.invulnerableTime = 0;
+                float hp = hit.getHealth();
+                if (oak.strike(level, foeOwner) != null || hit.getHealth() < hp)
+                    helper.fail("the Storm Oak struck again while on cooldown");
+                for (int t = 0; t < com.solegendary.reignofnether.building.buildings.placements.StormOakPlacement.COOLDOWN_TICKS - 1; t++)
+                    oak.tickStrike(level);
+                if (oak.strike(level, foeOwner) != null)
+                    helper.fail("the Storm Oak struck before its cooldown ended");
+                oak.tickStrike(level);
+                for (var e : List.of(loner, packA, packB))
+                    e.invulnerableTime = 0;
+                if (oak.strike(level, foeOwner) == null)
+                    helper.fail("the Storm Oak did not strike again after its cooldown");
+                helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+                for (var e : all)
+                    e.discard();
+            }
+        }
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

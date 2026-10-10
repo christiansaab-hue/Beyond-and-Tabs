@@ -204,6 +204,7 @@ public class BuildingSaveData extends SavedData {
             case com.solegendary.reignofnether.building.buildings.verdant.HeartOfTheWild.buildingName -> building = Buildings.HEART_OF_THE_WILD;
             case com.solegendary.reignofnether.building.buildings.verdant.CircleOfElders.buildingName -> building = Buildings.CIRCLE_OF_ELDERS;
             case com.solegendary.reignofnether.building.buildings.verdant.Grove.buildingName -> building = Buildings.GROVE;
+            case com.solegendary.reignofnether.building.buildings.verdant.StormOak.buildingName -> building = Buildings.STORM_OAK;
         }
         return building;
     }
