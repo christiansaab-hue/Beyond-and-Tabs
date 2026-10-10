@@ -302,6 +302,9 @@ public class BotPlayer {
                     a.use(level, u, le.blockPosition());
             }
             fireDGun(level, le, u);
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.RaiseDead && a.isOffCooldown(u))
+                    a.use(level, u, le.blockPosition());   // does nothing (and keeps its cooldown) without wrecks in reach
         }
     }
 
