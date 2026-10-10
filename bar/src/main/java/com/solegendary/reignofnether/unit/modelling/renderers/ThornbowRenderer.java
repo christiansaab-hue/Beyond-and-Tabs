@@ -9,7 +9,8 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * The Verdant Court Thornbow: the skeleton's slim archer model (with its bow-draw animation) wearing an elven skin -
- * pale face, leaf hood, bark-brown tunic (64x32, the skeleton layout). Liveries add the green leather hood and coat.
+ * pale face, leaf hood with a thorn-berry sprig, bark-brown tunic and quiver strap (64x32, the skeleton layout; drawn by
+ * tools/gen_verdant_skins.py). The Court's livery is boots only, so the drawn hood and tunic show.
  */
 @OnlyIn(Dist.CLIENT)
 public class ThornbowRenderer extends SkeletonRenderer {

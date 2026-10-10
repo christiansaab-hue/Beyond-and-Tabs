@@ -54,6 +54,7 @@ public class ResourceCosts {
     // Verdant Court T3: the Heart of the Wild and the World Tree Walker
     public static final ResourceCost WORLD_TREE_WALKER = new ResourceCost(ID, "WORLD_TREE_WALKER");
     public static final ResourceCost HEART_OF_THE_WILD = new ResourceCost(ID, "HEART_OF_THE_WILD");
+    public static final ResourceCost STORM_OAK = new ResourceCost(ID, "STORM_OAK");
     // Verdant Court
     public static final ResourceCost SEEDSHAPER = new ResourceCost(ID, "SEEDSHAPER");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
@@ -307,6 +308,7 @@ public class ResourceCosts {
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
         WORLD_TREE_WALKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WORLD_TREE_WALKER);
         HEART_OF_THE_WILD.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.HEART_OF_THE_WILD);
+        STORM_OAK.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.STORM_OAK);
         SEEDSHAPER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEEDSHAPER);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
         MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);

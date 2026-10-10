@@ -80,6 +80,8 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.verdant.CircleOfElders CIRCLE_OF_ELDERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "circle_of_elders"), new com.solegendary.reignofnether.building.buildings.verdant.CircleOfElders());
     // Verdant Court T3 lab
     public static final com.solegendary.reignofnether.building.buildings.verdant.HeartOfTheWild HEART_OF_THE_WILD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "heart_of_the_wild"), new com.solegendary.reignofnether.building.buildings.verdant.HeartOfTheWild());
+    // Verdant Court T2 defence (registered last: no existing building's id moves)
+    public static final com.solegendary.reignofnether.building.buildings.verdant.StormOak STORM_OAK = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "storm_oak"), new com.solegendary.reignofnether.building.buildings.verdant.StormOak());
 
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);

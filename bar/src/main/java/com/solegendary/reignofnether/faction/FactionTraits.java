@@ -170,13 +170,16 @@ public final class FactionTraits {
      * the Grove Warden its Thornburst cone and Wildstride and the Seedshapers their quick-build extractor; slice 2 its
      * death debris (leaves, petals and green sparkles). A faction mechanic (Living Terrain, slice 3) stays off.
      */
+    // Livery: only the commander (helm + chest) and the faction-green boots. The Court's units wear their own drawn
+    // clothes (tools/gen_verdant_skins.py: hoods, veils, leaf pauldrons, robes) - a leather chest and hood over them
+    // hid the robe layer and made every Court unit the same green figure from the RTS camera.
     public static final FactionTraits VERDANT = new Builder("verdant")
         .accent(0xFF5CD69A)
         .livery(new Livery(0x4E8A3C, 0xC0C8CC,
             Piece.vanilla(Items.CHAINMAIL_HELMET), Piece.vanilla(Items.LEATHER_CHESTPLATE),
-            Piece.vanilla(Items.LEATHER_CHESTPLATE),
-            Piece.vanilla(Items.LEATHER_HELMET), Piece.vanilla(Items.LEATHER_CHESTPLATE),
-            new Piece(null, null), Piece.vanilla(Items.LEATHER_CHESTPLATE)))
+            new Piece(null, null),
+            new Piece(null, null), new Piece(null, null),
+            new Piece(null, null), new Piece(null, null)))
         .banner(Blocks.GREEN_WOOL.defaultBlockState(), Blocks.LIGHT_GRAY_WOOL.defaultBlockState())
         .scaffold(Blocks.OAK_LOG.defaultBlockState(), Blocks.MOSS_BLOCK.defaultBlockState(), ScaffoldDecor.LANTERNS)
         .ambience(Ambience.SPORES)

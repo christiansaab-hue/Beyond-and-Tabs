@@ -140,6 +140,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.WATCHTOWER.define(BUILDER);
         BuildingCosts.CASTLE.define(BUILDER);
         BuildingCosts.HEART_OF_THE_WILD.define(BUILDER);
+        BuildingCosts.STORM_OAK.define(BUILDER);
         BuildingCosts.IRON_GOLEM_BUILDING.define(BUILDER);
         BuildingCosts.SHRINE_OF_PROSPERITY.define(BUILDER);
         BuildingCosts.VILLAGER_MARKET.define(BUILDER);
@@ -367,6 +368,9 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry WATCHTOWER = ResourceCostConfigEntry.Building(0,100,75, 0, ResourceCosts.WATCHTOWER, "Watchtower Config");
         public static final ResourceCostConfigEntry CASTLE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.CASTLE, "Castle Config");
         public static final ResourceCostConfigEntry HEART_OF_THE_WILD = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.HEART_OF_THE_WILD, "Heart of the Wild Config");
+        // T2 static defence: a Watchtower (100/75) needs three garrisoned units to fight; the Storm Oak fights alone
+        // (25 dmg / 6 s at range 22, about one archer's damage, but it never misses) - priced like a small T2 army
+        public static final ResourceCostConfigEntry STORM_OAK = ResourceCostConfigEntry.Building(0,180,260, 0, ResourceCosts.STORM_OAK, "Storm Oak Config");
         public static final ResourceCostConfigEntry IRON_GOLEM_BUILDING = ResourceCostConfigEntry.Building(0,50,250, 0, ResourceCosts.IRON_GOLEM_BUILDING, "Iron Golem Building Config");
         public static final ResourceCostConfigEntry SHRINE_OF_PROSPERITY = ResourceCostConfigEntry.Building(0,125,50, 0, ResourceCosts.SHRINE_OF_PROSPERITY, "Shrine of Prosperity Config");
         public static final ResourceCostConfigEntry VILLAGER_MARKET = ResourceCostConfigEntry.Building(0,75,75, 0, ResourceCosts.VILLAGER_MARKET, "Villager Market Config");

@@ -169,6 +169,29 @@ powers. Tier 3 stays off the Heartwood Hall and the bot never researches it (nul
 Not done: Wisp Choir, Bloom Priestess, Storm Oak, Great Elk Herd; own portraits for the T2 units (recoloured
 slice-1 skins and a drawn stag icon for now).
 
+### Polish status (branch `verdant-polish`)
+
+- **Own skins** (`tools/gen_verdant_skins.py`, original pixel art drawn in code, UV layouts of the models the renderers
+  already use): Seedshaper (moss hood with a sprout, seed-gold sash and pouches, linen apron, bark bracers), Elder
+  Druid (white beard, forest robe trimmed silver, bone antler circlet + moonstone, antlers across the hood top), Bloom
+  Priestess (pale veil, flower crown ring, blossom-strewn robe, green stole), Leafblade (bark leathers, leaf pauldrons,
+  lime scarf mask, leaf crest), Hive Keeper (straw hat + mesh veil, honey smock with bee bands, comb pot, moss gloves),
+  Thornbow (leaf hood with thorn-berry sprig, quiver strap), Shade Ranger (dusk-violet peaked hood, face in shadow with
+  teal eyes, silver clasp), Moonwell Bearer (own `MoonwellBearerRenderer`: moon-silver robe, lantern belt, the witch
+  hat as a moss cowl with a silver brim and moon tip). The villager-model head "hat" box (8x12x8) is visible, so hoods,
+  veils and crowns are real 3D shapes. Top faces carry the strongest shapes (the RTS camera looks down).
+- **Livery**: the Court now wears boots only (commander keeps helm + chest); the leather chest/hood hid the drawn robes
+  and made every Court unit the same green figure. A livery with no melee chest also skips the leggings.
+- **Portraits**: every Court unit (15) has a 16x16 bust on a shared dusk backdrop with a moss frame (saved 4x, 64x64).
+- **Calm theme**: `verdant_court_calm` in sounds.json is an event reference to vanilla's
+  `music.overworld.flower_forest` (shipped with the game, no audio added); Factions points the Court at it.
+- **Storm Oak** (`StormOak` + `StormOakPlacement`, `storm_oak.nbt` 7x15x7 both trees, slot abilitySlot5, 180m/260e,
+  360 HP): needs a Circle of Elders + Tier 2 on the button, dormant on the server without Tier 2. Every 6 s one bolt
+  (particle line from the lightning rod, flash, thunder) of 25 indirect-magic damage on one enemy unit within 22
+  blocks, the one with the most other enemies within 4 blocks (nearest on ties); never friends/allies/cloaked units, no
+  LightningBolt entity (no fire). Bot raises one after its T2 lab, a second from minute 12 (`BotPlayer.t2TowerFor`).
+  GameTest `verdant_storm_oak_strikes_foe_not_friend_and_respects_cooldown`.
+
 ### Slice 2 status (branch `verdant-slice-2`)
 
 Implemented (all trained at the Grove, slots 4-6, or planted by a Seedshaper):

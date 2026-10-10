@@ -90,13 +90,13 @@ public class Factions {
 
 		// Registered last so the registry ids of the six above don't move (getFaction(int) reads them). Playable (lobby,
 		// skirmish, sandbox, random, bots) but still no cube map (so the title screen and survival's random pick skip it)
-		// and no spawn wave (not a survival faction) until those exist. No calm theme of its own yet: the Kingdom's
-		// pastoral one fits a forest court best. Custom (sandbox) buildings follow the Kingdom's "buildable" flag until
-		// CustomBuilding grows a Court one.
+		// and no spawn wave (not a survival faction) until those exist. Its calm theme is vanilla's flower-forest music
+		// (SoundRegistrar.VERDANT_CALM_THEME_SONG), no longer the Kingdom's. Custom (sandbox) buildings follow the
+		// Kingdom's "buildable" flag until CustomBuilding grows a Court one.
 		VERDANT_COURT = register("verdant_court", new Faction()
 			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/seedshaper.png"))
 			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/flowering_azalea_leaves.png"))
-			.setSound(SoundRegistrar.VILLAGER_CALM_THEME_SONG.get())
+			.setSound(SoundRegistrar.VERDANT_CALM_THEME_SONG.get())
 			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
 			.noCubeMap()
 			.setTraits(FactionTraits.VERDANT)
@@ -266,6 +266,7 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.GROVE, Keybindings.abilitySlot6);
 		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, Keybindings.hotkey2);   // T3 lab: the Castle's and Stronghold's slot
+		registerBuildings(VERDANT_COURT, Buildings.STORM_OAK, Keybindings.abilitySlot5);       // T2 defence: the Watchtowers' slot
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);
