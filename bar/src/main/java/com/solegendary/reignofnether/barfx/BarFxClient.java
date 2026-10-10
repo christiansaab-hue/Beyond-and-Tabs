@@ -130,7 +130,7 @@ public final class BarFxClient {
                     }
                     case BarFx.SCORCH -> scorchRing(e.x, e.y, e.z, e.a, busy);
                     case BarFx.BUILDING_PART -> buildingPart(e.x, e.y, e.z, (int) e.a);
-                    case BarFx.COLLAPSE -> collapse(e.x, e.y, e.z, e.a, e.b);
+                    case BarFx.COLLAPSE -> collapse(e.x, e.y, e.z, e.a, e.b, (e.flags & 1) == 0);
                     case BarFx.NANO -> nano(e.kind, e.flags, e.x, e.y, e.z, e.a, e.b, e.c, busy);
                     default -> { }
                 }
@@ -423,7 +423,7 @@ public final class BarFxClient {
     }
 
     /** A whole building comes down: fire, rubble, a dust cloud, a shockwave, smoke that lingers. */
-    static void collapse(float x, float y, float z, float half, float height) {
+    static void collapse(float x, float y, float z, float half, float height, boolean shake) {
         half = Math.min(half, 12); height = Math.min(height, 24);
         float g = groundY(x, y + 1, z);
         flash(x, g + 1.5f, z, 2 + half * .7f, .25f, 0xFFFFFF);
@@ -465,7 +465,8 @@ public final class BarFxClient {
             d.x2 = g;   // ground under the pop, for its dust
         }
         P billow = add(DELAY, x, g, z, .8f, half, 0xA89C8A); billow.x2 = g; billow.crater = true;   // crater = billow
-        shake(.25f + half * .04f, x, g, z);   // (unchanged: one gentle shake per building, never per unit)
+        if (shake)   // one gentle shake per building, never per unit (and none for the commander blast)
+            shake(.25f + half * .04f, x, g, z);
     }
 
     /** A DELAY timer ran out: a secondary pop of a collapsing building, or (crater flag) its second dust billow. */

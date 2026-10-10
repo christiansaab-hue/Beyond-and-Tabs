@@ -30,8 +30,16 @@ public class EmbalmerUnit extends ZombieVillagerUnit {
     @Override
     public void updateAbilityButtons() {
         super.updateAbilityButtons();
-        embalmerAbilities = ZombieVillagerUnit.ABILITIES.clone();
-        embalmerAbilities.add(new SoulWisps(), Keybindings.abilitySlot1);
+        // the type's own ability is added only when missing: a re-run (client cooldown sync) keeps the previous one
+        // and any commander abilities added at runtime, instead of wiping them
+        Abilities prev = embalmerAbilities;
+        embalmerAbilities = Abilities.cloneKeepingExtras(ZombieVillagerUnit.ABILITIES, prev);
+        boolean has = false;
+        for (var a : embalmerAbilities.get())
+            if (a instanceof SoulWisps)
+                has = true;
+        if (!has)
+            embalmerAbilities.add(new SoulWisps(), Keybindings.abilitySlot1);
     }
 
     @Override
