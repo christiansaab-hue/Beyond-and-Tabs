@@ -292,6 +292,32 @@ def energy_converter(P):
     return s
 
 
+# ---- storage vault: a squat 3x3 strongroom - barrels on every face and the faction's hoard showing in the middle ----
+# what each faction keeps in its store: Sunforged treasury gold, Gravebound ossuary bones, Horde raw plunder,
+# Verdant seed bales, Tidewrought kelp-packed bilge stores (all inert vanilla blocks: nothing changes mid-match)
+HOARD = {"": "gold_block", "_dark": "bone_block", "_nether": "raw_gold_block", "_verdant": "hay_block",
+         "_tide": "dried_kelp_block"}
+
+def storage_vault(P, variant):
+    s = Structure(3, 4, 3)
+    s.fill(0, 0, 0, 2, 0, 2, P["pad"])
+    s.set(1, 0, 1, P["ring"])
+    pillar_props = {"axis": "y"} if P["pillar"].endswith(("log", "basalt", "pillar")) else {}
+    for (x, z) in [(0, 0), (2, 0), (0, 2), (2, 2)]:
+        s.set(x, 1, z, P["pillar"], **pillar_props)
+        s.set(x, 2, z, P["pillar"], **pillar_props)
+        s.set(x, 3, z, P["band"])
+    # barrels facing out of each side, slab lids over them
+    for (x, z, facing) in [(1, 0, "north"), (0, 1, "west"), (2, 1, "east"), (1, 2, "south")]:
+        s.set(x, 1, z, "barrel", facing=facing, open="false")
+        s.set(x, 2, z, P["slab"], type="bottom")
+    # the hoard in the middle, open to the sky so it reads from the RTS camera, a barrel stacked on it
+    hoard = HOARD.get(variant, "gold_block")
+    s.set(1, 1, 1, hoard, **({"axis": "y"} if hoard in ("bone_block", "hay_block") else {}))
+    s.set(1, 2, 1, "barrel", facing="up", open="false")
+    return s
+
+
 # ---- faction houses (7 wide x 5 deep footprint, same as Reign of Nether's) ----
 # y=0 must contain the class's startingBlockTypes (placed instantly as the foundation).
 
@@ -1104,6 +1130,7 @@ if __name__ == "__main__":
             metal_extractor_t2(P).write(f"{out}/metal_extractor_t2{variant}.nbt")
             wind_generator(P).write(f"{out}/wind_generator{variant}.nbt")
             energy_converter(P).write(f"{out}/energy_converter{variant}.nbt")
+            storage_vault(P, variant).write(f"{out}/storage_vault{variant}.nbt")
         kingdom_house().write(f"{out}/villager_house.nbt")
         fallen_house().write(f"{out}/haunted_house.nbt")
         heartwood_hall().write(f"{out}/heartwood_hall.nbt")

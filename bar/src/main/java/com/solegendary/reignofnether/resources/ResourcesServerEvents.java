@@ -54,7 +54,8 @@ public class ResourcesServerEvents {
     public static ArrayList<Resources> resourcesList = new ArrayList<>();
 
     // BAR economy: only Metal (the 'ore' field) and Energy (the 'wood' field) are used; food is always 0.
-    // Every mode starts with 1000 metal and 1000 energy (the default storage), except sandbox.
+    // Every mode starts with 1000 metal and 1000 energy, except sandbox. Storage starts at 1500/1500 with the capitol
+    // (EconomyServerEvents), so there is room to bank income before the first spend - like BAR.
     public static final int STARTING_METAL = 1000;
     public static final int STARTING_ENERGY = 1000;
     public static final int STARTING_FOOD_TUTORIAL = 0;

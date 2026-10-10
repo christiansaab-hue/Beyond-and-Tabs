@@ -223,6 +223,7 @@ public class Factions {
 		registerBuildings(MONSTERS, Buildings.METAL_EXTRACTOR_MONSTERS, Keybindings.hotkey5);
 		registerBuildings(MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Keybindings.hotkey6);
 		registerBuildings(MONSTERS, Buildings.ENERGY_CONVERTER_MONSTERS, Keybindings.hotkey7);
+		registerBuildings(MONSTERS, Buildings.STORAGE_VAULT_MONSTERS, Keybindings.hotkey8);
 		registerBuildings(MONSTERS, Buildings.SCULK_CATALYST, Keybindings.abilitySlot3);
 		registerBuildings(MONSTERS, Buildings.PUMPKIN_FARM, Keybindings.abilitySlot4);
 		registerBuildings(MONSTERS, Buildings.DARK_WATCHTOWER, Keybindings.abilitySlot5);
@@ -254,6 +255,7 @@ public class Factions {
 		registerBuildings(PIGLINS, Buildings.METAL_EXTRACTOR_PIGLINS, Keybindings.hotkey5);
 		registerBuildings(PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Keybindings.hotkey6);
 		registerBuildings(PIGLINS, Buildings.ENERGY_CONVERTER_PIGLINS, Keybindings.hotkey7);
+		registerBuildings(PIGLINS, Buildings.STORAGE_VAULT_PIGLINS, Keybindings.hotkey8);
 		registerBuildings(PIGLINS, Buildings.PIGLIN_MARKET, Keybindings.hotkey10);
 		registerBuildings(PIGLINS, Buildings.BEACON);
 		registerBuilding(PIGLINS, Buildings.PORTAL_CIVILIAN);
@@ -267,6 +269,7 @@ public class Factions {
 		registerBuildings(VILLAGERS, Buildings.METAL_EXTRACTOR_VILLAGERS, Keybindings.hotkey5);
 		registerBuildings(VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Keybindings.hotkey6);
 		registerBuildings(VILLAGERS, Buildings.ENERGY_CONVERTER_VILLAGERS, Keybindings.hotkey7);
+		registerBuildings(VILLAGERS, Buildings.STORAGE_VAULT_VILLAGERS, Keybindings.hotkey8);
 		registerBuildings(VILLAGERS, Buildings.VILLAGER_HOUSE, Keybindings.abilitySlot3);
 		registerBuildings(VILLAGERS, Buildings.WHEAT_FARM, Keybindings.abilitySlot4);
 		registerBuildings(VILLAGERS, Buildings.WATCHTOWER, Keybindings.abilitySlot5);
@@ -287,6 +290,8 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.METAL_EXTRACTOR_VERDANT, Keybindings.hotkey5);
 		registerBuildings(VERDANT_COURT, Buildings.WIND_GENERATOR_VERDANT, Keybindings.hotkey6);
 		registerBuildings(VERDANT_COURT, Buildings.ENERGY_CONVERTER_VERDANT, Keybindings.hotkey7);
+		// storage: H, not "." like the others - the Seedshaper's Vine Snare already has "." (hotkey8)
+		registerBuildings(VERDANT_COURT, Buildings.STORAGE_VAULT_VERDANT, Keybindings.hotkey10);
 		registerBuildings(VERDANT_COURT, Buildings.GROVE, Keybindings.abilitySlot6);
 		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, Keybindings.hotkey2);   // T3 lab: the Castle's and Stronghold's slot
@@ -297,6 +302,7 @@ public class Factions {
 		registerBuildings(TIDEWROUGHT, Buildings.METAL_EXTRACTOR_TIDE, Keybindings.hotkey5);
 		registerBuildings(TIDEWROUGHT, Buildings.WIND_GENERATOR_TIDE, Keybindings.hotkey6);
 		registerBuildings(TIDEWROUGHT, Buildings.ENERGY_CONVERTER_TIDE, Keybindings.hotkey7);
+		registerBuildings(TIDEWROUGHT, Buildings.STORAGE_VAULT_TIDE, Keybindings.hotkey8);
 		registerBuildings(TIDEWROUGHT, Buildings.SLIPWAY, Keybindings.abilitySlot6);
 
 		//Neutral

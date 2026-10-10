@@ -112,6 +112,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.METAL_EXTRACTOR.define(BUILDER);
         BuildingCosts.WIND_GENERATOR.define(BUILDER);
         BuildingCosts.ENERGY_CONVERTER.define(BUILDER);
+        BuildingCosts.STORAGE_VAULT.define(BUILDER);
         BuildingCosts.OAK_BRIDGE.define(BUILDER);
         BuildingCosts.SPRUCE_BRIDGE.define(BUILDER);
         BuildingCosts.BLACKSTONE_BRIDGE.define(BUILDER);
@@ -351,6 +352,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry METAL_EXTRACTOR = ResourceCostConfigEntry.Building(0,60,50, 0, ResourceCosts.METAL_EXTRACTOR, "Metal Extractor Config");
         public static final ResourceCostConfigEntry WIND_GENERATOR = ResourceCostConfigEntry.Building(0,20,45, 0, ResourceCosts.WIND_GENERATOR, "Wind Generator Config");
         public static final ResourceCostConfigEntry ENERGY_CONVERTER = ResourceCostConfigEntry.Building(0,200,15, 0, ResourceCosts.ENERGY_CONVERTER, "Energy Converter Config");
+        // BAR storage is cheap: 60 metal / 120 energy for +2000 metal / +3000 energy storage
+        public static final ResourceCostConfigEntry STORAGE_VAULT = ResourceCostConfigEntry.Building(0,120,60, 0, ResourceCosts.STORAGE_VAULT, "Storage Vault Config");
         public static final ResourceCostConfigEntry OAK_BRIDGE = ResourceCostConfigEntry.Building(0,100,0, 0, ResourceCosts.OAK_BRIDGE, "Oak Bridge Config");
         public static final ResourceCostConfigEntry SPRUCE_BRIDGE = ResourceCostConfigEntry.Building(0,100,0, 0, ResourceCosts.SPRUCE_BRIDGE, "Spruce Bridge Config");
         public static final ResourceCostConfigEntry BLACKSTONE_BRIDGE = ResourceCostConfigEntry.Building(0,0,100, 0, ResourceCosts.BLACKSTONE_BRIDGE, "Blackstone Bridge Config");

@@ -671,6 +671,124 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /**
+     * BAR storage: a completed vault raises its owner's caps by 2000 metal / 3000 energy, and when it dies whatever
+     * it held above the new cap is lost. Places a real vault, marks it built, recalculates, then destroys it - all
+     * inside this one call, so no server tick (or another test's recalc) runs in between.
+     */
+    @GameTest(template = ARENA)
+    public static void storage_vault_raises_cap_and_its_loss_trims_excess(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 205;
+        int cx = base.getX(), cz = base.getZ();
+        for (int dx = -4; dx <= 4; dx++)
+            for (int dz = -4; dz <= 4; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        String owner = "gametest_vault_owner";
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var vault = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
+            Buildings.STORAGE_VAULT_VILLAGERS, new BlockPos(cx - 1, y, cz - 1), Rotation.NONE, owner, new int[0],
+            false, false, true, true);
+        try {
+            if (vault == null) {
+                helper.fail("placeBuilding returned null for the vault");
+                return;
+            }
+            vault.isBuilt = true;
+            com.solegendary.reignofnether.resources.EconomyServerEvents.recalculateIncomeAndStorage();
+            var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(owner);
+            float baseM = com.solegendary.reignofnether.resources.EconomyServerEvents.DEFAULT_METAL_STORAGE;
+            float baseE = com.solegendary.reignofnether.resources.EconomyServerEvents.DEFAULT_ENERGY_STORAGE;
+            if (Math.abs(eco.metalStorage - (baseM + 2000f)) > 0.5f || Math.abs(eco.energyStorage - (baseE + 3000f)) > 0.5f) {
+                helper.fail("a built vault should raise storage to " + (baseM + 2000f) + " / " + (baseE + 3000f)
+                    + ", got " + eco.metalStorage + " / " + eco.energyStorage);
+                return;
+            }
+            pool.addMetal(2500);
+            pool.addEnergy(3500);
+            com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(vault);
+            vault.destroy(level);
+            if (Math.abs(pool.getMetal() - baseM) > 0.5f || Math.abs(pool.getEnergy() - baseE) > 0.5f)
+                helper.fail("losing the vault should trim the pool to the new cap " + baseM + " / " + baseE
+                    + ", got " + pool.getMetal() + " / " + pool.getEnergy());
+            else if (eco.metalStorage > baseM + 0.5f)
+                helper.fail("storage did not drop with the vault: " + eco.metalStorage);
+            else
+                helper.succeed();
+        } finally {
+            if (vault != null)
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(vault);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+        }
+    }
+
+    /** A fresh pool registered for an overflow test, with its storage and fill set (no tick runs in between). */
+    private static com.solegendary.reignofnether.resources.Resources overflowPool(String name, float storage, float metal) {
+        var pool = new com.solegendary.reignofnether.resources.Resources(name, 0, 0, 0);
+        pool.addMetal(metal);
+        var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name);
+        eco.metalStorage = storage;
+        eco.energyStorage = storage;
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        return pool;
+    }
+
+    /** BAR overflow: income that doesn't fit goes to allies with room, split evenly - never to an enemy. */
+    @GameTest(template = ARENA)
+    public static void overflow_goes_to_allies_with_room_not_enemies(GameTestHelper helper) {
+        String me = "gametest_ovf_me", ally = "gametest_ovf_ally", ally2 = "gametest_ovf_ally2", foe = "gametest_ovf_foe";
+        var pools = List.of(overflowPool(me, 1000, 1000), overflowPool(ally, 1000, 500),
+            overflowPool(ally2, 1000, 0), overflowPool(foe, 1000, 0));
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally2);
+        try {
+            float shared = com.solegendary.reignofnether.resources.EconomyServerEvents.shareOverflow(me, 10f, true);
+            if (Math.abs(shared - 10f) > 0.01f)
+                helper.fail("both allies had room, all 10 should be shared, got " + shared);
+            else if (Math.abs(pools.get(1).getMetal() - 505f) > 0.01f || Math.abs(pools.get(2).getMetal() - 5f) > 0.01f)
+                helper.fail("overflow should split evenly: ally " + pools.get(1).getMetal() + ", ally2 " + pools.get(2).getMetal());
+            else if (pools.get(3).getMetal() > 0.001f)
+                helper.fail("the enemy received overflow: " + pools.get(3).getMetal());
+            else if (pools.get(0).getMetal() > 1000.001f)
+                helper.fail("the sender went over its cap: " + pools.get(0).getMetal());
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally2);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.removeAll(pools);
+        }
+    }
+
+    /** Overflow is only wasted when every ally is full too; an ally with a little room takes exactly that much. */
+    @GameTest(template = ARENA)
+    public static void overflow_is_wasted_only_when_every_ally_is_full(GameTestHelper helper) {
+        String me = "gametest_waste_me", ally = "gametest_waste_ally";
+        var pools = List.of(overflowPool(me, 1000, 1000), overflowPool(ally, 1000, 1000));
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+        try {
+            float shared = com.solegendary.reignofnether.resources.EconomyServerEvents.shareOverflow(me, 10f, true);
+            if (shared > 0.001f) {
+                helper.fail("ally was full but took " + shared);
+                return;
+            }
+            pools.get(1).addMetal(-3f);   // 3 metal of room
+            shared = com.solegendary.reignofnether.resources.EconomyServerEvents.shareOverflow(me, 10f, true);
+            if (Math.abs(shared - 3f) > 0.01f || Math.abs(pools.get(1).getMetal() - 1000f) > 0.01f)
+                helper.fail("ally with 3 room should take exactly 3 (7 wasted), took " + shared
+                    + ", ally now " + pools.get(1).getMetal());
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.removeAll(pools);
+        }
+    }
+
     /** Veterancy: killing an equal-cost enemy is one rank (+10% max health); ranks cap at 3. */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void veterans_rank_up_on_kills(GameTestHelper helper) {
