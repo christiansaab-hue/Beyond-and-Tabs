@@ -1006,7 +1006,7 @@ public class UnitClientEvents {
         if (actionableUnits.isEmpty())
             return;
 
-        // Ctrl + right-drag with workers selected: area reclaim / repair circle instead of a formation line
+        // Ctrl + right-drag: area reclaim / repair (workers) or area attack (fighters) circle instead of a formation line
         if (AreaCommandClientEvents.onRightDrag()) {
             if (FormationDragMove.isDragging())
                 FormationDragMove.cancelDrag();
