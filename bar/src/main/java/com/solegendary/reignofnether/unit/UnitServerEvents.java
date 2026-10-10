@@ -117,6 +117,33 @@ public class UnitServerEvents {
 
     public static List<UnitActionItem> getUnitActionSlowQueue() { return unitActionSlowQueue; }
 
+    /** True if this unit has shift-queued orders still waiting (each slow-queue item holds a single unit). */
+    public static boolean hasQueuedActions(int unitId) {
+        synchronized (unitActionSlowQueue) {
+            for (UnitActionItem uai : unitActionSlowQueue)
+                if (uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == unitId)
+                    return true;
+        }
+        return false;
+    }
+
+    /** Snapshot of this unit's queued orders, oldest first. */
+    public static List<UnitActionItem> getQueuedActions(int unitId) {
+        List<UnitActionItem> out = new ArrayList<>();
+        synchronized (unitActionSlowQueue) {
+            for (UnitActionItem uai : unitActionSlowQueue)
+                if (uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == unitId)
+                    out.add(uai);
+        }
+        return out;
+    }
+
+    public static void clearQueuedActions(int unitId) {
+        synchronized (unitActionSlowQueue) {
+            unitActionSlowQueue.removeIf(uai -> uai.getUnitIds().length > 0 && uai.getUnitIds()[0] == unitId);
+        }
+    }
+
     private static final ArrayList<LivingEntity> allUnits = new ArrayList<>();
     // bumped whenever allUnits gains/loses a unit here; part of the population cache key
     private static int allUnitsModCount = 0;

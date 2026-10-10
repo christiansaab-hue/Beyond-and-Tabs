@@ -164,5 +164,6 @@ public enum UnitAction {
     SOLAR_LANCE,          // Beyond and Tabs: Sun Colossus beam
     CRYPT_TIDE,           // Beyond and Tabs: Gravebound Wraith bone-hand root
     WAR_DRUMS,            // Beyond and Tabs: Horde Warlord speed rally
-    BASTION_AEGIS         // Beyond and Tabs: Sunforged Evoker projectile dome
+    BASTION_AEGIS,        // Beyond and Tabs: Sunforged Evoker projectile dome
+    RECLAIM               // Beyond and Tabs: walk a worker to one wreck and stay on it until it is stripped (area reclaim)
 }

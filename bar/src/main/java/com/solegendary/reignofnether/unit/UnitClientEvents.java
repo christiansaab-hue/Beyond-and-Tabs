@@ -1006,6 +1006,13 @@ public class UnitClientEvents {
         if (actionableUnits.isEmpty())
             return;
 
+        // Ctrl + right-drag with workers selected: area reclaim / repair circle instead of a formation line
+        if (AreaCommandClientEvents.onRightDrag()) {
+            if (FormationDragMove.isDragging())
+                FormationDragMove.cancelDrag();
+            return;
+        }
+
         if (!FormationDragMove.isDragging()) {
             FormationDragMove.startDrag(CursorClientEvents.getRightClickStartBp());
         }
@@ -1021,6 +1028,12 @@ public class UnitClientEvents {
         if (evt.getButton() == GLFW.GLFW_MOUSE_BUTTON_2) {
 		if (MinimapClientEvents.minimapRightClickDown)
 			return;
+            if (AreaCommandClientEvents.isActive()) {
+                AreaCommandClientEvents.onRightRelease();
+                FormationDragMove.cancelDrag();
+                rightClickMoveDeferred = false;   // the drag was the command; no move order on top
+                return;
+            }
             if (Keybindings.altMod.isDown() && FormationDragMove.isDragging()) {
                 FormationDragMove.cancelDrag();
             }
@@ -1192,6 +1205,9 @@ public class UnitClientEvents {
         }
 
         if (OrthoviewClientEvents.isEnabled() && evt.getStage() == AFTER_ENTITIES) {
+            // BAR command queue lines (server-synced shift-queue), drawn before the checkpoint buffers below are
+            // fetched so switching render types can't end a batch they still write to
+            UnitQueueLinesClient.render(evt.getPoseStack(), evt.getPartialTick());
             VertexConsumer vertexConsumerLine = MC.renderBuffers().bufferSource().getBuffer(RenderType.LINE_STRIP);
             ResourceLocation rl = ResourceLocation.parse("forge:textures/white.png");
             VertexConsumer vertexConsumerEntityTranslucent = MC.renderBuffers().bufferSource().getBuffer(RenderType.entityTranslucent(rl));
