@@ -4500,12 +4500,11 @@ public class SkirmishGameTests {
         // the non-fighters: made, owned, tidal - never added to the level
         var gull = com.solegendary.reignofnether.registrars.EntityRegistrar.GULL_SPOTTER_UNIT.get().create(level);
         var priest = com.solegendary.reignofnether.registrars.EntityRegistrar.TIDE_PRIEST_UNIT.get().create(level);
-        if (!(gull instanceof com.solegendary.reignofnether.unit.units.tide.GullSpotterUnit g) || !g.isScout()
-                || !g.isFlying() || g instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit)
+        if (gull == null || !gull.isScout() || !gull.isFlying()
+                || ((Object) gull) instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit)
             helper.fail("the Gull Spotter is not an unarmed flying scout");
-        if (!(priest instanceof com.solegendary.reignofnether.unit.units.tide.TidePriestUnit p)
-                || p instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit
-                || p.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.RaiseTidepool))
+        if (priest == null || ((Object) priest) instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit
+                || priest.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.RaiseTidepool))
             helper.fail("the Tide Priest is not a non-fighting support with Raise Tidepool");
         for (net.minecraft.world.entity.Mob e : java.util.Arrays.<net.minecraft.world.entity.Mob>asList(gull, priest))
             if (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) {
