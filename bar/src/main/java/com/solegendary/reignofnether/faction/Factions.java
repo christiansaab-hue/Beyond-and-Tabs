@@ -178,6 +178,8 @@ public class Factions {
 		registerEntity(VERDANT_COURT, EntityRegistrar.STAG_LANCER_UNIT.get(), ProductionItems.STAG_LANCER);
 		registerEntity(VERDANT_COURT, EntityRegistrar.SHADE_RANGER_UNIT.get(), ProductionItems.SHADE_RANGER);
 		registerEntity(VERDANT_COURT, EntityRegistrar.ELDER_TREANT_UNIT.get(), ProductionItems.ELDER_TREANT);
+		registerEntity(VERDANT_COURT, EntityRegistrar.WISP_CHOIR_UNIT.get(), ProductionItems.WISP_CHOIR);
+		registerEntity(VERDANT_COURT, EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), ProductionItems.BLOOM_PRIESTESS);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);

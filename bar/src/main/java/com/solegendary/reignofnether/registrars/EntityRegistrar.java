@@ -294,6 +294,19 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "elder_treant_unit").toString()));
 
+    // Verdant Court T2 extras: the anti-air choir (three allay-bodied wisps round one hitbox) and the support priestess
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit>> WISP_CHOIR_UNIT = ENTITIES.register("wisp_choir_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit::new, MobCategory.CREATURE)
+                    .sized(0.9f, 0.8f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wisp_choir_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit>> BLOOM_PRIESTESS_UNIT = ENTITIES.register("bloom_priestess_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bloom_priestess_unit").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit>> EMBALMER_UNIT = ENTITIES.register("embalmer_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
@@ -619,6 +632,8 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.verdant.StagLancerProd.itemName -> EntityRegistrar.STAG_LANCER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.ShadeRangerProd.itemName -> EntityRegistrar.SHADE_RANGER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd.itemName -> EntityRegistrar.ELDER_TREANT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.WispChoirProd.itemName -> EntityRegistrar.WISP_CHOIR_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.BloomPriestessProd.itemName -> EntityRegistrar.BLOOM_PRIESTESS_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

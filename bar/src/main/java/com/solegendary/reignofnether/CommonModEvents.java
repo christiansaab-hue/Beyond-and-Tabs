@@ -54,6 +54,8 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.STAG_LANCER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.StagLancerUnit.createAttributes().build());
         evt.put(EntityRegistrar.SHADE_RANGER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.createAttributes().build());
         evt.put(EntityRegistrar.ELDER_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ElderTreantUnit.createAttributes().build());
+        evt.put(EntityRegistrar.WISP_CHOIR_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_DOG_UNIT.get(), ScoutDogUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_CAT_UNIT.get(), ScoutCatUnit.createAttributes().build());
         evt.put(EntityRegistrar.MILITIA_UNIT.get(), MilitiaUnit.createAttributes().build());
@@ -173,6 +175,8 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.STAG_LANCER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SHADE_RANGER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.ELDER_TREANT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.WISP_CHOIR_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.BLOOM_PRIESTESS_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEEDSHAPER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MOONWELL_BEARER_UNIT_SPAWN_EGG);

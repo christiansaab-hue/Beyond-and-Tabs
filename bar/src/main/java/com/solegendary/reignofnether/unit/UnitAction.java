@@ -175,5 +175,6 @@ public enum UnitAction {
     LEAF_DASH,            // Beyond and Tabs: Verdant Court Leafblade gap-closing dash
     AWAKEN_THICKET,       // Beyond and Tabs: Verdant Court Elder Druid temporary treant
     STAG_LEAP,            // Beyond and Tabs: Verdant Court Stag Lancer leaping charge
+    BLOOM,                // Beyond and Tabs: Verdant Court Bloom Priestess heal-and-cleanse burst
     PLANT_VINE_SNARE      // Beyond and Tabs: Verdant Court Seedshaper hidden root trap
 }

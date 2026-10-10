@@ -121,6 +121,8 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.STAG_LANCER_UNIT.get(), com.github.alexthe666.alexsmobs.client.render.RenderMoose::new);
         evt.registerEntityRenderer(EntityRegistrar.SHADE_RANGER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ShadeRangerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ELDER_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ElderTreantRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.WISP_CHOIR_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WispChoirRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BLOOM_PRIESTESS_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.BloomPriestessRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_DOG_UNIT.get(), DogUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_CAT_UNIT.get(), CatUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MILITIA_UNIT.get(), VillagerUnitRenderer::new);
