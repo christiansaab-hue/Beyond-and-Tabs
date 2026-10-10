@@ -38,6 +38,10 @@ This file is the session-proof status log: what's shipped, how to install, what'
   holding half their metal; workers within 3 blocks reclaim it (5 metal/s x build power). 5 min decay, cap 150.
   Bots send an idle worker to wrecks near home. Chipped lamps/friezes on economy buildings.
 
+- Commander D-gun per faction (aimed line, 150 energy); Gravebound commander Raise Dead (wrecks rise as Ghouls,
+  paid from the wreck). Faction signatures: Horde Momentum (straight charges +50% dmg), Sunforged Formation
+  (ranged with 2 melee guards +25% projectile dmg). Reclaim chains; Gravebound reclaim x2, Horde x1.5.
+
 ## Decor mods (installed in lovish's instance; structures may reference them)
 Macaw's Roofs 2.3.2, Macaw's Windows 2.4.2, Macaw's Fences & Walls 1.2.1, Supplementaries 1.20-3.1.43,
 Moonlight Lib 1.20-2.16.35 (SHA-512 verified vs Modrinth). Modded blocks in a structure load as AIR if the mod
