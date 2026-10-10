@@ -56,6 +56,8 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.STAG_LANCER.define(BUILDER);
         UnitCosts.SHADE_RANGER.define(BUILDER);
         UnitCosts.ELDER_TREANT.define(BUILDER);
+        UnitCosts.WISP_CHOIR.define(BUILDER);
+        UnitCosts.BLOOM_PRIESTESS.define(BUILDER);
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
         UnitCosts.WORLD_TREE_WALKER.define(BUILDER);
         UnitCosts.SEEDSHAPER.define(BUILDER);
@@ -285,6 +287,10 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry STAG_LANCER = ResourceCostConfigEntry.Unit(160,60,90,35,3, ResourceCosts.STAG_LANCER, "Stag Lancer Config");
         public static final ResourceCostConfigEntry SHADE_RANGER = ResourceCostConfigEntry.Unit(120,80,120,40,3, ResourceCosts.SHADE_RANGER, "Shade Ranger Config");
         public static final ResourceCostConfigEntry ELDER_TREANT = ResourceCostConfigEntry.Unit(360,60,170,60,7, ResourceCosts.ELDER_TREANT, "Elder Treant Config");
+        // the Wisp Choir sits with the Windcaller (an anti-air specialist, useless against the ground), the Bloom
+        // Priestess a little above the Witch (a whole-army healer that also cleanses)
+        public static final ResourceCostConfigEntry WISP_CHOIR = ResourceCostConfigEntry.Unit(110,60,70,32,3, ResourceCosts.WISP_CHOIR, "Wisp Choir Config");
+        public static final ResourceCostConfigEntry BLOOM_PRIESTESS = ResourceCostConfigEntry.Unit(120,80,80,40,3, ResourceCosts.BLOOM_PRIESTESS, "Bloom Priestess Config");
         public static final ResourceCostConfigEntry EMBALMER = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.EMBALMER, "Embalmer Config");
         public static final ResourceCostConfigEntry BONEWRIGHT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.BONEWRIGHT, "Bonewright Config");
         public static final ResourceCostConfigEntry WAR_MAMMOTH = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.WAR_MAMMOTH, "War Mammoth Config");

@@ -77,7 +77,9 @@ public final class UnitInfoCard {
         // Verdant Court T2: the Elder Treant is a 520 HP tank (not an experimental), the Stag Lancer a raider, the
         // Shade Ranger a long-range single-target artillery piece; the Elder Druid falls to the worker rule
         Map.entry("ElderTreantUnit", Role.TANK), Map.entry("StagLancerUnit", Role.RAIDER),
-        Map.entry("ShadeRangerUnit", Role.ARTILLERY)
+        Map.entry("ShadeRangerUnit", Role.ARTILLERY),
+        // the Wisp Choir is a ranged skirmisher (its anti-air bonus is on the damage line), the Bloom Priestess a healer
+        Map.entry("WispChoirUnit", Role.SKIRMISHER), Map.entry("BloomPriestessUnit", Role.SUPPORT)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

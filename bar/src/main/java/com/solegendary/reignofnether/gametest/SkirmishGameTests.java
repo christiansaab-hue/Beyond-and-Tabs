@@ -3344,6 +3344,167 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    // ------------------------------------------------------------------ Verdant Court T2 extras (Wisp Choir, Bloom Priestess)
+
+    /**
+     * A Wisp Choir bolt hurts a flying unit (an Owl Watcher) far more than a unit on the ground (a villager): the
+     * flyer multiplier is applied through RoN's damage pipeline, and both are real hits.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_wisp_choir_hits_flyers_harder(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_wisps", foeOwner = "gametest_wisps_foe";
+        var choir = com.solegendary.reignofnether.registrars.EntityRegistrar.WISP_CHOIR_UNIT.get().create(level);
+        var owl = com.solegendary.reignofnether.registrars.EntityRegistrar.OWL_WATCHER_UNIT.get().create(level);
+        var walker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (choir == null || owl == null || walker == null) {
+            helper.fail("could not create the Wisp Choir test units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        choir.moveTo(at.getX() + 0.5, at.getY() + 1, at.getZ() + 0.5, 0, 0);
+        owl.moveTo(at.getX() + 4.5, at.getY() + 2, at.getZ() + 0.5, 0, 0);
+        walker.moveTo(at.getX() - 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        choir.setOwnerName(owner);
+        owl.setOwnerName(foeOwner);
+        walker.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(choir, owl, walker);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(5, () -> {
+            try {
+                if (!com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.isFlyer(owl)
+                        || com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.isFlyer(walker)) {
+                    helper.fail("flyer check: owl " + com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.isFlyer(owl)
+                            + ", villager " + com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.isFlyer(walker));
+                    return;
+                }
+                owl.setHealth(owl.getMaxHealth());
+                walker.setHealth(walker.getMaxHealth());
+                float owlHp = owl.getHealth(), walkerHp = walker.getHealth();
+                choir.bolt(owl);
+                choir.bolt(walker);
+                float toFlyer = owlHp - owl.getHealth(), toGround = walkerHp - walker.getHealth();
+                if (toGround <= 0)
+                    helper.fail("the bolt did no damage to the ground unit");
+                else if (toFlyer < toGround * 4)
+                    helper.fail("the bolt should hurt a flyer much more than a walker: " + toFlyer + " vs " + toGround);
+                else if (choir.getUnitAttackDamage() != com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.attackDamage)
+                    helper.fail("the bolt multiplier leaked out of the hit: base damage now " + choir.getUnitAttackDamage());
+                else
+                    helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /**
+     * The Bloom Priestess' pulse heals a hurt friendly unit and strips its Slowness (a Vine Snare root), and leaves a
+     * hurt, slowed enemy just as close untouched.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_bloom_priestess_heals_and_cleanses_friend_not_foe(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_priestess", foeOwner = "gametest_priestess_foe";
+        var priestess = com.solegendary.reignofnether.registrars.EntityRegistrar.BLOOM_PRIESTESS_UNIT.get().create(level);
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var friend = vill.create(level);
+        var foe = vill.create(level);
+        if (priestess == null || friend == null || foe == null) {
+            helper.fail("could not create the Bloom Priestess test units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        priestess.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        priestess.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(priestess, friend, foe);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(5, () -> {
+            try {
+                friend.setHealth(friend.getMaxHealth() * 0.4f);
+                foe.setHealth(foe.getMaxHealth() * 0.4f);
+                var slow = net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN;
+                friend.addEffect(new net.minecraft.world.effect.MobEffectInstance(slow, 200, 6));
+                foe.addEffect(new net.minecraft.world.effect.MobEffectInstance(slow, 200, 6));
+                float friendHp = friend.getHealth(), foeHp = foe.getHealth();
+                int touched = priestess.pulse(level);
+                float expect = com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit.PULSE_HEAL;
+                if (touched != 1)
+                    helper.fail("the pulse should touch exactly the one friend, touched " + touched);
+                else if (Math.abs(friend.getHealth() - friendHp - expect) > 0.01f)
+                    helper.fail("friend healed " + (friend.getHealth() - friendHp) + ", expected " + expect);
+                else if (friend.hasEffect(slow))
+                    helper.fail("the pulse did not cleanse the friend's Slowness");
+                else if (foe.getHealth() > foeHp)
+                    helper.fail("the Bloom Priestess healed an enemy");
+                else if (!foe.hasEffect(slow))
+                    helper.fail("the Bloom Priestess cleansed an enemy");
+                else
+                    helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /** Bloom, cast through the priestess' own ability, heals a hurt friend in reach for its full burst and goes on cooldown. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_bloom_burst_heals(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bloom";
+        var priestess = com.solegendary.reignofnether.registrars.EntityRegistrar.BLOOM_PRIESTESS_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (priestess == null || friend == null) {
+            helper.fail("could not create the Bloom test units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        priestess.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);   // 6 blocks: in reach of Bloom (8)
+        priestess.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        List<net.minecraft.world.entity.Mob> all = List.of(priestess, friend);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(5, () -> {
+            try {
+                com.solegendary.reignofnether.ability.Ability bloom = null;
+                for (var a : priestess.getAbilities().get())
+                    if (a instanceof com.solegendary.reignofnether.ability.abilities.Bloom)
+                        bloom = a;
+                if (bloom == null) {
+                    helper.fail("the Bloom Priestess has no Bloom ability");
+                    return;
+                }
+                if (!bloom.isOffCooldown(priestess)) {
+                    helper.fail("Bloom starts on cooldown");
+                    return;
+                }
+                friend.setHealth(friend.getMaxHealth() * 0.3f);
+                float before = friend.getHealth();
+                float expect = Math.min(friend.getMaxHealth() - before, com.solegendary.reignofnether.ability.abilities.Bloom.HEAL);
+                bloom.use(level, priestess, priestess.blockPosition());
+                float healed = friend.getHealth() - before;
+                if (Math.abs(healed - expect) > 0.01f)
+                    helper.fail("Bloom healed " + healed + ", expected " + expect);
+                else if (bloom.isOffCooldown(priestess))
+                    helper.fail("Bloom did not go on cooldown");
+                else
+                    helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
 
     // ------------------------------------------------------------------ Verdant Living Terrain (slice 3)
 

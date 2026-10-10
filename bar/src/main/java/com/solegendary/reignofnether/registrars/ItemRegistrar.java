@@ -262,6 +262,14 @@ public class ItemRegistrar {
             ITEMS.register("world_tree_walker_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.WORLD_TREE_WALKER_UNIT,
                     0x8A7A62, 0x5E9A3C, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> WISP_CHOIR_UNIT_SPAWN_EGG =
+            ITEMS.register("wisp_choir_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.WISP_CHOIR_UNIT,
+                    0xCFF5C8, 0x7FE0D0, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> BLOOM_PRIESTESS_UNIT_SPAWN_EGG =
+            ITEMS.register("bloom_priestess_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BLOOM_PRIESTESS_UNIT,
+                    0xF2C4D6, 0x6FA35A, new Item.Properties()));
+
     public static final RegistryObject<Item> THROWABLE_TNT =
             ITEMS.register("throwable_tnt", () -> new ThrowableTnt(new Item.Properties()));
 

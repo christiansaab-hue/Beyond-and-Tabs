@@ -85,7 +85,8 @@ public class BotPlayer {
                 List.of(ProductionItems.LEAFBLADE, ProductionItems.THORNBOW, ProductionItems.SENTINEL_TREANT,
                         ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER),
                 Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
-                List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT),
+                List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT,
+                        ProductionItems.BLOOM_PRIESTESS),   // the Wisp Choir is queued only against flyers (queueAntiAir)
                 Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
         return null;
     }
@@ -282,6 +283,7 @@ public class BotPlayer {
             if (bp.isBuilt && bp.getBuilding() == kit.t2Lab() && bp instanceof ProductionPlacement pp) {
                 if (t2Workers < targetT2Workers())
                     queueT2Worker(pp);
+                queueAntiAir(pp, mine, gameTime);
                 if (pp.productionQueue.size() < 2)
                     pp.startProductionItem(kit.t2Army().get(rng.nextInt(kit.t2Army().size())));
             }
@@ -501,7 +503,8 @@ public class BotPlayer {
                 if (!aimed && !(a instanceof com.solegendary.reignofnether.ability.abilities.WarDrums)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.BastionAegis)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack)
-                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.HolyBell))
+                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.HolyBell)
+                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.Bloom))
                     continue;
                 if (!a.isOffCooldown(u))
                     continue;
@@ -631,8 +634,12 @@ public class BotPlayer {
             BlockPos centre = null;
             List<LivingEntity> lagging = new ArrayList<>();
             for (LivingEntity le : mine) {
-                if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit mb))
+                // Moonwell Bearers and Bloom Priestesses: healers, not fighters (neither is an AttackerUnit, so the
+                // army list never holds them and they would otherwise idle at the lab)
+                if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit)
+                        && !(le instanceof com.solegendary.reignofnether.unit.units.verdant.BloomPriestessUnit))
                     continue;
+                Unit mb = (Unit) le;
                 if (centre == null)
                     centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
                 BlockPos mt = mb.getMoveGoal() == null ? null : mb.getMoveGoal().getMoveTarget();
@@ -1092,6 +1099,44 @@ public class BotPlayer {
                 idle.add(le);
         if (idle.size() >= 3)
             order(idle, UnitAction.PATROL, farthest);
+    }
+
+    /** Enemy flyers seen at the last scan and when it ran (the scan walks every unit, so it runs every 10 s at most). */
+    int enemyFlyers = 0;
+    long enemyFlyersAt = -1;
+
+    /**
+     * The Verdant Court's anti-air answer: while the enemy fields flyers (Bone Dragons, ghasts, bats, bees, owls, a
+     * flying Windcaller - WispChoirUnit.isFlyer), keep one Wisp Choir per two of them (at least one, at most six) and
+     * queue the next one at the T2 lab. No flyers, no choirs: they are useless against the ground.
+     */
+    void queueAntiAir(ProductionPlacement pp, List<LivingEntity> mine, long gameTime) {
+        if (!faction.equals(Factions.VERDANT_COURT))
+            return;
+        if (enemyFlyersAt < 0 || gameTime - enemyFlyersAt >= 20 * 10) {
+            enemyFlyersAt = gameTime;
+            enemyFlyers = 0;
+            for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+                if (!(le instanceof Unit u) || !le.isAlive() || !com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit.isFlyer(le))
+                    continue;
+                String o = u.getOwnerName();
+                if (o == null || o.isEmpty() || o.equals(name) || AlliancesServerEvents.isAllied(name, o))
+                    continue;
+                enemyFlyers++;
+            }
+        }
+        if (enemyFlyers == 0)
+            return;
+        int want = Math.min(6, (enemyFlyers + 1) / 2);
+        int have = 0;
+        for (LivingEntity le : mine)
+            if (le instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit)
+                have++;
+        for (var item : pp.productionQueue)
+            if (item.item == ProductionItems.WISP_CHOIR)
+                have++;
+        if (have < want)
+            pp.startProductionItem(ProductionItems.WISP_CHOIR);
     }
 
     BlockPos nearestEnemyUnit(ServerLevel level, BlockPos from, double range) {

@@ -381,6 +381,9 @@ public class MiscUtil {
             priorityFilter = e -> e.hasEffect(MobEffects.WITHER);
         } else if (unitMob instanceof WindcallerUnit) {
             priorityFilter = e -> !e.hasEffect(MobEffects.LEVITATION);
+        } else if (unitMob instanceof com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit) {
+            // anti-air: a flyer in range beats a closer walker
+            priorityFilter = com.solegendary.reignofnether.unit.units.verdant.WispChoirUnit::isFlyer;
         }
 
         Vec3 unitVec = new Vec3(unitPosition.x, unitPosition.y, unitPosition.z);
