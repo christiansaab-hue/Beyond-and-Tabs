@@ -36,6 +36,7 @@ public class ReignOfNetherConfigScreen extends Screen {
         super.init();
         this.buildColorSettings(50);
         this.buildMinimapSettings(150);
+        this.buildAlertSettings(195);
         this.addRenderableWidget(button(this.width / 2 - 75, this.height - 29, 150, 20, CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.parent)));
     }
 
@@ -89,5 +90,27 @@ public class ReignOfNetherConfigScreen extends Screen {
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.SQUARE_MINIMAP, "Square minimap", "Diamond minimap")
                 .pos(left, y + labelHeight)
                 .size(width, labelHeight));
+    }
+
+    // BAR-style notifications: on/off plus a volume button that steps 0-25-50-75-100% (0 keeps the text lines)
+    private void buildAlertSettings(int y) {
+        int width = 200;
+        int labelHeight = 20;
+        int left = this.width / 2 - width / 2;
+
+        addRenderableOnly(new Label("Alerts").pos(left, y).size(width, labelHeight));
+        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.ALERTS_ENABLED, "Alerts on", "Alerts off")
+                .pos(left, y + labelHeight)
+                .size(120, labelHeight));
+        addRenderableWidget(button(left + 125, y + labelHeight, width - 125, labelHeight, volumeLabel(), b -> {
+            int vol = ReignOfNetherClientConfigs.ALERT_VOLUME.get();
+            vol = vol >= 100 ? 0 : (vol / 25 + 1) * 25;
+            ReignOfNetherClientConfigs.ALERT_VOLUME.set(vol);
+            b.setMessage(volumeLabel());
+        }));
+    }
+
+    private static Component volumeLabel() {
+        return Component.literal("Volume " + ReignOfNetherClientConfigs.ALERT_VOLUME.get() + "%");
     }
 }

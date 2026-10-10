@@ -17,6 +17,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> USE_PLAYER_COLORS;
     public static final ForgeConfigSpec.ConfigValue<Integer> CAMERA_SENSITIVITY;
     public static final ForgeConfigSpec.ConfigValue<Boolean> SQUARE_MINIMAP;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> ALERTS_ENABLED;
+    public static final ForgeConfigSpec.ConfigValue<Integer> ALERT_VOLUME;
 
     static {
         BUILDER.push("Configuration File");
@@ -32,6 +34,10 @@ public class ReignOfNetherClientConfigs {
         USE_PLAYER_COLORS = BUILDER.define("use_player_colors", false);
         CAMERA_SENSITIVITY = BUILDER.define("camera_sensitivity", 10);
         SQUARE_MINIMAP = BUILDER.define("square_minimap", false);
+        BUILDER.comment("BAR-style notifications (commander under attack, unit lost, construction complete...)");
+        ALERTS_ENABLED = BUILDER.define("alerts_enabled", true);
+        BUILDER.comment("Notification sound volume, 0-100 (0 = text only)");
+        ALERT_VOLUME = BUILDER.defineInRange("alert_volume", 100, 0, 100);
         SPEC = BUILDER.build();
     }
 

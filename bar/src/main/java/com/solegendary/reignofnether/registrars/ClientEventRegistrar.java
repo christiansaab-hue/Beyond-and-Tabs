@@ -88,6 +88,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(SandboxClientEvents.class);
         vanillaEventBus.register(HudClientEvents.class); // ensure this is first so cursor is rendered above hud
         vanillaEventBus.register(AttackWarningClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hud.NotificationClientEvents.class);
         vanillaEventBus.register(CursorClientEvents.class);
         vanillaEventBus.register(MinimapClientEvents.class);
         vanillaEventBus.register(TimeClientEvents.class);

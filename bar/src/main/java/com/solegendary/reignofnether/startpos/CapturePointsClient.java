@@ -20,6 +20,8 @@ public final class CapturePointsClient {
     }
 
     public static void sync(List<Site> newSites) {
+        // owner changes of our own sites become "site captured / lost" notifications
+        com.solegendary.reignofnether.hud.NotificationClientEvents.onCaptureSitesSynced(sites, newSites);
         sites = List.copyOf(newSites);
     }
 

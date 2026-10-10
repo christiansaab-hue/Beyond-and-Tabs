@@ -957,6 +957,7 @@ public class BuildingPlacement {
                 rtsPlayer.scores.addToScore(RTSPlayerScoresEnum.TOTAL_BUILDINGS_CONSTRUCTED);
         } else {
             TutorialClientEvents.updateStage();
+            com.solegendary.reignofnether.hud.NotificationClientEvents.onBuildingBuilt(this);
             if (this.isCapitol && !SandboxClientEvents.isSandboxPlayer() &&
                 getTotalCompletedBuildingsOwned(this.level.isClientSide(), ownerName) == 1)
                 SoundClientEvents.playFactionCalmTheme(this.getFaction(), ownerName);

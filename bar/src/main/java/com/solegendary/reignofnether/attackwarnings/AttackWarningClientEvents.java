@@ -63,6 +63,9 @@ public class AttackWarningClientEvents {
         if (MC.player == null || !OrthoviewClientEvents.isEnabled())
             return;
         String me = MC.player.getName().getString();
+        // spoken-style "commander under attack" / "ally needs help" (own cooldowns, independent of the danger banner)
+        if (isCommander)
+            com.solegendary.reignofnether.hud.NotificationClientEvents.onCommanderAttacked(attackedPlayerName);
         if (!me.equals(attackedPlayerName)) {
             // BAR-style: an ally's commander under fire shows up on your minimap too (orange, not the red own-unit ping)
             if (isCommander && AlliancesClient.isAllied(me, attackedPlayerName))
