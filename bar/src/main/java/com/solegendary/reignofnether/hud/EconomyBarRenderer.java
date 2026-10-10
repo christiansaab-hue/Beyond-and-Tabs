@@ -4,6 +4,7 @@ import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.building.BuildingClientEvents;
 import com.solegendary.reignofnether.player.PlayerColors;
 import com.solegendary.reignofnether.resources.EconomyClientEvents.ClientEconomy;
+import com.solegendary.reignofnether.resources.EconomyServerEvents;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.unit.UnitClientEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -96,6 +97,17 @@ public final class EconomyBarRenderer {
             bottom += 12;
         }
 
+        // BAR "wasting" warning: at storage cap with positive net income, everything extra is thrown away
+        boolean metalWaste = updateWaste(true, resources.ore, eco.metalStorage, eco.metalIncome - eco.metalExpense);
+        boolean energyWaste = updateWaste(false, resources.wood, eco.energyStorage, eco.energyIncome - eco.energyExpense);
+        if (metalWaste || energyWaste) {
+            if (metalWaste)
+                renderWasteLabel(gg, font, zones, left + 4, bottom, true, metalWasteRate);
+            if (energyWaste)
+                renderWasteLabel(gg, font, zones, left + totalW - 4, bottom, false, energyWasteRate);
+            bottom += 12;
+        }
+
         // tooltips
         if (mouseY >= top && mouseY < top + PANEL_H) {
             List<FormattedCharSequence> tip = null;
@@ -103,15 +115,29 @@ public final class EconomyBarRenderer {
                 tip = List.of(line("Metal  " + resources.ore + " / " + Math.round(eco.metalStorage)),
                     line("+" + fmt(eco.metalIncome) + "/s from extractors, -" + fmt(eco.metalExpense) + "/s on builds"),
                     line("Build more extractors on metal patches to grow income."));
-            else if (mouseX >= left + panelW + POP_W && mouseX < left + totalW)
-                tip = List.of(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)),
-                    line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(eco.energyExpense) + "/s on builds"),
-                    line("Wind generators are cheap; keep them behind the base."));
+            else if (mouseX >= left + panelW + POP_W && mouseX < left + totalW) {
+                // energyExpense includes the converters' drain; split it out so a bar pinned at 50% makes sense
+                float onBuilds = Math.max(0, eco.energyExpense - eco.energyConverted);
+                if (eco.conversionCapacity > 0)
+                    tip = List.of(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)),
+                        line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(onBuilds) + "/s on builds"),
+                        line("-" + fmt(eco.energyConverted) + "/s into converters (max " + fmt(eco.conversionCapacity)
+                            + "/s) -> +" + fmt(eco.metalConverted) + " metal/s"),
+                        line("Converters only use energy above "
+                            + Math.round(EconomyServerEvents.CONVERSION_THRESHOLD * 100) + "% storage ("
+                            + Math.round(eco.energyStorage * EconomyServerEvents.CONVERSION_THRESHOLD) + "),"),
+                        line("so energy sitting there means they're running, not that you're short."));
+                else
+                    tip = List.of(line("Energy  " + resources.wood + " / " + Math.round(eco.energyStorage)),
+                        line("+" + fmt(eco.energyIncome) + "/s from generators, -" + fmt(onBuilds) + "/s on builds"),
+                        line("Wind generators are cheap; keep them behind the base."));
+            }
             else if (mouseX >= px && mouseX < px + POP_W)
                 tip = List.of(line("Population " + popStr + "  (" + workers + " workers)"),
                     line("Build houses or more capitols to raise supply."));
+            // deferred: HudClientEvents draws exactly one HUD tooltip per frame, and a hovered button wins
             if (tip != null)
-                MyRenderer.renderTooltip(gg, tip, mouseX + 6, mouseY + 12);
+                HudClientEvents.deferTooltip(tip, mouseX + 6, mouseY + 12);
         }
         return new Layout(left, left + totalW, bottom);
     }
@@ -151,6 +177,49 @@ public final class EconomyBarRenderer {
         int ix = ex - 5 - font.width(inc);
         gg.drawString(font, inc, ix, y + 24, 0x55FF55, false);
         gg.drawString(font, exp, ex, y + 24, 0xFF5555, false);
+    }
+
+    // Hysteresis so the label doesn't flicker as storage bounces off the cap between 4 Hz syncs: show after
+    // WASTE_SHOW_MS continuously at cap, keep for WASTE_HOLD_MS after it stops. The shown rate is smoothed.
+    private static final long WASTE_SHOW_MS = 1000, WASTE_HOLD_MS = 1500;
+    private static long metalWasteSince = -1, energyWasteSince = -1;
+    private static long metalWasteLast = -1, energyWasteLast = -1;
+    private static float metalWasteRate = 0, energyWasteRate = 0;
+
+    private static boolean updateWaste(boolean metal, int amount, float storage, float net) {
+        long now = System.currentTimeMillis();
+        boolean atCap = storage > 0 && amount >= storage - 1 && net > 0.05f;
+        long since = metal ? metalWasteSince : energyWasteSince;
+        long last = metal ? metalWasteLast : energyWasteLast;
+        float rate = metal ? metalWasteRate : energyWasteRate;
+        if (atCap) {
+            if (since < 0)
+                since = now;
+            last = now;
+            rate = rate <= 0 ? net : rate + (net - rate) * 0.1f;
+        } else if (last < 0 || now - last > WASTE_HOLD_MS) {
+            since = -1;
+            rate = 0;
+        }
+        if (metal) { metalWasteSince = since; metalWasteLast = last; metalWasteRate = rate; }
+        else { energyWasteSince = since; energyWasteLast = last; energyWasteRate = rate; }
+        return since >= 0 && now - since >= WASTE_SHOW_MS;
+    }
+
+    // "WASTING +X/s" in the resource's bar colour, pulsing slowly (~1.2 s) on a dark chip so it stays readable;
+    // anchored at the bar's left edge for metal and right edge for energy, under the bar/stall warning
+    private static void renderWasteLabel(GuiGraphics gg, Font font, List<RectZone> zones, int anchorX, int y,
+                                         boolean metal, float rate) {
+        String s = "WASTING +" + fmt(rate) + "/s";
+        int w = font.width(s) + 8;
+        int x = metal ? anchorX : anchorX - w;
+        double phase = (System.currentTimeMillis() % 1200L) / 1200.0 * Math.PI * 2;
+        int alpha = 0x90 + (int) (0x6F * (0.5 + 0.5 * Math.sin(phase)));
+        int col = ((metal ? METAL_FILL : ENERGY_FILL) & 0x00FFFFFF) | (alpha << 24);
+        gg.fill(x, y, x + w, y + 12, 0xC0101216);
+        gg.fill(x, y + 11, x + w, y + 12, col);
+        gg.drawString(font, s, x + 4, y + 2, col);
+        zones.add(RectZone.getZoneByLW(x, y, w, 12));
     }
 
     static String fmt(float perSecond) {

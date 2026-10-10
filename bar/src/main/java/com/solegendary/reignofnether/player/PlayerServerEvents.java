@@ -1209,6 +1209,26 @@ public class PlayerServerEvents {
         }
     }
 
+    // End-of-match "most damage dealt" award: credit damage landed by a unit (or its projectile - getEntity() is the
+    // shooter) to the unit's owner. LOWEST priority so armour/friendly-fire/zeal adjustments from the other
+    // LivingDamageEvent handlers are already applied, and cancelled hits are skipped. Overkill is clamped to the
+    // victim's remaining health; hits on your own units don't count. Building (block) damage is not included.
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
+    public static void trackDamageDealt(net.minecraftforge.event.entity.living.LivingDamageEvent evt) {
+        if (evt.getEntity().level().isClientSide() || evt.getAmount() <= 0)
+            return;
+        if (!(evt.getSource().getEntity() instanceof Unit attacker))
+            return;
+        String owner = attacker.getOwnerName();
+        if (owner == null || owner.isBlank())
+            return;
+        if (evt.getEntity() instanceof Unit victim && owner.equals(victim.getOwnerName()))
+            return;
+        RTSPlayer rtsPlayer = getRTSPlayer(owner);
+        if (rtsPlayer != null)
+            rtsPlayer.damageDealt += Math.min(evt.getAmount(), Math.max(0, evt.getEntity().getHealth()));
+    }
+
     // Sends the final per-player scoreboard to all clients so they can show the
     // end-of-match stats popup (MatchEndScreen). Winners are those in winnerNames;
     // everyone else (already moved to postGameRtsPlayers on defeat) is a loser.
@@ -1226,7 +1246,8 @@ public class PlayerServerEvents {
         for (RTSPlayer p : byName.values())
             rows.add(new MatchStatsClientboundPacket.MatchStatRow(
                     p.name, p.faction, winnerNames.contains(p.name), p.startPosColorId,
-                    p.scores.getScoreListAsArray()));
+                    p.scores.getScoreListAsArray(),
+                    Math.round(p.damageDealt), Math.round(p.metalProduced), Math.round(p.metalReclaimed)));
         MatchStatsClientboundPacket.broadcast(rtsGameTicks, rows);
     }
 

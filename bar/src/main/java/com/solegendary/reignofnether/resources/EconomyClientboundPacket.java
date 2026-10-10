@@ -29,6 +29,9 @@ public class EconomyClientboundPacket {
     public float metalExpense;
     public float energyExpense;
     public float stall;
+    public float energyConverted; // energy/s drained by converters (part of energyExpense)
+    public float metalConverted;  // metal/s made by converters (part of metalIncome)
+    public float conversionCapacity; // energy/s the converters could drain at most
 
     public static void sync(Resources res, EconomyServerEvents.PlayerEconomy eco) {
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new EconomyClientboundPacket(EconomyAction.SYNC,
@@ -36,14 +39,15 @@ public class EconomyClientboundPacket {
             eco.metalStorage, eco.energyStorage,
             eco.metalIncome + eco.metalConverted, eco.energyIncome,
             eco.metalExpense, eco.energyExpense,
-            eco.stall
+            eco.stall, eco.energyConverted, eco.metalConverted, eco.conversionCapacity
         ));
     }
 
     public EconomyClientboundPacket(EconomyAction action, String ownerName, int metal, int energy,
                                     float metalStorage, float energyStorage,
                                     float metalIncome, float energyIncome,
-                                    float metalExpense, float energyExpense, float stall) {
+                                    float metalExpense, float energyExpense, float stall,
+                                    float energyConverted, float metalConverted, float conversionCapacity) {
         this.action = action;
         this.ownerName = ownerName;
         this.metal = metal;
@@ -55,6 +59,9 @@ public class EconomyClientboundPacket {
         this.metalExpense = metalExpense;
         this.energyExpense = energyExpense;
         this.stall = stall;
+        this.energyConverted = energyConverted;
+        this.metalConverted = metalConverted;
+        this.conversionCapacity = conversionCapacity;
     }
 
     public EconomyClientboundPacket(FriendlyByteBuf buffer) {
@@ -69,6 +76,9 @@ public class EconomyClientboundPacket {
         this.metalExpense = buffer.readFloat();
         this.energyExpense = buffer.readFloat();
         this.stall = buffer.readFloat();
+        this.energyConverted = buffer.readFloat();
+        this.metalConverted = buffer.readFloat();
+        this.conversionCapacity = buffer.readFloat();
     }
 
     public void encode(FriendlyByteBuf buffer) {
@@ -83,6 +93,9 @@ public class EconomyClientboundPacket {
         buffer.writeFloat(this.metalExpense);
         buffer.writeFloat(this.energyExpense);
         buffer.writeFloat(this.stall);
+        buffer.writeFloat(this.energyConverted);
+        buffer.writeFloat(this.metalConverted);
+        buffer.writeFloat(this.conversionCapacity);
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

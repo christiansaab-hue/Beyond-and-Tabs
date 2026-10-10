@@ -320,6 +320,7 @@ public class HudClientEvents {
         
         mouseX = evt.getMouseX();
         mouseY = evt.getMouseY();
+        deferredTooltip = null;
         
         // where to start drawing the centre hud (from left to right: portrait, stats, unit icon buttons)
         int hudStartingXPos = Button.DEFAULT_ICON_FRAME_SIZE * 6 + (Button.DEFAULT_ICON_FRAME_SIZE / 2);
@@ -355,8 +356,9 @@ public class HudClientEvents {
 
         // BAR-style command panel: one dark backing behind the orders grid, portrait, stats and the selection
         // strip in the bottom-left, drawn first so every button sits on it
+        int panelRight = screenWidth; // right edge of the command panel - also bounds the building title
         if (!selUnits.isEmpty() || !selBuildings.isEmpty()) {
-            int panelRight = hudStartingXPos + portraitRendererUnit.frameWidth + portraitRendererUnit.statsWidth + 10;
+            panelRight = hudStartingXPos + portraitRendererUnit.frameWidth + portraitRendererUnit.statsWidth + 10;
             if (selUnits.size() > 1 || selBuildings.size() > 1)
                 panelRight = Math.max(panelRight, hudStartingXPos + portraitRendererUnit.frameWidth
                     + portraitRendererUnit.statsWidth + iconFrameSize * buttonsPerRow + 24);
@@ -409,7 +411,8 @@ public class HudClientEvents {
             buildingPortraitZone = portraitRendererBuilding.render(evt.getGuiGraphics(),
                 blitX,
                 blitY,
-                hudSelectedPlacement
+                hudSelectedPlacement,
+                panelRight - (blitX + 4) - 4
             );
             hudZones.add(buildingPortraitZone);
 
@@ -503,7 +506,7 @@ public class HudClientEvents {
                                 int numBuildings = extraBuildingsMap.get(buildingName);
                                 tooltipLines.add(fcs("x" + numBuildings + " " + buildingName));
                             }
-                            MyRenderer.renderTooltip(evt.getGuiGraphics(), tooltipLines, mouseX, mouseY);
+                            deferTooltip(tooltipLines, mouseX, mouseY);
                         }
                         break;
                     } else {
@@ -534,7 +537,10 @@ public class HudClientEvents {
                             () -> com.solegendary.reignofnether.building.BuildingProductionServerboundPacket.toggleRepeat(prodForRepeat.originPos),
                             com.solegendary.reignofnether.util.LanguageUtil.getTranslation("hud.reignofnether.repeat_queue.tooltip")
                     );
-                    repeatButton.render(evt.getGuiGraphics(), blitX - 5, blitY - 24, mouseX, mouseY);
+                    // sits one row ABOVE the building title (portrait top - 28) instead of on the title line, so it
+                    // can never cover the name however long it is; still inside the panel backing (>= 94px tall)
+                    int portraitTop = screenHeight - portraitRendererBuilding.frameHeight;
+                    repeatButton.render(evt.getGuiGraphics(), blitX - 5, portraitTop - 28, mouseX, mouseY);
                     renderedButtons.add(repeatButton);
                 }
 
@@ -731,7 +737,7 @@ public class HudClientEvents {
                 RectZone zone = portraitRendererUnit.renderHeroLevelAndExp(evt.getGuiGraphics(), blitX + 1, blitY - 5, mouseX, mouseY, heroUnit);
                 hudZones.add(zone);
                 if (zone.isMouseOver(mouseX, mouseY)) {
-                    MyRenderer.renderTooltip(evt.getGuiGraphics(),
+                    deferTooltip(
                         heroUnit.getHeroLevel() >= HeroUnit.MAX_LEVEL ?
                             List.of(fcs(I18n.get("hud.hero.reignofnether.max_level"))) :
                             List.of(
@@ -896,7 +902,7 @@ public class HudClientEvents {
                                 numUnits = 0;
                             }
                         }
-                        MyRenderer.renderTooltip(evt.getGuiGraphics(), tooltipLines, mouseX, mouseY);
+                        deferTooltip(tooltipLines, mouseX, mouseY);
                     }
                     break;
                 } else {
@@ -1775,11 +1781,30 @@ public class HudClientEvents {
         // ------------------------------------------------------
         // Button tooltips (has to be rendered last to be on top)
         // ------------------------------------------------------
+        // Exactly one HUD tooltip per frame (playtest: the metal tooltip drew over a control-group tooltip). Buttons
+        // sit on top of the panels, so a hovered button wins; among buttons the last rendered is the topmost.
+        Button tooltipButton = null;
         for (Button button : renderedButtons)
             if (button.isMouseOver(mouseX, mouseY))
-                button.renderTooltip(evt.getGuiGraphics(), mouseX, mouseY);
+                tooltipButton = button;
+        if (tooltipButton != null)
+            tooltipButton.renderTooltip(evt.getGuiGraphics(), mouseX, mouseY);
+        else if (deferredTooltip != null)
+            MyRenderer.renderTooltip(evt.getGuiGraphics(), deferredTooltip, deferredTooltipX, deferredTooltipY);
+        deferredTooltip = null;
 
         TutorialClientEvents.checkAndRenderNextAction(evt.getGuiGraphics(), renderedButtons);
+    }
+
+    // Panel/bar tooltips (economy bar, "+N more" icons, hero exp) are queued here instead of drawn immediately, then
+    // drawn at the end of onDrawScreen only if no button is hovered. The latest queued one wins (drawn later = on top).
+    private static List<FormattedCharSequence> deferredTooltip = null;
+    private static int deferredTooltipX, deferredTooltipY;
+
+    public static void deferTooltip(List<FormattedCharSequence> lines, int x, int y) {
+        deferredTooltip = lines;
+        deferredTooltipX = x;
+        deferredTooltipY = y;
     }
 
     public static boolean isMouseOverAnyButton() {
@@ -1882,7 +1907,7 @@ public class HudClientEvents {
     @SubscribeEvent
     // hudSelectedEntity and portraitRendererUnit should be assigned in the same event to avoid desyncs
     public static void onRenderLivingEntity(RenderLivingEvent.Post<? extends LivingEntity, ? extends Model> evt) {
-        if (hudSelectedEntity != null && hudSelectedEntity.isRemoved())
+        if (hudSelectedEntity != null && (hudSelectedEntity.isRemoved() || hudSelectedEntity.isDeadOrDying()))
             setHudSelectedEntity(null);
 
         ArrayList<LivingEntity> units = UnitClientEvents.getSortedSelectedUnits();

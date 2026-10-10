@@ -33,6 +33,11 @@ public class RTSPlayer {
     public int creepScore = 0; // value of neutral enemies killed, for credit towards item drops
     public Long itemSeed = 0L;
     public ArrayDeque<UnitItem> itemDropQueue = new ArrayDeque<>();
+    // match totals for the end-of-match awards (BAR-style "most damage dealt" etc). Not saved: a fresh RTSPlayer is
+    // made per match, and losing them on a mid-match save/reload only shortens an award line
+    public float damageDealt = 0;
+    public float metalProduced = 0;
+    public float metalReclaimed = 0;
 
     public static RTSPlayer getNewScenarioPlayer(String playerName, Faction faction, int id, int scenarioRoleIndex) {
         RTSPlayer rtsPlayer = new RTSPlayer(playerName, faction, id);

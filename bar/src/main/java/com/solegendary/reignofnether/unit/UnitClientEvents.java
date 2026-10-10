@@ -630,6 +630,15 @@ public class UnitClientEvents {
         }
     }
 
+    // dying (health <= 0, death animation playing) or removed for good (killed/discarded). Entities that merely left
+    // render distance (UNLOADED_*) are kept on purpose - see onEntityLeave.
+    public static boolean isDeadForSelection(LivingEntity e) {
+        if (e.isDeadOrDying())
+            return true;
+        Entity.RemovalReason reason = e.getRemovalReason();
+        return reason != null && reason.shouldDestroy();
+    }
+
     private static final int VIS_CHECK_TICKS_MAX = 10;
     private static int ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;
     @SubscribeEvent
@@ -638,6 +647,14 @@ public class UnitClientEvents {
             return;
 
         ticksToNextVisCheck -= 1;
+
+        // drop dead/killed units from the selection every tick: the server's leave packet only arrives after the
+        // death animation (or never, if the packet races the kill), which left a "0.0/30" blank portrait in the
+        // panel. Non-capturing method ref = no per-tick allocation; the lists are tiny anyway.
+        if (!selectedUnits.isEmpty() && selectedUnits.removeIf(UnitClientEvents::isDeadForSelection))
+            markSelectedUnitsChanged();
+        if (!preselectedUnits.isEmpty())
+            preselectedUnits.removeIf(UnitClientEvents::isDeadForSelection);
 
         if (ticksToNextVisCheck <= 0) {
             ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;

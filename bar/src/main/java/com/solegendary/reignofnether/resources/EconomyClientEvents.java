@@ -14,6 +14,9 @@ public class EconomyClientEvents {
         public float metalExpense = 0;
         public float energyExpense = 0;
         public float stall = 1f;
+        public float energyConverted = 0;
+        public float metalConverted = 0;
+        public float conversionCapacity = 0;
     }
 
     private static final Map<String, ClientEconomy> economies = new HashMap<>();
@@ -39,6 +42,9 @@ public class EconomyClientEvents {
         eco.metalExpense = packet.metalExpense;
         eco.energyExpense = packet.energyExpense;
         eco.stall = packet.stall;
+        eco.energyConverted = packet.energyConverted;
+        eco.metalConverted = packet.metalConverted;
+        eco.conversionCapacity = packet.conversionCapacity;
 
         // continuous spending doesn't send ADD_SUBTRACT packets, so set the absolute amounts here.
         // Any pending HUD animation (xToAdd) is kept so the displayed value still ends up at the server value.

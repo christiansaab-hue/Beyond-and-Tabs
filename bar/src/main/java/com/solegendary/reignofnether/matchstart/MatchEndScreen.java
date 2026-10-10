@@ -58,6 +58,8 @@ public class MatchEndScreen extends Screen {
     }
 
     private final List<Team> teams = new ArrayList<>();
+    // BAR-style award lines ("Most damage dealt: X (12,345)"), precomputed once - only awards someone actually earned
+    private final List<String> awards = new ArrayList<>();
     private int panelL, panelT, panelW, panelH;
 
     public MatchEndScreen() {
@@ -72,14 +74,31 @@ public class MatchEndScreen extends Screen {
             Team t = byTeamId.computeIfAbsent(row.teamId, k -> new Team());
             t.winner = row.winner; // all members of a team share a result
             t.members.add(row);
-            t.units += row.scores[SCORE_UNITS];
-            t.military += row.scores[SCORE_MILITARY];
-            t.buildings += row.scores[SCORE_BUILDINGS];
-            t.resources += row.scores[SCORE_RESOURCES];
+            t.units += row.score(SCORE_UNITS);
+            t.military += row.score(SCORE_MILITARY);
+            t.buildings += row.score(SCORE_BUILDINGS);
+            t.resources += row.score(SCORE_RESOURCES);
         }
+        buildAwards();
         // winners first
         for (Team t : byTeamId.values()) if (t.winner) teams.add(t);
         for (Team t : byTeamId.values()) if (!t.winner) teams.add(t);
+    }
+
+    private void buildAwards() {
+        awards.clear();
+        addAward("matchend.reignofnether.award_damage", r -> r.damageDealt);
+        addAward("matchend.reignofnether.award_metal", r -> r.metalProduced);
+        addAward("matchend.reignofnether.award_reclaim", r -> r.metalReclaimed);
+    }
+
+    private void addAward(String key, java.util.function.ToIntFunction<MatchStatRow> stat) {
+        MatchStatRow best = null;
+        for (MatchStatRow row : MatchEndClientEvents.getRows())
+            if (stat.applyAsInt(row) > 0 && (best == null || stat.applyAsInt(row) > stat.applyAsInt(best)))
+                best = row;
+        if (best != null)
+            awards.add(Component.translatable(key, best.name, String.format("%,d", stat.applyAsInt(best))).getString());
     }
 
     @Override
@@ -88,6 +107,8 @@ public class MatchEndScreen extends Screen {
         panelH = PAD + HEADER_H + LINE_H; // header + column-header row
         for (Team t : teams)
             panelH += TEAM_HEADER_H + t.members.size() * ROW_H + LINE_H + LINE_H + TEAM_GAP;
+        if (!awards.isEmpty())
+            panelH += LINE_H + 4 + awards.size() * LINE_H; // "Awards" header + divider + one line each
         panelH += PAD;
         panelL = (this.width - panelW) / 2;
         panelT = (this.height - panelH) / 2;
@@ -148,9 +169,9 @@ public class MatchEndScreen extends Screen {
 
                 int textY = y + (HEAD - font.lineHeight) / 2;
                 g.drawString(font, row.name, cl + HEAD + 4 + HEAD + 4, textY, TEXT_NORMAL, true);
-                drawNum(g, row.scores[SCORE_UNITS], cl + COL_UNITS, textY, TEXT_NORMAL);
-                drawNum(g, row.scores[SCORE_MILITARY], cl + COL_MIL, textY, TEXT_NORMAL);
-                drawNum(g, row.scores[SCORE_BUILDINGS], cl + COL_BLDG, textY, TEXT_NORMAL);
+                drawNum(g, row.score(SCORE_UNITS), cl + COL_UNITS, textY, TEXT_NORMAL);
+                drawNum(g, row.score(SCORE_MILITARY), cl + COL_MIL, textY, TEXT_NORMAL);
+                drawNum(g, row.score(SCORE_BUILDINGS), cl + COL_BLDG, textY, TEXT_NORMAL);
                 y += ROW_H;
             }
 
@@ -165,6 +186,17 @@ public class MatchEndScreen extends Screen {
             String res = Component.translatable("matchend.reignofnether.resources", String.format("%,d", t.resources)).getString();
             g.drawString(font, res, cl + HEAD + 4 + HEAD + 4, y, TEXT_DIM, true);
             y += LINE_H + TEAM_GAP;
+        }
+
+        if (!awards.isEmpty()) {
+            g.fill(cl, y, cr, y + 1, DIVIDER);
+            y += 4;
+            g.drawString(font, Component.translatable("matchend.reignofnether.awards"), cl, y, ACCENT, true);
+            y += LINE_H;
+            for (String award : awards) {
+                g.drawString(font, award, cl + 8, y, TEXT_NORMAL, true);
+                y += LINE_H;
+            }
         }
 
         super.render(g, mouseX, mouseY, partialTick); // renders the [X] button

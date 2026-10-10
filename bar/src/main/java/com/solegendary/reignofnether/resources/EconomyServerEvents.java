@@ -2,6 +2,8 @@ package com.solegendary.reignofnether.resources;
 
 import com.solegendary.reignofnether.building.BuildingPlacement;
 import com.solegendary.reignofnether.building.BuildingServerEvents;
+import com.solegendary.reignofnether.player.PlayerServerEvents;
+import com.solegendary.reignofnether.player.RTSPlayer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -62,6 +64,14 @@ public class EconomyServerEvents {
         // metal per second the converters made, measured over the last second (shown as income, like BAR)
         public float metalConverted = 0;
         private float metalConvertedWindow = 0;
+        // energy per second the converters drained, measured over the last second. Already part of energyExpense;
+        // sent separately so the HUD tooltip can explain why energy sits at the 50% conversion threshold
+        public float energyConverted = 0;
+        private float energyConvertedWindow = 0;
+        // metal actually banked this window from income+converters / from reclaim, flushed once per second into
+        // the RTSPlayer's match totals for the end-of-match awards (avoids a player lookup every tick)
+        private float metalProducedWindow = 0;
+        private float metalReclaimedWindow = 0;
 
         // demand registered during the current tick
         private float metalDemand = 0;
@@ -95,8 +105,10 @@ public class EconomyServerEvents {
                 continue;
             float room = getEconomy(ownerName).metalStorage - res.getMetal();
             float got = Math.max(0, Math.min(amount, room));
-            if (got > 0)
+            if (got > 0) {
                 res.addMetal(got);
+                getEconomy(ownerName).metalReclaimedWindow += got;
+            }
             return got;
         }
         return 0;
@@ -117,7 +129,9 @@ public class EconomyServerEvents {
         res.addEnergy(-energy);
         res.addMetal(energy / CONVERSION_RATIO);
         eco.energySpentWindow += energy;           // converters show up as energy expense ...
+        eco.energyConvertedWindow += energy;
         eco.metalConvertedWindow += energy / CONVERSION_RATIO;   // ... and as metal income
+        eco.metalProducedWindow += energy / CONVERSION_RATIO;
     }
 
     public static float getStall(String ownerName) {
@@ -231,8 +245,11 @@ public class EconomyServerEvents {
             // income, capped at storage (anything above storage is wasted, like BAR)
             float metalIn = eco.metalIncome / TICKS_PER_SECOND;
             float energyIn = eco.energyIncome / TICKS_PER_SECOND;
-            if (metalIn > 0 && res.getMetal() < eco.metalStorage)
-                res.addMetal(Math.min(metalIn, eco.metalStorage - res.getMetal()));
+            if (metalIn > 0 && res.getMetal() < eco.metalStorage) {
+                float banked = Math.min(metalIn, eco.metalStorage - res.getMetal());
+                res.addMetal(banked);
+                eco.metalProducedWindow += banked;
+            }
             if (energyIn > 0 && res.getEnergy() < eco.energyStorage)
                 res.addEnergy(Math.min(energyIn, eco.energyStorage - res.getEnergy()));
 
@@ -251,10 +268,21 @@ public class EconomyServerEvents {
                 eco.metalExpense = eco.metalSpentWindow * TICKS_PER_SECOND / eco.windowTicks;
                 eco.energyExpense = eco.energySpentWindow * TICKS_PER_SECOND / eco.windowTicks;
                 eco.metalConverted = eco.metalConvertedWindow * TICKS_PER_SECOND / eco.windowTicks;
+                eco.energyConverted = eco.energyConvertedWindow * TICKS_PER_SECOND / eco.windowTicks;
                 eco.metalSpentWindow = 0;
                 eco.energySpentWindow = 0;
                 eco.metalConvertedWindow = 0;
+                eco.energyConvertedWindow = 0;
                 eco.windowTicks = 0;
+                if (eco.metalProducedWindow > 0 || eco.metalReclaimedWindow > 0) {
+                    RTSPlayer rtsPlayer = PlayerServerEvents.getRTSPlayer(res.ownerName);
+                    if (rtsPlayer != null) {
+                        rtsPlayer.metalProduced += eco.metalProducedWindow;
+                        rtsPlayer.metalReclaimed += eco.metalReclaimedWindow;
+                    }
+                    eco.metalProducedWindow = 0;
+                    eco.metalReclaimedWindow = 0;
+                }
             }
         }
         if (tickCount % SYNC_INTERVAL_TICKS == 0)

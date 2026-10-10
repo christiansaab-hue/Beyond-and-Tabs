@@ -233,6 +233,7 @@ public class PlayerClientEvents {
 
         if (!SandboxClientEvents.isSandboxPlayer(playerName)) {
             MC.gui.setTitle(Component.translatable("titles.reignofnether.defeated"));
+            com.solegendary.reignofnether.matchstart.MatchEndClientEvents.onTitleShown();
             MC.player.playSound(SoundRegistrar.DEFEAT.get(), 0.5f, 1.0f);
         }
         ResearchClient.removeAllResearch();
@@ -245,6 +246,7 @@ public class PlayerClientEvents {
             return;
         }
         MC.gui.setTitle(Component.translatable("titles.reignofnether.victorious"));
+        com.solegendary.reignofnether.matchstart.MatchEndClientEvents.onTitleShown(); // hides chat/minimap off the title
         MC.player.playSound(SoundRegistrar.VICTORY.get(), 0.5f, 1.0f);
     }
 

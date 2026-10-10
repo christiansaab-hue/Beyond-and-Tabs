@@ -27,13 +27,30 @@ public class MatchStatsClientboundPacket {
         public final boolean winner;
         public final int teamId; // startPosColorId - players sharing it are on the same team
         public final int[] scores; // ordered as RTSPlayerScoresEnum.values()
+        // BAR-style award totals (RTSPlayer.damageDealt / metalProduced / metalReclaimed, rounded)
+        public final int damageDealt;
+        public final int metalProduced;
+        public final int metalReclaimed;
 
         public MatchStatRow(String name, Faction faction, boolean winner, int teamId, int[] scores) {
+            this(name, faction, winner, teamId, scores, 0, 0, 0);
+        }
+
+        public MatchStatRow(String name, Faction faction, boolean winner, int teamId, int[] scores,
+                            int damageDealt, int metalProduced, int metalReclaimed) {
             this.name = name;
-            this.faction = faction;
+            this.faction = faction != null ? faction : Factions.NONE; // encode() dereferences faction.key
             this.winner = winner;
             this.teamId = teamId;
-            this.scores = scores;
+            this.scores = scores != null ? scores : new int[0];
+            this.damageDealt = damageDealt;
+            this.metalProduced = metalProduced;
+            this.metalReclaimed = metalReclaimed;
+        }
+
+        // bounds-checked: a row from an older/newer score enum must not crash the results screen
+        public int score(int index) {
+            return index >= 0 && index < scores.length ? scores[index] : 0;
         }
     }
 
@@ -60,7 +77,10 @@ public class MatchStatsClientboundPacket {
             boolean winner = buffer.readBoolean();
             int teamId = buffer.readVarInt();
             int[] scores = buffer.readVarIntArray();
-            this.rows.add(new MatchStatRow(name, faction, winner, teamId, scores));
+            int damage = buffer.readVarInt();
+            int metalMade = buffer.readVarInt();
+            int metalReclaimed = buffer.readVarInt();
+            this.rows.add(new MatchStatRow(name, faction, winner, teamId, scores, damage, metalMade, metalReclaimed));
         }
     }
 
@@ -73,6 +93,9 @@ public class MatchStatsClientboundPacket {
             buffer.writeBoolean(row.winner);
             buffer.writeVarInt(row.teamId);
             buffer.writeVarIntArray(row.scores);
+            buffer.writeVarInt(Math.max(0, row.damageDealt));
+            buffer.writeVarInt(Math.max(0, row.metalProduced));
+            buffer.writeVarInt(Math.max(0, row.metalReclaimed));
         }
     }
 
