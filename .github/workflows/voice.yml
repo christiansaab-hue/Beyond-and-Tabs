@@ -1,0 +1,74 @@
+name: voice
+# Generates the announcer voice lines (tools/voice_lines.txt) with Kokoro-82M (Apache-2.0, see NOTICE.md) and uploads
+# them as the "announcer-voice" artifact. The oggs are then committed by hand into
+# bar/src/main/resources/assets/reignofnether/sounds/announcer/ - the game build never needs the model.
+# workflow_dispatch only works once this file is on the default branch, so pushes that change the script also run it.
+on:
+  workflow_dispatch:
+    inputs:
+      voice:
+        description: Kokoro voice id (af_heart, af_bella, bf_emma, ...)
+        default: af_heart
+      speed:
+        description: Speaking speed (1.0 = normal)
+        default: '0.95'
+  push:
+    paths:
+      - tools/voice_lines.txt
+      - tools/voice_synth.py
+      - .github/workflows/voice.yml
+permissions:
+  contents: read
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VOICE: ${{ github.event.inputs.voice || 'af_heart' }}
+      SPEED: ${{ github.event.inputs.speed || '0.95' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Install ffmpeg + espeak-ng (Kokoro's fallback phonemiser)
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg espeak-ng
+      - name: Install Kokoro (CPU torch keeps the download small)
+        run: |
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q "kokoro>=0.9.4" soundfile numpy
+      - name: Synthesise raw lines
+        run: python3 tools/voice_synth.py tools/voice_lines.txt raw "$VOICE" "$SPEED"
+      - name: Post-process into the ship's-computer announcer
+        run: |
+          set -euo pipefail
+          mkdir -p out tmp
+          # soft two-tone chime (rising fifth) for urgent alerts, generated, not sampled
+          ffmpeg -v error -y \
+            -f lavfi -i "sine=f=880:d=0.16:sample_rate=44100" \
+            -f lavfi -i "sine=f=1318.5:d=0.24:sample_rate=44100" \
+            -f lavfi -i "anullsrc=r=44100:cl=mono:d=0.12" \
+            -filter_complex "[0]afade=t=in:d=0.01,afade=t=out:st=0.08:d=0.08,volume=0.22[a];[1]afade=t=in:d=0.01,afade=t=out:st=0.08:d=0.16,volume=0.18[b];[a][b][2]concat=n=3:v=0:a=1,aformat=sample_fmts=fltp:channel_layouts=mono[o]" \
+            -map "[o]" tmp/chime.wav
+          # trim -> pitch up 3% keeping tempo -> band-limit 250-7000 Hz -> faint chorus -> small-room reflections
+          FX="silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,"
+          FX+="asetrate=24000*1.03,aresample=44100,atempo=1/1.03,"
+          FX+="highpass=f=250,lowpass=f=7000,"
+          FX+="chorus=0.9:0.85:22:0.18:0.35:1.2,"
+          FX+="aecho=0.85:0.5:18|31:0.16|0.09,"
+          FX+="apad=pad_dur=0.12,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=mono"
+          for wav in raw/*.wav; do
+            key=$(basename "$wav" .wav)
+            ffmpeg -v error -y -i "$wav" -af "$FX" tmp/$key.wav
+            if grep -qx "$key" raw/chime.list; then
+              ffmpeg -v error -y -i tmp/chime.wav -i tmp/$key.wav -filter_complex "[0][1]concat=n=2:v=0:a=1[o]" -map "[o]" tmp/$key.c.wav
+              mv tmp/$key.c.wav tmp/$key.wav
+            fi
+            ffmpeg -v error -y -i tmp/$key.wav -af "loudnorm=I=-16:TP=-1.5:LRA=11" -ar 44100 -ac 1 -c:a libvorbis -q:a 5 out/$key.ogg
+          done
+          ls -l out
+          du -ch out/*.ogg | tail -1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: announcer-voice
+          path: out/*.ogg
+          retention-days: 14
