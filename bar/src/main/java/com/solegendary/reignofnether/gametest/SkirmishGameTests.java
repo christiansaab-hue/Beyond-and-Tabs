@@ -747,8 +747,9 @@ public class SkirmishGameTests {
                 Throwable err = failures.get(n);
                 if (err != null)
                     problems.add(n + " think threw " + err);
-                if (maxBuildings[i] < 1 && maxUnits[i] <= startUnits[i])
-                    problems.add(n + " never built or trained anything (buildings " + maxBuildings[i] + ", units "
+                // capitol + at least two more: a bot that stops after its capitol has stalled (the old bad-patch bug)
+                if (maxBuildings[i] < 3 || maxUnits[i] <= startUnits[i])
+                    problems.add(n + " stalled (buildings " + maxBuildings[i] + ", units "
                         + startUnits[i] + " -> " + maxUnits[i] + ")");
             }
             ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} buildings {} units {} (start {}), {} buildings {} units {} (start {})",

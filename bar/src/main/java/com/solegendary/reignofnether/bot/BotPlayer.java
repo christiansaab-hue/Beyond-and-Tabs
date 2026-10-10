@@ -178,21 +178,27 @@ public class BotPlayer {
             int pop = UnitServerEvents.getCurrentPopulation(name);
             int popCap = BuildingServerEvents.getTotalPopulationSupply(name);
             BlockPos patch = extractors < 2 + minutes ? freePatch(level) : null;
+            // Each candidate build is tried in priority order and a failed placement FALLS THROUGH to the next one
+            // (the soak test caught bots sitting on 850 metal forever because one bad patch blocked every build).
+            boolean done = workers.isEmpty();
             // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
-            if (tier2 && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1 && !workers.isEmpty())
-                placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
-            else if (patch != null && !workers.isEmpty())
-                placeNear(level, kit.extractor(), patch.offset(-2, 0, -2), workers, 1);
-            else if (winds < 2 + minutes && winds <= extractors * 2 && !workers.isEmpty())
-                placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
-            else if (!workers.isEmpty() && energyFull() && count(buildings, converterFor()) < 1 + (int) (minutes / 6))
-                placeNear(level, converterFor(), layoutSlot(Layout.CONVERTER, count(buildings, converterFor())), workers, 1);
-            else if (farms < 1 && !workers.isEmpty())
-                placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
+            if (!done && tier2 && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1)
+                done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
+            if (!done && patch != null) {
+                done = placeExtractor(level, patch, workers);
+                if (!done)
+                    badPatches.put(patch, gameTime);   // retry it later, not every think
+            }
+            if (!done && winds < 2 + minutes && winds <= extractors * 2 + 2)
+                done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
+            if (!done && energyFull() && count(buildings, converterFor()) < 1 + (int) (minutes / 6))
+                done = placeNear(level, converterFor(), layoutSlot(Layout.CONVERTER, count(buildings, converterFor())), workers, 1);
+            if (!done && farms < 1)
+                done = placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
             // (no houses: there is no supply any more, like BAR)
-            else if (armyBuildings < 1 + (int) (minutes / 4) && minutes >= 1 && !workers.isEmpty())
-                placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
-            else if (kit.tower() != null && count(buildings, kit.tower()) < 1 + (int) (minutes / 5) && minutes >= 2 && !workers.isEmpty()) {
+            if (!done && armyBuildings < 1 + (int) (minutes / 4) && minutes >= 1)
+                done = placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
+            if (!done && kit.tower() != null && count(buildings, kit.tower()) < 1 + (int) (minutes / 5) && minutes >= 2) {
                 // a tower between home and the nearest threat
                 BlockPos threat = nearestEnemyBuilding(home);
                 BlockPos want = home;
@@ -346,6 +352,27 @@ public class BotPlayer {
         }
     }
 
+    /** Patches whose extractor placement failed, with the game time of the failure: skipped for two minutes. */
+    final java.util.Map<BlockPos, Long> badPatches = new java.util.HashMap<>();
+
+    /**
+     * An extractor over a patch: the 5x5 footprint may sit anywhere that still covers the patch block, and the
+     * ground may be a block off the recorded centre (terrain edits, a stamp next to a river), so try those first.
+     */
+    boolean placeExtractor(ServerLevel level, BlockPos patch, List<LivingEntity> workers) {
+        level.getChunk(patch.getX() >> 4, patch.getZ() >> 4);
+        for (int dy : new int[] { 0, -1, 1 })
+            for (int[] o : new int[][] { {-2, -2}, {-1, -2}, {-2, -1}, {-3, -2}, {-2, -3}, {-1, -1}, {-3, -3}, {-1, -3}, {-3, -1} }) {
+                BlockPos origin = new BlockPos(patch.getX() + o[0], patch.getY() + dy, patch.getZ() + o[1]);
+                if (!BuildingValidators.isPlacementValid(level, kit.extractor(), origin, name, Rotation.NONE, false, false, true))
+                    continue;
+                workers.sort((u, v) -> Double.compare(u.blockPosition().distSqr(origin), v.blockPosition().distSqr(origin)));
+                return BuildingServerEvents.placeBuilding(kit.extractor(), origin, Rotation.NONE, name,
+                        new int[] { workers.get(0).getId() }, false, false, false, true) != null;
+            }
+        return false;
+    }
+
     /** The nearest stamped metal patch with no building on it yet. */
     BlockPos freePatch(ServerLevel level) {
         BlockPos best = null;
@@ -358,6 +385,9 @@ public class BotPlayer {
                     break;
                 }
             if (taken)
+                continue;
+            Long failed = badPatches.get(p);
+            if (failed != null && level.getGameTime() - failed < 20 * 120)
                 continue;
             // don't send workers to die: skip patches deep in enemy territory (near their buildings)
             BlockPos enemy = nearestEnemyBuildingAny(p);
