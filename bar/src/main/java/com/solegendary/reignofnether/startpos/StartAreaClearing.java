@@ -91,6 +91,8 @@ public final class StartAreaClearing {
             float ringR = 0;
             for (BlockPos p : positions)
                 ringR = Math.max(ringR, (float) Math.hypot(p.getX() + 0.5f - cx, p.getZ() + 0.5f - cz));
+            // capturable neutral sites between the bases (lovish, Oct 10)
+            com.solegendary.reignofnether.startpos.CapturePointServerEvents.stampFor(level, positions, cx, cz, ringR);
             if (ringR > 60) {
                 int ringCount = Math.max(4, Math.round(positions.size() * 3 * mexRichness));
                 for (int i = 0; i < ringCount; i++) {

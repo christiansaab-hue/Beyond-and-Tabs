@@ -659,6 +659,43 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** Capture points: an uncontested side takes a site over 20 s; an Ancient Mine then pays its owner metal. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void capture_point_is_taken_and_pays(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        int cx = base.getX() - 60, cz = base.getZ() + 60, y = 220;
+        for (int dx = -6; dx <= 6; dx++)
+            for (int dz = -6; dz <= 6; dz++)
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.STONE.defaultBlockState(), 3);
+        var point = com.solegendary.reignofnether.startpos.CapturePointServerEvents.place(level, cx, cz,
+            com.solegendary.reignofnether.startpos.CapturePointServerEvents.Kind.MINE);
+        String owner = "gametest_captor";
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var unit = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (point == null || unit == null) {
+            helper.fail("could not set up the capture point");
+            return;
+        }
+        unit.moveTo(cx + 2.5, y + 1, cz + 0.5, 0, 0);
+        unit.setOwnerName(owner);
+        level.addFreshEntity(unit);
+        helper.runAfterDelay(3, () -> {
+            for (int i = 0; i < 25; i++)
+                com.solegendary.reignofnether.startpos.CapturePointServerEvents.tick(level, 1f);
+            if (!owner.equals(com.solegendary.reignofnether.startpos.CapturePointServerEvents.ownerOf(point)))
+                helper.fail("25 uncontested seconds did not capture the site (progress "
+                    + com.solegendary.reignofnether.startpos.CapturePointServerEvents.progressOf(point) + ")");
+            if (pool.getMetal() <= 0)
+                helper.fail("the captured Ancient Mine paid no metal");
+            unit.discard();
+            point.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

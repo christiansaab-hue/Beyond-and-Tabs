@@ -2300,5 +2300,9 @@
   "entity.reignofnether.bonewright_unit": "Bonewright",
   "entity.reignofnether.bonewright_unit.tooltip1": "T2 constructor: builds twice as fast, twice the health of a worker.",
   "entity.reignofnether.bonewright_unit.tooltip2": "The only builder that can raise your Tier 3 lab.",
-  "entity.reignofnether.bonewright_unit.tooltip3": "Raises the Horde's great halls from bone and iron."
+  "entity.reignofnether.bonewright_unit.tooltip3": "Raises the Horde's great halls from bone and iron.",
+  "capture.reignofnether.mine": "Ancient Mine (+3 metal/s)",
+  "capture.reignofnether.shrine": "Ley Shrine (+30 energy/s)",
+  "capture.reignofnether.camp": "Mercenary Camp (hired wolves)",
+  "server.reignofnether.capture_taken": "%s has captured the %s"
 }
