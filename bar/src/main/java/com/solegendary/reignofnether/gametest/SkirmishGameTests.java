@@ -4009,6 +4009,295 @@ public class SkirmishGameTests {
         }
     }
 
+    // ------------------------------------------------------------------ Tidewrought tidepools (Tides core)
+
+    /**
+     * A raise fills only air above a sturdy floor: it never replaces a block (stone, a poppy), never sits on a metal
+     * patch, and never goes inside a building's footprint. The building is a placement that is in the server's list
+     * only for the synchronous raise (no tick passes), so parallel tests never see it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tidepool_raise_fills_only_open_ground(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_raise_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 14, 14);
+        BlockPos centre = helper.absolutePos(new BlockPos(7, 2, 7));
+        BlockPos stone = helper.absolutePos(new BlockPos(7, 2, 6));
+        BlockPos poppy = helper.absolutePos(new BlockPos(8, 2, 7));
+        BlockPos patchFloor = helper.absolutePos(new BlockPos(6, 1, 8));
+        level.setBlock(stone, Blocks.STONE.defaultBlockState(), 3);
+        level.setBlock(poppy.below(), Blocks.GRASS_BLOCK.defaultBlockState(), 3);   // so the poppy survives neighbour updates
+        level.setBlock(poppy, Blocks.POPPY.defaultBlockState(), 3);
+        level.setBlock(patchFloor, MetalPatches.PATCH_BLOCK.defaultBlockState(), 3);
+        var placement = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(
+            Buildings.WIND_GENERATOR_VILLAGERS, level, helper.absolutePos(new BlockPos(9, 1, 3)), Rotation.NONE, owner, false);
+        var buildings = com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings();
+        com.solegendary.reignofnether.tide.TidepoolServerEvents.Pool pool;
+        buildings.add(placement);
+        try {
+            pool = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner, centre, 3, 400);
+        } finally {
+            buildings.remove(placement);
+        }
+        try {
+            if (pool == null) {
+                helper.fail("the raise was refused: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+                return;
+            }
+            var tide = com.solegendary.reignofnether.registrars.BlockRegistrar.TIDEPOOL.get();
+            int insideColumns = 0;
+            for (int dx = -3; dx <= 3; dx++)
+                for (int dz = -3; dz <= 3; dz++) {
+                    if (dx * dx + dz * dz > 9)
+                        continue;
+                    BlockPos col = centre.offset(dx, 0, dz);
+                    if (placement.isPosInsideBuilding(col)) {
+                        insideColumns++;
+                        for (int y = 0; y <= 2; y++)
+                            if (level.getBlockState(col.above(y)).is(tide))
+                                helper.fail("a tidepool cell was raised inside a building footprint at " + col.above(y));
+                    }
+                }
+            if (insideColumns == 0)
+                helper.fail("test setup: the building footprint does not overlap the disc");
+            for (BlockPos c : pool.positions()) {
+                if (!level.getBlockState(c).is(tide))
+                    helper.fail("a registered cell is not a tidepool block at " + c);
+                if (!level.getBlockState(c.below()).isFaceSturdy(level, c.below(), net.minecraft.core.Direction.UP))
+                    helper.fail("a tidepool cell has no sturdy floor at " + c);
+                if (level.getBlockState(c.below()).is(MetalPatches.PATCH_BLOCK))
+                    helper.fail("a tidepool cell was raised on a metal patch at " + c);
+            }
+            if (!level.getBlockState(stone).is(Blocks.STONE) || !level.getBlockState(poppy).is(Blocks.POPPY))
+                helper.fail("the raise replaced a block (stone or poppy)");
+            if (level.getBlockState(patchFloor.above()).is(tide))
+                helper.fail("a tidepool covers the metal patch");
+            if (!level.getBlockState(centre).getFluidState().isEmpty())
+                helper.fail("a tidepool cell has a fluid state");
+            if (pool.cellCount() < 15)
+                helper.fail("too few cells for an r3 disc on open ground: " + pool.cellCount());
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+        }
+    }
+
+    /**
+     * A pool dries up after its lifetime (the 1 Hz expiry pass), and a cell its registry doesn't know - as after a
+     * restart - removes itself through its scheduled fail-safe tick.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void tidepool_expires_and_orphan_cells_dry_up(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_expiry_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 9, 9);
+        var pool = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner,
+            helper.absolutePos(new BlockPos(3, 2, 3)), 1, 20);
+        if (pool == null || pool.cellCount() != 5) {
+            helper.fail("an r1 raise on open ground should make 5 cells: " + (pool == null ? "refused" : pool.cellCount()));
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            return;
+        }
+        var tide = com.solegendary.reignofnether.registrars.BlockRegistrar.TIDEPOOL.get();
+        BlockPos orphan = helper.absolutePos(new BlockPos(7, 2, 7));
+        level.setBlock(orphan, tide.defaultBlockState(), 3);
+        level.scheduleTick(orphan, tide, 5);
+        helper.runAfterDelay(30, () -> {
+            try {
+                com.solegendary.reignofnether.tide.TidepoolServerEvents.tickExpiry(level);
+                if (pool.isActive())
+                    helper.fail("the pool is still active after its lifetime");
+                for (BlockPos c : pool.positions())
+                    if (level.getBlockState(c).is(tide))
+                        helper.fail("an expired pool left a cell at " + c);
+                if (level.getBlockState(orphan).is(tide))
+                    helper.fail("an orphan cell (no registry entry) did not dry up on its fail-safe tick");
+                helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            }
+        });
+    }
+
+    /**
+     * Raising a 5th pool evicts the owner's oldest; another owner's pool is untouched. Trail pools have their own cap
+     * per source and never evict the owner's normal pools.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tidepool_cap_evicts_the_owners_oldest(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        long key = helper.absolutePos(BlockPos.ZERO).asLong();
+        String owner = "gametest_tide_cap_" + key, other = "gametest_tide_cap_other_" + key;
+        openGround(helper, 1, 1, 14, 14);
+        var tide = com.solegendary.reignofnether.registrars.BlockRegistrar.TIDEPOOL.get();
+        var source = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        try {
+            var otherPool = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, other,
+                helper.absolutePos(new BlockPos(12, 2, 2)), 0, 400);
+            List<com.solegendary.reignofnether.tide.TidepoolServerEvents.Pool> mine = new ArrayList<>();
+            for (int i = 0; i < 5; i++)
+                mine.add(com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner,
+                    helper.absolutePos(new BlockPos(2 + 2 * i, 2, 2)), 0, 400));
+            if (otherPool == null || mine.contains(null) || source == null) {
+                helper.fail("a cap-test raise was refused: " + com.solegendary.reignofnether.tide.TidepoolServerEvents.lastRefusal());
+                return;
+            }
+            if (mine.get(0).isActive() || level.getBlockState(mine.get(0).centre).is(tide))
+                helper.fail("the owner's oldest pool survived a 5th raise");
+            for (int i = 1; i < 5; i++)
+                if (!mine.get(i).isActive())
+                    helper.fail("pool " + i + " was evicted instead of the oldest");
+            if (com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner).size()
+                    != com.solegendary.reignofnether.tide.TidepoolServerEvents.POOLS_PER_PLAYER)
+                helper.fail("the owner has " + com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsOf(owner).size() + " pools");
+            if (!otherPool.isActive())
+                helper.fail("another owner's pool was evicted");
+            // trail pools: own cap per source, oldest trail pool evicted, normal pools untouched
+            List<com.solegendary.reignofnether.tide.TidepoolServerEvents.Pool> trail = new ArrayList<>();
+            int cap = com.solegendary.reignofnether.tide.TidepoolServerEvents.TRAIL_POOLS_PER_SOURCE;
+            for (int i = 0; i <= cap; i++)
+                trail.add(com.solegendary.reignofnether.tide.TidepoolServerEvents.raiseTrail(level, owner, source,
+                    helper.absolutePos(new BlockPos(1 + i, 2, 8)), 0, 400));
+            if (trail.contains(null)) {
+                helper.fail("a trail raise was refused");
+                return;
+            }
+            if (trail.get(0).isActive())
+                helper.fail("the oldest trail pool survived past the trail cap");
+            for (int i = 1; i < 5; i++)
+                if (!mine.get(i).isActive())
+                    helper.fail("a trail pool evicted the owner's normal pool " + i);
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(other);
+            if (source != null)
+                source.discard();
+        }
+    }
+
+    /**
+     * A tidal unit on a tidepool gets the Tides speed modifier and regenerates; a non-tidal unit on the same cell gets
+     * neither; the modifier goes when the tidal unit steps off. The pool cell is KIND_TIDEPOOL for the pathfinder,
+     * walkable for every mobility class and cheapest for TIDAL. Units are never added to the level, so they can't
+     * act or be targeted by other tests; tidal-ness comes from the entity tag (the faction has no units yet).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void tides_buff_tidal_unit_on_a_pool_but_not_others(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tides_buff_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 10, 6);
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 3));
+        var pool = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner, at, 1, 400);
+        var vind = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get();
+        var tidal = vind.create(level);
+        var plain = vind.create(level);
+        try {
+            if (pool == null || tidal == null || plain == null) {
+                helper.fail("could not set up the Tides buff test");
+                return;
+            }
+            tidal.addTag(com.solegendary.reignofnether.tide.TidesServerEvents.TIDAL_TAG);
+            tidal.setOwnerName(owner);
+            plain.setOwnerName(owner);
+            for (var u : List.of(tidal, plain)) {
+                u.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+                u.setHealth(u.getMaxHealth() - 6);
+            }
+            float tidalHp = tidal.getHealth(), plainHp = plain.getHealth();
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(tidal);
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(plain);
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(tidal);   // a second pass must not stack
+            if (!com.solegendary.reignofnether.tide.TidesServerEvents.hasSpeedBonus(tidal))
+                helper.fail("a tidal unit on a tidepool has no speed modifier");
+            if (tidal.getHealth() <= tidalHp)
+                helper.fail("a tidal unit on a tidepool did not regenerate");
+            if (com.solegendary.reignofnether.tide.TidesServerEvents.hasSpeedBonus(plain) || plain.getHealth() != plainHp)
+                helper.fail("a non-tidal unit on a tidepool got the Tides buff");
+            if (com.solegendary.reignofnether.unit.pathfinding.MobilityClass.of(tidal) != com.solegendary.reignofnether.unit.pathfinding.MobilityClass.TIDAL)
+                helper.fail("a tidal unit is not MobilityClass.TIDAL");
+            if (com.solegendary.reignofnether.unit.pathfinding.MobilityClass.of(plain) == com.solegendary.reignofnether.unit.pathfinding.MobilityClass.TIDAL)
+                helper.fail("a non-tidal unit is MobilityClass.TIDAL");
+            byte kind = com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.classify(level, at.getX(), at.getY(), at.getZ());
+            if (kind != com.solegendary.reignofnether.unit.pathfinding.WalkabilityBuilder.KIND_TIDEPOOL)
+                helper.fail("a tidepool cell classifies as kind " + kind + ", not KIND_TIDEPOOL");
+            for (var mc : com.solegendary.reignofnether.unit.pathfinding.MobilityClass.values())
+                if (Float.isInfinite(mc.costFor(mc, kind)))
+                    helper.fail("a tidepool is not walkable for " + mc);
+            var TIDAL = com.solegendary.reignofnether.unit.pathfinding.MobilityClass.TIDAL;
+            var HUMANOID = com.solegendary.reignofnether.unit.pathfinding.MobilityClass.HUMANOID;
+            if (TIDAL.costFor(TIDAL, kind) >= HUMANOID.costFor(HUMANOID, kind))
+                helper.fail("a tidepool is not cheaper for TIDAL than for HUMANOID");
+            // step off onto dry ground: the modifier goes
+            tidal.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
+            com.solegendary.reignofnether.tide.TidesServerEvents.update(tidal);
+            if (com.solegendary.reignofnether.tide.TidesServerEvents.hasSpeedBonus(tidal))
+                helper.fail("the Tides speed modifier stayed after leaving the pool");
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            if (tidal != null)
+                tidal.discard();
+            if (plain != null)
+                plain.discard();
+        }
+    }
+
+    /**
+     * Counterplay: fire placed beside a cell evaporates it at once, a fire attack's evaporate() dries the rest, and a
+     * drained pool is gone within DRAIN_TICKS (what a constructor's reclaim order does).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void tidepool_fire_evaporates_and_drain_dries(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_tide_fire_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        openGround(helper, 1, 1, 13, 10);
+        var tide = com.solegendary.reignofnether.registrars.BlockRegistrar.TIDEPOOL.get();
+        BlockPos centre = helper.absolutePos(new BlockPos(5, 2, 5));
+        BlockPos edge = centre.offset(0, 0, 2), fire = centre.offset(0, 0, 3);
+        var pool = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner, centre, 2, 400);
+        var drained = com.solegendary.reignofnether.tide.TidepoolServerEvents.raise(level, owner,
+            helper.absolutePos(new BlockPos(11, 2, 5)), 1, 400);
+        if (pool == null || drained == null || !level.getBlockState(edge).is(tide)) {
+            helper.fail("could not raise the fire-test pools");
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            return;
+        }
+        level.setBlock(fire, Blocks.FIRE.defaultBlockState(), 3);
+        boolean edgeGone = !level.getBlockState(edge).is(tide);
+        boolean centreKept = level.getBlockState(centre).is(tide);
+        level.setBlock(fire, Blocks.AIR.defaultBlockState(), 3);
+        if (!edgeGone)
+            helper.fail("fire beside a tidepool cell did not evaporate it");
+        if (!centreKept)
+            helper.fail("fire beside one cell evaporated a cell it doesn't touch");
+        int dried = com.solegendary.reignofnether.tide.TidepoolServerEvents.evaporate(level, centre, 2);
+        if (dried < 10)
+            helper.fail("evaporate() dried only " + dried + " cells of an r2 pool");
+        for (BlockPos c : pool.positions())
+            if (level.getBlockState(c).is(tide))
+                helper.fail("evaporate() left a cell at " + c);
+        if (!com.solegendary.reignofnether.tide.TidepoolServerEvents.drain(drained) || !drained.isDraining()
+                || drained.ticksLeft() > com.solegendary.reignofnether.tide.TidepoolServerEvents.DRAIN_TICKS) {
+            helper.fail("drain() did not start drying the pool");
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            return;
+        }
+        helper.runAfterDelay(com.solegendary.reignofnether.tide.TidepoolServerEvents.DRAIN_TICKS + 5, () -> {
+            try {
+                com.solegendary.reignofnether.tide.TidepoolServerEvents.tickExpiry(level);
+                if (drained.isActive())
+                    helper.fail("a drained pool is still active");
+                for (BlockPos c : drained.positions())
+                    if (level.getBlockState(c).is(tide))
+                        helper.fail("a drained pool left a cell at " + c);
+                helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(owner);
+            }
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

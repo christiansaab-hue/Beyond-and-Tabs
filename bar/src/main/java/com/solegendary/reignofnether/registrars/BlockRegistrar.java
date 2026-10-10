@@ -164,6 +164,23 @@ public class BlockRegistrar {
                     .sound(SoundType.AZALEA_LEAVES)
                     .pushReaction(PushReaction.DESTROY)));
 
+    // Tidewrought tidepool (design/tidewrought_plan.md section 3): temporary shallow "water" with no fluid state, no
+    // collision and no occlusion, raised and expired only by tide/TidepoolServerEvents. No block item, no loot.
+    // Replaceable, so buildings and placed blocks simply overwrite it; not view-blocking, never darkens the ground
+    public static final RegistryObject<TidepoolBlock> TIDEPOOL = registerBlock("tidepool",
+            () -> new TidepoolBlock(BlockBehaviour.Properties.of().mapColor(MapColor.WATER)
+                    .replaceable()
+                    .noCollission()
+                    .noOcclusion()
+                    .forceSolidOff()
+                    .noLootTable()
+                    .instabreak()
+                    .isViewBlocking((bs, bg, bp) -> false)
+                    .isSuffocating((bs, bg, bp) -> false)
+                    .isRedstoneConductor((bs, bg, bp) -> false)
+                    .sound(SoundType.WET_GRASS)
+                    .pushReaction(PushReaction.DESTROY)));
+
     public static final RegistryObject<Block> RTS_START_BLOCK_BLUE = registerBlock("rts_start_block_blue", () ->
             new RTSStartBlock(BlockBehaviour.Properties.copy(Blocks.STONE).mapColor(MapColor.COLOR_BLUE)
                     .strength(-1.0F, 3600000.0F).noLootTable()), CreativeModeTabs.FUNCTIONAL_BLOCKS);

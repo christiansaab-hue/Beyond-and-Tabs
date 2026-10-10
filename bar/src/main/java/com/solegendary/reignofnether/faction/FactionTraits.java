@@ -73,6 +73,12 @@ public final class FactionTraits {
     public final float reclaimMultiplier;
     /** Sunforged Formation (FormationServerEvents) / Horde Momentum (MomentumServerEvents). */
     public final boolean formation, momentum;
+    /**
+     * Tidewrought Tides (tide/TidesServerEvents): this faction's units are faster and regenerate on water and on
+     * tidepools, path cheaply through them (MobilityClass.TIDAL) and may raise pools. Read through
+     * TidesServerEvents.isTidal, never with a faction == check.
+     */
+    public final boolean tidal;
     /** The extractor a worker queues by right-clicking a metal patch; supplier returning null = no quick-build. */
     public final Supplier<Building> metalExtractor;
 
@@ -94,6 +100,7 @@ public final class FactionTraits {
         reclaimMultiplier = b.reclaimMultiplier;
         formation = b.formation;
         momentum = b.momentum;
+        tidal = b.tidal;
         metalExtractor = b.metalExtractor;
     }
 
@@ -192,8 +199,9 @@ public final class FactionTraits {
     /**
      * Tidewrought (preview, design/tidewrought_plan.md): corsairs and tide-priests in teal and brass - shipwreck
      * timber, prismarine and copper. Slice 0 sets only the look (accent, livery, banner, scaffold, wreck), so the
-     * faction is never dressed or built as anyone else. Commander kit, debris, quick-build and the Tides mechanic stay
-     * at the neutral defaults until slice 1.
+     * faction is never dressed or built as anyone else. Commander kit, debris and quick-build stay at the neutral
+     * defaults until slice 1. The Tides core (tidepools + the wet buff) is switched on with {@code tidal()}; it is
+     * inert while the faction has no units.
      */
     public static final FactionTraits TIDEWROUGHT = new Builder("tidewrought")
         .accent(0xFF3CC8BE)
@@ -205,6 +213,7 @@ public final class FactionTraits {
         .banner(Blocks.CYAN_WOOL.defaultBlockState(), Blocks.CUT_COPPER.defaultBlockState())
         .scaffold(Blocks.STRIPPED_MANGROVE_LOG.defaultBlockState(), Blocks.PRISMARINE_BRICKS.defaultBlockState(), ScaffoldDecor.NONE)
         .wreck(Blocks.DARK_PRISMARINE.defaultBlockState(), 1f)
+        .tidal()
         .build();
 
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)
@@ -224,7 +233,7 @@ public final class FactionTraits {
         CommanderAbility.Kind commanderAbility = CommanderAbility.Kind.NONE;
         BlockState wreckBlock = Blocks.COBBLESTONE.defaultBlockState();
         float reclaimMultiplier = 1f;
-        boolean formation = false, momentum = false;
+        boolean formation = false, momentum = false, tidal = false;
         Supplier<Building> metalExtractor = () -> null;
 
         Builder(String name) { this.name = name; }
@@ -238,6 +247,7 @@ public final class FactionTraits {
         Builder wreck(BlockState block, float reclaim) { wreckBlock = block; reclaimMultiplier = reclaim; return this; }
         Builder formation() { formation = true; return this; }
         Builder momentum() { momentum = true; return this; }
+        Builder tidal() { tidal = true; return this; }
         Builder extractor(Supplier<Building> s) { metalExtractor = s; return this; }
         FactionTraits build() { return new FactionTraits(this); }
     }

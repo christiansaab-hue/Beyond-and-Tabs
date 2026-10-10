@@ -77,6 +77,9 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.AwakenThicket.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.StagLeap.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);
+        // Tidewrought Tides core: tidepool registry/expiry/drain + /rts-tidepool, and the wet buff
+        vanillaEventBus.register(com.solegendary.reignofnether.tide.TidepoolServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.tide.TidesServerEvents.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);
         vanillaEventBus.register(BuildingServerEvents.class);

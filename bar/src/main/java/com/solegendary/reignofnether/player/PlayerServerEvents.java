@@ -1126,6 +1126,8 @@ public class PlayerServerEvents {
                     postGameRtsPlayers.add(rtsPlayer);
 
                     PlayerClientboundPacket.defeat(playerName);
+                    // a defeated Tidewrought's tidepools dry up at once
+                    com.solegendary.reignofnether.tide.TidepoolServerEvents.clearOwner(playerName);
 
                     // Remove ownership from all units and buildings of the defeated player
                     for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
@@ -1318,6 +1320,7 @@ public class PlayerServerEvents {
             // the battlefield resets with the match: patches dug out so a rematch stamps a fresh layout
             if (!isSandboxOrScenario)
                 com.solegendary.reignofnether.resources.MetalPatches.clearAll(serverLevel);
+            com.solegendary.reignofnether.tide.TidepoolServerEvents.clearAll();   // tidepools never outlive a match
 
             for (LivingEntity entity : UnitServerEvents.getAllUnits())
                 if (hardReset || (entity instanceof Unit unit && !Unit.hasAnchor(unit) && !isSandboxOrScenario))

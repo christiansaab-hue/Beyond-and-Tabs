@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.unit.pathfinding;
 
 import com.solegendary.reignofnether.blocks.BlockUtils;
+import com.solegendary.reignofnether.blocks.TidepoolBlock;
 import com.solegendary.reignofnether.util.MiscUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
@@ -13,7 +14,7 @@ import net.minecraft.world.level.block.SculkShriekerBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 
-// classifies one cell (x, y, z) as LAND / WATER / FIRE / LAVA / BLOCKED.
+// classifies one cell (x, y, z) as LAND / WATER / FIRE / LAVA / SLIME / TIDEPOOL / BLOCKED.
 // a cell is occupiable when feet (y) and head (y+1) are non-solid AND the floor (y-1) supports.
 public final class WalkabilityBuilder {
     private WalkabilityBuilder() {}
@@ -24,6 +25,10 @@ public final class WalkabilityBuilder {
     public static final byte KIND_FIRE    = 3;
     public static final byte KIND_LAVA    = 4;
     public static final byte KIND_SLIME    = 5;
+    // Tidewrought tidepool on solid ground: walkable for every mobility class (MobilityClass.costFor), only cheaper
+    // for TIDAL units - so a pool can never wall off a choke, and a stale (not yet reclassified) cell reading as
+    // LAND is just as walkable. PathConverter maps it to WALKABLE.
+    public static final byte KIND_TIDEPOOL = 6;
 
     // hot path (per cell during a chunk build); reuse mutable positions to avoid BlockPos allocations.
     private static final ThreadLocal<BlockPos.MutableBlockPos> FEET  = ThreadLocal.withInitial(BlockPos.MutableBlockPos::new);
@@ -45,6 +50,11 @@ public final class WalkabilityBuilder {
         BlockState floorBs = level.getBlockState(floor);
         if (floorBs.getBlock() == Blocks.WATER && feetBs.getBlock() == Blocks.LILY_PAD)
             return KIND_LAND;
+        // before the fluid checks (a tidepool has no fluid state anyway); without solid support it falls through to
+        // the ordinary floor rules below
+        if (feetBs.getBlock() instanceof TidepoolBlock && MiscUtil.isSolidBlocking(level, floor)
+                && !isFenceLike(floorBs) && !floorBs.is(BlockTags.LEAVES))
+            return KIND_TIDEPOOL;
 
         FluidState feetFluid = feetBs.getFluidState();
         if (feetFluid.is(FluidTags.LAVA)) return KIND_LAVA;

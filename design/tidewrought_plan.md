@@ -175,6 +175,43 @@ vanilla. `FactionTraits.tides` gates the whole thing (no `Factions.TIDEWROUGHT =
   "last seen" behaviour RoN gives buildings; acceptable. Minimap shows pools as water colour through `MapColor`.
 - No new packets for slice 1 beyond the ability's existing aimed-cast packet.
 
+### 3.6 As built (branch `tidewrought-tidepools`) - the API units and buildings use
+The core landed ahead of the units, so slice 1's units/buildings only call this API. Deviations from 3.1-3.5 are
+marked **(changed)**.
+
+| Piece | Where | Notes |
+|---|---|---|
+| Block | `blocks/TidepoolBlock`, `BlockRegistrar.TIDEPOOL` | 1.5/16 sheet, vanilla `water_still` tinted `0x3CC8BE` (`ClientModEvents` colour handler), translucent, no fluid state, no collision, replaceable, `MapColor.WATER`, no item/loot. Fire/lava/magma beside a cell evaporates it (neighbour update). Burning entities wading in are put out. Fail-safe scheduled tick re-arms while its pool lives, else dries the cell. **(changed)** no `AGE` drying-out states yet. |
+| Registry | `tide/TidepoolServerEvents` | API documented at the top of the class (below). Not saved. |
+| Buff | `tide/TidesServerEvents` | every 10 ticks; **(changed)** +20 % speed (`MULTIPLY_TOTAL`, fixed UUID, added/removed only on step on/off) and 2 HP/s (1 HP per pass) for every tidal unit - per-unit numbers (Reef Guard) are a unit-slice tweak. |
+| Who is tidal | `TidesServerEvents.isTidal` | **(changed)** flag is `FactionTraits.tidal` (not `tides`), true for `TIDEWROUGHT`; or the entity tag `bt_tidal` (`TIDAL_TAG`) for borrowed summons and tests. `MobilityClass.of` checks it first. |
+| Pathing | `WalkabilityBuilder.KIND_TIDEPOOL = 6`, `MobilityClass.TIDAL`, `PathConverter` -> `WALKABLE` | costs as 3.5 (tidepool 1.0 TIDAL / 1.5 others, water 1.5 TIDAL). A tidepool without solid floor falls through to the normal rules. |
+| Counterplay | `UnitActionItem` RECLAIM, `AreaCommands.issueDrains` | a RECLAIM order (single or area, when the circle holds no wreck/repair) on a pool walks the worker there and drains the whole pool 2 s after it gets within 4 blocks. **(changed)** any worker may drain (own pools too), not only enemies. Fire abilities call `evaporate`. Buildings fill pools via the existing soft-block clearing in `levelFootprint`. |
+| Lifecycle | `PlayerServerEvents.defeat` -> `clearOwner`, `resetRTS` -> `clearAll` | server stop just forgets; saved fail-safe ticks dry leftovers. |
+| Fog | nothing new | pools are blocks and ride the fog-filtered block updates; a pool that dries in a dark chunk stays drawn for that enemy until the chunk is seen again (building-like last-seen). |
+| Debug | `/rts-tidepool <radius> [seconds]` (op 2) | raises at the caller's feet, owned by the caller. |
+
+```java
+Pool p = TidepoolServerEvents.raise(level, owner, centre, radius, lifetimeTicks);  // null = refused, see lastRefusal()
+Pool t = TidepoolServerEvents.raiseTrail(level, owner, leviathan, centre, 1, 200); // per-source cap 6, never evicts priest pools
+p.isActive(); p.isDraining(); p.cellCount(); p.ticksLeft(); p.positions();         // read-only handle
+TidepoolServerEvents.drain(p);                    // dries within DRAIN_TICKS (2 s)
+TidepoolServerEvents.evaporate(level, at, r);     // fire attacks: dries the cells hit, returns the count
+TidepoolServerEvents.poolAt(level, pos) / poolNear(level, pos) / isTidepool(level, pos) / poolsOf(owner) / poolsIn(...)
+TidepoolServerEvents.orderDrain(level, worker, pos);   // what the reclaim hook calls
+TidepoolServerEvents.clearOwner(owner) / clearAll();
+TidepoolServerEvents.collectCells(level, centre, r);   // the cells a raise would fill (ability preview / bot checks)
+TidesServerEvents.isTidal(entity) / isWet(entity) / hasSpeedBonus(entity);
+```
+Constants: `DEFAULT_LIFETIME_TICKS` 600, `MAX_RADIUS` 4, `POOLS_PER_PLAYER` 4, `TRAIL_POOLS_PER_SOURCE` 6,
+`MAX_CELLS_PER_LEVEL` 1200 (an over-budget raise returns null with `lastRefusal() == "tide.reignofnether.too_many_tidepools"`
+- the ability shows it via `HudClientboundPacket.showTempMessageI18n`), 1 Hz expiry. The Tide Priest's 20 s cooldown and
+energy cost belong to its ability, not the registry.
+
+GameTests: `tidepool_raise_fills_only_open_ground`, `tidepool_expires_and_orphan_cells_dry_up`,
+`tidepool_cap_evicts_the_owners_oldest`, `tides_buff_tidal_unit_on_a_pool_but_not_others` (also KIND_TIDEPOOL +
+TIDAL costs), `tidepool_fire_evaporates_and_drain_dries`.
+
 ---
 
 ## 4. Alex's Mobs bodies (checked against AM 1.22.9 `AMEntityRegistry`)

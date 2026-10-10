@@ -82,6 +82,12 @@ public class ClientModEvents {
                 BlockRegistrar.WRAITH_SNOW_LAYER.get()
         );
 
+        // Tidewrought tidepool: the grey vanilla water texture tinted the faction's shallow-sea teal
+        evt.register(
+                (state, level, pos, tintIndex) -> 0x3CC8BE,
+                BlockRegistrar.TIDEPOOL.get()
+        );
+
         // wrap every block's provider with the fog multiplier; biome-tinted ones only fog their untinted quads
         // (BiomeColorsMixin fogs the biome colour itself)
         java.util.Set<Block> biomeTinted = java.util.Set.of(

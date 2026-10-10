@@ -416,6 +416,11 @@ public class UnitActionItem {
                             com.solegendary.reignofnether.resources.WreckServerEvents.isWreck(wreck) && !wreck.isRemoved()) {
                         com.solegendary.reignofnether.resources.WreckServerEvents.setReclaimTarget((LivingEntity) unit, wreck);
                         unit.setMoveTarget(wreck.blockPosition());
+                    } else if (!level.isClientSide() && unit instanceof WorkerUnit && preselectedBlockPos != null
+                            && level instanceof net.minecraft.server.level.ServerLevel sl
+                            && com.solegendary.reignofnether.tide.TidepoolServerEvents.orderDrain(sl, (LivingEntity) unit, preselectedBlockPos)) {
+                        // reclaim on a Tidewrought tidepool: walk there, the pool drains once the worker is close
+                        unit.setMoveTarget(preselectedBlockPos);
                     } else if (level.isClientSide()) {
                         unit.setMoveTarget(preselectedBlockPos);
                     }

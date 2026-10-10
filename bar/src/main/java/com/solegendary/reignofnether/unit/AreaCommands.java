@@ -73,6 +73,9 @@ public class AreaCommands {
         int handed = 0;
         if (!workers.isEmpty() && mode != MODE_ATTACK)
             handed += issueWorkers(level, owner, mode, centre, radius, workers, shift);
+        // no wreck or repair in the circle: an area reclaim over tidepools drains them instead
+        if (handed == 0 && !workers.isEmpty() && (mode == MODE_AUTO || mode == MODE_RECLAIM))
+            handed += issueDrains(level, owner, centre, radius, workers);
         if (!fighters.isEmpty() && mode != MODE_RECLAIM && mode != MODE_REPAIR)
             handed += issueAttack(level, owner, centre, radius, fighters, shift);
         return handed;
@@ -111,6 +114,40 @@ public class AreaCommands {
                 }
                 handed++;
             }
+        }
+        return handed;
+    }
+
+    /**
+     * Area reclaim over Tidewrought tidepools: each pool in the circle goes to the nearest worker not already sent
+     * to one, as a RECLAIM order on the pool's centre - which
+     * UnitActionItem turns into TidepoolServerEvents.orderDrain. Returns how many pools were handed out.
+     */
+    static int issueDrains(ServerLevel level, String owner, BlockPos centre, int radius, List<LivingEntity> workers) {
+        var pools = com.solegendary.reignofnether.tide.TidepoolServerEvents.poolsIn(level, centre, radius, MAX_DY);
+        if (pools.isEmpty())
+            return 0;
+        boolean[] busy = new boolean[workers.size()];
+        int handed = 0;
+        for (var pool : pools) {
+            int best = -1;
+            double bestD = Double.MAX_VALUE;
+            // a worker walks to one pool at a time; pools beyond the number of workers wait for a later order
+            for (int w = 0; w < workers.size(); w++) {
+                if (busy[w])
+                    continue;
+                double d = workers.get(w).distanceToSqr(pool.centre.getX() + 0.5, pool.centre.getY(), pool.centre.getZ() + 0.5);
+                if (d < bestD) {
+                    bestD = d;
+                    best = w;
+                }
+            }
+            if (best < 0)
+                break;
+            busy[best] = true;
+            new UnitActionItem(owner, UnitAction.RECLAIM, -1,
+                    new int[] { workers.get(best).getId() }, pool.centre, pool.centre).action(level);
+            handed++;
         }
         return handed;
     }
