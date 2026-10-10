@@ -189,6 +189,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ravager_unit").toString()));
 
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit>> WAR_MAMMOTH_UNIT = ENTITIES.register("war_mammoth_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.RAVAGER.getWidth() * com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit.SCALE,
+                           EntityType.RAVAGER.getHeight() * com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "war_mammoth_unit").toString()));
+
     public static final RegistryObject<EntityType<WardenUnit>> WARDEN_UNIT = ENTITIES.register("warden_unit",
             () -> EntityType.Builder.of(WardenUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.WARDEN.getWidth(), EntityType.WARDEN.getHeight())
@@ -486,6 +493,7 @@ public class EntityRegistrar {
             case SlimeProd.itemName -> EntityRegistrar.SLIME_UNIT.get();
             case WardenProd.itemName -> EntityRegistrar.WARDEN_UNIT.get();
             case RavagerProd.itemName -> EntityRegistrar.RAVAGER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();
             case BruteProd.itemName -> EntityRegistrar.BRUTE_UNIT.get();

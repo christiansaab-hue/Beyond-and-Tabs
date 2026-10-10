@@ -506,6 +506,28 @@ public class SkirmishGameTests {
         });
     }
 
+    /** The Horde's War Mammoth exists, belongs to the Horde, and obeys T3 rule (a): 4-6x a T2 heavy's cost. */
+    @GameTest(template = ARENA)
+    public static void war_mammoth_is_a_proper_t3(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var mammoth = com.solegendary.reignofnether.registrars.EntityRegistrar.WAR_MAMMOTH_UNIT.get().create(level);
+        if (mammoth == null) {
+            helper.fail("could not create the War Mammoth");
+            return;
+        }
+        var f = com.solegendary.reignofnether.faction.Factions.getFaction(mammoth);
+        if (f == null || !f.equals(com.solegendary.reignofnether.faction.Factions.PIGLINS))
+            helper.fail("War Mammoth is not a Horde unit: " + f);
+        float ratio = (float) com.solegendary.reignofnether.resources.ResourceCosts.WAR_MAMMOTH.metal()
+            / com.solegendary.reignofnether.resources.ResourceCosts.RAVAGER.metal();
+        if (ratio < 4f || ratio > 6f)
+            helper.fail("T3 rule (a): War Mammoth should cost 4-6x the Siege Ox, is " + ratio + "x");
+        if (mammoth.getMaxHealth() < 1000)
+            helper.fail("War Mammoth health " + mammoth.getMaxHealth());
+        mammoth.discard();
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

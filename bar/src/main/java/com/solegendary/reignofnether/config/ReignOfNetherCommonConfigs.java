@@ -48,6 +48,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.WITCH.define(BUILDER);
         UnitCosts.EVOKER.define(BUILDER);
         UnitCosts.RAVAGER.define(BUILDER);
+        UnitCosts.WAR_MAMMOTH.define(BUILDER);
         UnitCosts.ROYAL_GUARD.define(BUILDER);
         UnitCosts.ENCHANTER.define(BUILDER);
         //Piglins
@@ -236,6 +237,8 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry WITCH = ResourceCostConfigEntry.Unit(90,90,90,35,3, ResourceCosts.WITCH, "Witch Config");
         public static final ResourceCostConfigEntry EVOKER = ResourceCostConfigEntry.Unit(140,0,120,35,3, ResourceCosts.EVOKER, "Evoker Config");
         public static final ResourceCostConfigEntry RAVAGER = ResourceCostConfigEntry.Unit(400,50,150,60,7, ResourceCosts.RAVAGER, "Ravager Config");
+        // Horde T3: ~4.5x the Siege Ox (T3 rule a); slow and melee-only (rule b)
+        public static final ResourceCostConfigEntry WAR_MAMMOTH = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.WAR_MAMMOTH, "War Mammoth Config");
         public static final ResourceCostConfigEntry ROYAL_GUARD = ResourceCostConfigEntry.Unit(0,0,0,30, 5, ResourceCosts.ROYAL_GUARD, "Royal Guard Config");
         public static final ResourceCostConfigEntry ENCHANTER = ResourceCostConfigEntry.Unit(0,0,0,30, 5, ResourceCosts.ENCHANTER, "Enchanter Config");
 

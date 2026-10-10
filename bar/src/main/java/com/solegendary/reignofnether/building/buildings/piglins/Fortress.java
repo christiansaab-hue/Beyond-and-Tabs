@@ -51,6 +51,7 @@ public class Fortress extends ProductionBuilding implements GarrisonableBuilding
         this.productions.add(ProductionItems.RESEARCH_ADVANCED_PORTALS, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.RESEARCH_BLOODLUST, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.RESEARCH_SOUL_FIREBALLS, Keybindings.abilitySlot3);
+        this.productions.add(ProductionItems.WAR_MAMMOTH, Keybindings.abilitySlot4);   // Horde T3 experimental
 
         setActiveAddon(GarrisonableBuildingAddon.class, this, true);
     }

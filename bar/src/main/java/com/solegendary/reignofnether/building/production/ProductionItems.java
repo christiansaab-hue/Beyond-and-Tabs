@@ -42,6 +42,7 @@ public class ProductionItems {
     public static final SlimeProd SLIME = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "slime"), new SlimeProd());
     public static final WardenProd WARDEN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "warden"), new WardenProd());
     public static final RavagerProd RAVAGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ravager"), new RavagerProd());
+    public static final com.solegendary.reignofnether.unit.units.piglins.WarMammothProd WAR_MAMMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "war_mammoth"), new com.solegendary.reignofnether.unit.units.piglins.WarMammothProd());
 
     public static final GruntProd GRUNT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "grunt"), new GruntProd());
     public static final StriderProd STRIDER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "strider"), new StriderProd());
@@ -163,6 +164,7 @@ public class ProductionItems {
         SLIME,
         WARDEN,
         RAVAGER,
+        WAR_MAMMOTH,
         GRUNT,
         STRIDER,
         BRUTE,
