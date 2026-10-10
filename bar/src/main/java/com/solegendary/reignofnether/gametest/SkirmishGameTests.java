@@ -965,6 +965,16 @@ public class SkirmishGameTests {
             helper.runAfterDelay(t, sample);
         helper.runAfterDelay(SOAK_TICKS, () -> {
             sample.run();
+            StringBuilder diag = new StringBuilder(" | deaths: ").append(deaths);
+            diag.append(" | defeats: ").append(names.stream().map(n -> n + "=" + com.solegendary.reignofnether.player.PlayerServerEvents.DIAG_DEFEATS.get(n)).toList());
+            diag.append(" | grave starters: ");
+            for (var le : starters)
+                diag.append(net.minecraft.world.entity.EntityType.getKey(le.getType()).getPath()).append(" alive=").append(le.isAlive())
+                    .append(" removed=").append(le.getRemovalReason()).append(" owner='")
+                    .append(((com.solegendary.reignofnether.unit.interfaces.Unit) le).getOwnerName()).append("' hp=").append(le.getHealth())
+                    .append(" at ").append(le.blockPosition().toShortString()).append("; ");
+            diag.append("| starts ").append(starts[0]).append(" ").append(starts[1]).append(" cmdrDefeat=")
+                .append(level.getGameRules().getBoolean(com.solegendary.reignofnether.registrars.GameRuleRegistrar.COMMANDER_DEFEAT));
             List<String> problems = new ArrayList<>();
             for (int i = 0; i < 2; i++) {
                 String n = names.get(i);
@@ -990,19 +1000,8 @@ public class SkirmishGameTests {
             }
             leftovers.forEach(net.minecraft.world.entity.Entity::discard);
             net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
-            if (!problems.isEmpty()) {
-                StringBuilder diag = new StringBuilder(" | deaths: ").append(deaths);
-                diag.append(" | defeats: ").append(names.stream().map(n -> n + "=" + com.solegendary.reignofnether.player.PlayerServerEvents.DIAG_DEFEATS.get(n)).toList());
-                diag.append(" | grave starters: ");
-                for (var le : starters)
-                    diag.append(net.minecraft.world.entity.EntityType.getKey(le.getType()).getPath()).append(" alive=").append(le.isAlive())
-                        .append(" removed=").append(le.getRemovalReason()).append(" owner='")
-                        .append(((com.solegendary.reignofnether.unit.interfaces.Unit) le).getOwnerName()).append("' hp=").append(le.getHealth())
-                        .append(" at ").append(le.blockPosition().toShortString()).append("; ");
-                diag.append("| starts ").append(starts[0]).append(" ").append(starts[1]).append(" cmdrDefeat=")
-                    .append(level.getGameRules().getBoolean(com.solegendary.reignofnether.registrars.GameRuleRegistrar.COMMANDER_DEFEAT));
-                helper.fail(String.join("; ", problems) + diag);
-            }
+            helper.fail("SOAKDIAG b/u k " + maxBuildings[0] + "/" + maxUnits[0] + " g " + maxBuildings[1] + "/" + maxUnits[1]
+                + " start " + startUnits[0] + "/" + startUnits[1] + " " + String.join("; ", problems) + diag);   // TEMP: always report
             helper.succeed();
         });
     }
