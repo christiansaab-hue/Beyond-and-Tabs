@@ -232,6 +232,7 @@ public class BotPlayer {
 
         // 4c) the commander's signature ability when a fight is on near it (same rules as a player: cooldown)
         useCommanderAbility(level, mine);
+        useFactionPowers(level, mine);
 
         // 5) train fighters: the repeat queue keeps army buildings running once seeded
         for (BuildingPlacement bp : buildings)
@@ -425,6 +426,47 @@ public class BotPlayer {
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get())
                 if (a instanceof com.solegendary.reignofnether.ability.abilities.RaiseDead && a.isOffCooldown(u))
                     a.use(level, u, le.blockPosition());   // does nothing (and keeps its cooldown) without wrecks in reach
+        }
+    }
+
+    /**
+     * Faction powers (Crypt Tide, War-Drums, Bastion Aegis) on any unit that carries one: same rule as the
+     * commander's signature - only once three or more enemy units are within 12 blocks. Crypt Tide is aimed at the
+     * nearest of them; the other two are cast where the unit stands. The enemy scan only runs for a unit with a
+     * power off cooldown, so an idle army costs nothing here.
+     */
+    void useFactionPowers(ServerLevel level, List<LivingEntity> mine) {
+        for (LivingEntity le : mine) {
+            if (!(le instanceof Unit u) || u.getAbilities() == null)
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                boolean tide = a instanceof com.solegendary.reignofnether.ability.abilities.CryptTide;
+                if (!tide && !(a instanceof com.solegendary.reignofnether.ability.abilities.WarDrums)
+                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.BastionAegis))
+                    continue;
+                if (!a.isOffCooldown(u))
+                    continue;
+                int enemies = 0;
+                LivingEntity nearest = null;
+                double best = Double.MAX_VALUE;
+                for (LivingEntity other : UnitServerEvents.getAllUnits()) {
+                    if (!(other instanceof Unit ou) || !other.isAlive())
+                        continue;
+                    double d = other.distanceToSqr(le);
+                    if (d > 12 * 12)
+                        continue;
+                    String o = ou.getOwnerName();
+                    if (o == null || o.equals(name) || AlliancesServerEvents.isAllied(name, o))
+                        continue;
+                    enemies++;
+                    if (d < best) {
+                        best = d;
+                        nearest = other;
+                    }
+                }
+                if (enemies >= 3)
+                    a.use(level, u, tide ? nearest.blockPosition() : le.blockPosition());
+            }
         }
     }
 

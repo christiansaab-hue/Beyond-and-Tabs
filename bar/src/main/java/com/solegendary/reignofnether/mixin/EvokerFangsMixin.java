@@ -40,6 +40,10 @@ public abstract class EvokerFangsMixin extends Entity {
     private void dealDamageTo(LivingEntity pTarget, CallbackInfo ci) {
         ci.cancel();
 
+        // Crypt Tide's bone hands are visual only: the ability applies its own damage and root once per enemy
+        if (this.getTags().contains(com.solegendary.reignofnether.ability.abilities.CryptTide.VISUAL_FANG_TAG))
+            return;
+
         // prevent friendly fire
         if (this.getOwner() instanceof Unit unit &&
             UnitServerEvents.getUnitToEntityRelationship(unit, pTarget) == Relationship.FRIENDLY)

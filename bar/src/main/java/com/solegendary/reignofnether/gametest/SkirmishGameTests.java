@@ -984,6 +984,121 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** Crypt Tide: the eruption roots and hurts an enemy inside the ring, and leaves a friend inside it alone. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void crypt_tide_roots_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_crypt_tide";
+        var wraith = com.solegendary.reignofnether.registrars.EntityRegistrar.WRAITH_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_UNIT.get().create(level);
+        if (wraith == null || foe == null || friend == null) {
+            helper.fail("could not create crypt tide units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        wraith.moveTo(at.getX() - 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 1.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 2.5, 0, 0);
+        wraith.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName("gametest_crypt_tide_foe");
+        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(wraith, foe, friend))
+            level.addFreshEntity(e);
+        helper.runAfterDelay(3, () -> {
+            float foeHp = foe.getHealth(), friendHp = friend.getHealth();
+            var centre = new net.minecraft.world.phys.Vec3(at.getX() + 0.5, foe.getY(), at.getZ() + 0.5);
+            int hit = com.solegendary.reignofnether.ability.abilities.CryptTide.erupt(level, wraith, owner, centre);
+            if (hit < 1)
+                helper.fail("Crypt Tide caught no enemy");
+            if (!foe.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                helper.fail("Crypt Tide did not root the enemy");
+            if (foe.isAlive() && foe.getHealth() >= foeHp)
+                helper.fail("Crypt Tide did not hurt the enemy");
+            if (friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                helper.fail("Crypt Tide rooted a friendly unit");
+            if (friend.getHealth() < friendHp)
+                helper.fail("Crypt Tide hurt a friendly unit");
+            for (var e : List.<net.minecraft.world.entity.LivingEntity>of(wraith, foe, friend))
+                e.discard();
+            helper.succeed();
+        });
+    }
+
+    /** War-Drums: the speed modifier goes on the drummer and its friends nearby, never on an enemy beside them. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void war_drums_speed_friends_only(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_war_drums";
+        var drummer = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.BRUTE_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        if (drummer == null || friend == null || foe == null) {
+            helper.fail("could not create war drums units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        drummer.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 4.5, 0, 0);
+        drummer.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName("gametest_war_drums_foe");
+        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(drummer, friend, foe))
+            level.addFreshEntity(e);
+        var speed = net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED;
+        helper.runAfterDelay(3, () -> {
+            double friendBase = friend.getAttributeValue(speed), foeBase = foe.getAttributeValue(speed);
+            var drummed = com.solegendary.reignofnether.ability.abilities.WarDrums.rally(level, drummer, owner);
+            if (!drummed.contains(friend) || !com.solegendary.reignofnether.ability.abilities.WarDrums.isDrummed(friend))
+                helper.fail("War-Drums did not reach a friendly unit 4 blocks away");
+            if (!com.solegendary.reignofnether.ability.abilities.WarDrums.isDrummed(drummer))
+                helper.fail("War-Drums did not buff the drummer itself");
+            if (friend.getAttributeValue(speed) <= friendBase + 0.0001)
+                helper.fail("War-Drums gave the friend no speed: " + friendBase + " -> " + friend.getAttributeValue(speed));
+            if (drummed.contains(foe) || com.solegendary.reignofnether.ability.abilities.WarDrums.isDrummed(foe)
+                    || foe.getAttributeValue(speed) > foeBase + 0.0001)
+                helper.fail("War-Drums buffed an enemy unit");
+            for (var e : List.<net.minecraft.world.entity.LivingEntity>of(drummer, friend, foe))
+                e.discard();
+            helper.succeed();
+        });
+    }
+
+    /** Bastion Aegis: a projectile hit on a friend inside the dome is soaked by the dome, not the friend. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void bastion_aegis_soaks_a_projectile_for_a_friend(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bastion_aegis";
+        var evoker = com.solegendary.reignofnether.registrars.EntityRegistrar.EVOKER_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (evoker == null || friend == null) {
+            helper.fail("could not create aegis units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(11, 2, 11));
+        evoker.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        evoker.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        level.addFreshEntity(evoker);
+        level.addFreshEntity(friend);
+        helper.runAfterDelay(3, () -> {
+            var dome = com.solegendary.reignofnether.ability.abilities.BastionAegis.raise(level, evoker, owner, evoker.position());
+            float hp = friend.getHealth();
+            // a thrown projectile with no shooter: plain projectile damage, untouched by RoN's unit damage rewrite
+            friend.hurt(level.damageSources().thrown(null, null), 10f);
+            if (friend.getHealth() < hp - 0.01f)
+                helper.fail("the dome let a projectile hit through: " + hp + " -> " + friend.getHealth());
+            if (dome.remaining > com.solegendary.reignofnether.ability.abilities.BastionAegis.CAPACITY - 9.99f)
+                helper.fail("the dome did not pay for the hit: " + dome.remaining + " left");
+            com.solegendary.reignofnether.ability.abilities.BastionAegis.dispel(dome);
+            evoker.discard();
+            friend.discard();
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
