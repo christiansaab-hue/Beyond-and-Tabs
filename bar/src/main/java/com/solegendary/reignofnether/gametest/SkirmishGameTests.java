@@ -535,6 +535,45 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** The Sun Colossus is a Sunforged T3 with the Solar Lance, and the lance hits only hostiles in its lane. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void sun_colossus_lance_hits_its_lane(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var col = com.solegendary.reignofnether.registrars.EntityRegistrar.SUN_COLOSSUS_UNIT.get().create(level);
+        var golem = com.solegendary.reignofnether.registrars.EntityRegistrar.IRON_GOLEM_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (col == null || golem == null || foe == null) {
+            helper.fail("could not create units");
+            return;
+        }
+        var f = com.solegendary.reignofnether.faction.Factions.getFaction(col);
+        if (f == null || !f.equals(com.solegendary.reignofnether.faction.Factions.VILLAGERS))
+            helper.fail("Sun Colossus is not Sunforged: " + f);
+        if (col.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.SolarLance))
+            helper.fail("Sun Colossus has no Solar Lance");
+        if (golem.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.SolarLance))
+            helper.fail("Solar Lance leaked onto the ordinary Iron Golem");
+        golem.discard();
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 10));
+        col.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 9.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        col.setOwnerName("gametest_sun");
+        foe.setOwnerName("gametest_shade");
+        level.addFreshEntity(col);
+        level.addFreshEntity(foe);
+        helper.runAfterDelay(3, () -> {
+            var from = col.position().add(0, 1.5, 0);
+            var dir = new net.minecraft.world.phys.Vec3(1, 0, 0);
+            int hit = com.solegendary.reignofnether.ability.abilities.SolarLance.fire(level, col, "gametest_sun",
+                from, from.add(dir.scale(com.solegendary.reignofnether.ability.abilities.SolarLance.LENGTH)), dir);
+            if (hit < 1 || (foe.isAlive() && foe.getMaxHealth() - foe.getHealth() < 30))
+                helper.fail("Solar Lance did not land on the enemy in its lane (hit " + hit + ", hp " + foe.getHealth() + ")");
+            col.discard();
+            foe.discard();
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

@@ -2268,5 +2268,8 @@
   "entity.reignofnether.war_mammoth_unit": "War Mammoth",
   "entity.reignofnether.war_mammoth_unit.tooltip1": "Horde experimental: a woolly titan that tramples whole lines.",
   "entity.reignofnether.war_mammoth_unit.tooltip2": "Very slow and melee only - flyers and artillery are its bane.",
-  "server.reignofnether.t3_arrived": "%s has fielded an experimental: %s!"
+  "server.reignofnether.t3_arrived": "%s has fielded an experimental: %s!",
+  "entity.reignofnether.sun_colossus_unit": "Sun Colossus",
+  "entity.reignofnether.sun_colossus_unit.tooltip1": "Sunforged experimental: a gilded paladin-statue that fires the Solar Lance.",
+  "entity.reignofnether.sun_colossus_unit.tooltip2": "Very slow, nothing to hit flyers with - artillery and flyers pick it apart."
 }

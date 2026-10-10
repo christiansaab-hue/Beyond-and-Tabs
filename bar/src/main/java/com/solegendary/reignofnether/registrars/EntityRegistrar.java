@@ -196,6 +196,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "war_mammoth_unit").toString()));
 
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit>> SUN_COLOSSUS_UNIT = ENTITIES.register("sun_colossus_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit.SCALE,
+                           EntityType.IRON_GOLEM.getHeight() * com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_colossus_unit").toString()));
+
     public static final RegistryObject<EntityType<WardenUnit>> WARDEN_UNIT = ENTITIES.register("warden_unit",
             () -> EntityType.Builder.of(WardenUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.WARDEN.getWidth(), EntityType.WARDEN.getHeight())
@@ -488,6 +495,7 @@ public class EntityRegistrar {
             case PillagerProd.itemName -> EntityRegistrar.PILLAGER_UNIT.get();
             case WindcallerProd.itemName -> EntityRegistrar.WINDCALLER_UNIT.get();
             case IronGolemProd.itemName -> EntityRegistrar.IRON_GOLEM_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.villagers.SunColossusProd.itemName -> EntityRegistrar.SUN_COLOSSUS_UNIT.get();
             case WitchProd.itemName -> EntityRegistrar.WITCH_UNIT.get();
             case EvokerProd.itemName -> EntityRegistrar.EVOKER_UNIT.get();
             case SlimeProd.itemName -> EntityRegistrar.SLIME_UNIT.get();

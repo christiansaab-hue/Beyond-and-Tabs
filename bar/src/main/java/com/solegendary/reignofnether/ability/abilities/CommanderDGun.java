@@ -165,6 +165,11 @@ public class CommanderDGun extends Ability {
 
     /** Every hostile unit within {@link #HALF_WIDTH} blocks of the segment from-to. Public for the game test. */
     public static List<LivingEntity> hits(LivingEntity self, String owner, Vec3 from, Vec3 to) {
+        return hits(self, owner, from, to, HALF_WIDTH);
+    }
+
+    /** Same, with a custom half-width (the Sun Colossus' Solar Lance is wider). */
+    public static List<LivingEntity> hits(LivingEntity self, String owner, Vec3 from, Vec3 to, float halfWidth) {
         List<LivingEntity> out = new ArrayList<>();
         Vec3 seg = to.subtract(from);
         double len2 = seg.lengthSqr();
@@ -179,7 +184,7 @@ public class CommanderDGun extends Ability {
                 continue;
             Vec3 c = new Vec3(le.getX(), from.y, le.getZ());
             double t = len2 == 0 ? 0 : Math.max(0, Math.min(1, c.subtract(from).dot(seg) / len2));
-            double reach = HALF_WIDTH + le.getBbWidth() / 2;
+            double reach = halfWidth + le.getBbWidth() / 2;
             if (c.distanceToSqr(from.add(seg.scale(t))) <= reach * reach)
                 out.add(le);
         }
