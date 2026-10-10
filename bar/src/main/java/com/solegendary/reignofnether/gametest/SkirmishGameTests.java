@@ -970,7 +970,7 @@ public class SkirmishGameTests {
     /** Two dry, fairly flat base sites 160 blocks apart, searched eastward from (x, z); null if none found. */
     static net.minecraft.world.phys.Vec3[] soakStarts(ServerLevel level, int x, int z) {
         // the seed is random per CI run, so one line of x can be all ocean: try a few parallel lines before giving up
-        for (int bz : new int[] { z, z + 480, z - 480, z + 960 })
+        for (int bz : new int[] { z, z + 480, z - 480, z + 960, z - 960, z + 1440, z - 1440, z + 1920 })
             for (int step = 0; step < 16; step++) {
                 int bx = x + step * 96;
                 var a = soakDrySpot(level, bx, bz);
@@ -987,8 +987,8 @@ public class SkirmishGameTests {
         int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
         for (int dx = -12; dx <= 12; dx += 12)
             for (int dz = -12; dz <= 12; dz += 12) {
-                level.getChunk((x + dx) >> 4, (z + dz) >> 4);   // generate it, or the heightmap reads the void
-                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x + dx, z + dz);
+                level.getChunk((x + dx) >> 4, (z + dz) >> 4);   // generate it, or the heightmap reads the void (forests: ignore leaves, or tree tops read as 10-block cliffs)
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + dx, z + dz);
                 if (!level.getBlockState(new BlockPos(x + dx, y - 1, z + dz)).getFluidState().isEmpty())
                     return null;
                 minY = Math.min(minY, y);
@@ -996,7 +996,7 @@ public class SkirmishGameTests {
             }
         if (maxY - minY > 10)
             return null;
-        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z);
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         return new net.minecraft.world.phys.Vec3(x + 0.5, y, z + 0.5);
     }
 
