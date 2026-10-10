@@ -1061,6 +1061,10 @@ public class BuildingPlacement {
                 builderCount += 1;
         }
 
+        // BAR nanolathe feedback: every worker on the site beams at it while it is being built or repaired
+        if (blocksPlaced < blocksTotal && !workerUnits.isEmpty())
+            emitNanoBeams(workerUnits);
+
         boolean hasFastBuildCheat = ResearchServerEvents.playerHasCheat(this.ownerName, "warpten");
 
         // BAR flow economy: unbuilt buildings are constructed by build power and paid for while they are built.
@@ -1137,6 +1141,24 @@ public class BuildingPlacement {
         }
         if (isBuilt && tickAgeAfterBuilt % 10 == 0 && getBuilding().capturable) {
             checkAndDoCapture(serverLevel);
+        }
+    }
+
+    // One nano beam per builder, rate limited per worker inside BarFx.nano (cheap: a map lookup for the workers that
+    // are not due). Aims at a block about to be placed when there is one, else anywhere on the structure.
+    private void emitNanoBeams(ArrayList<WorkerUnit> workerUnits) {
+        int queued = blockPlaceQueue.size(), total = blocks == null ? 0 : blocks.size();
+        if (queued == 0 && total == 0)
+            return;
+        for (WorkerUnit w : workerUnits) {
+            if (!(w instanceof LivingEntity le))
+                continue;
+            BlockPos bp = queued > 0
+                    ? blockPlaceQueue.get(le.getRandom().nextInt(queued)).getBlockPos()
+                    : blocks.get(le.getRandom().nextInt(total)).getBlockPos();
+            com.solegendary.reignofnether.barfx.BarFx.nano(le, bp.getX() + .5, bp.getY() + .5, bp.getZ() + .5,
+                    com.solegendary.reignofnether.barfx.BarFx.NANO_INTERVAL,
+                    com.solegendary.reignofnether.barfx.BarFx.NANO_INTERVAL + 3);
         }
     }
 

@@ -84,6 +84,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(BuildingClientEvents.class); // being first fixes a bug with drawBuildingToPlace()
         vanillaEventBus.register(UnitClientEvents.class);
         vanillaEventBus.register(HealthBarClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.healthbars.BuildProgressBarClientEvents.class);
         vanillaEventBus.register(SandboxClientEvents.class);
         vanillaEventBus.register(HudClientEvents.class); // ensure this is first so cursor is rendered above hud
         vanillaEventBus.register(AttackWarningClientEvents.class);

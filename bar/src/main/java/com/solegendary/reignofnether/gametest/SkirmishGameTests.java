@@ -262,10 +262,48 @@ public class SkirmishGameTests {
                 helper.fail("worker at the wreck reclaimed no metal (wreck " + before + " -> " + after + ")");
             if (after >= before)
                 helper.fail("wreck did not lose metal: " + before + " -> " + after);
+            if (com.solegendary.reignofnether.barfx.BarFx.lastNanoTime(worker) < 0)
+                helper.fail("reclaiming worker sent no nanolathe beam");
             near.forEach(net.minecraft.world.entity.Entity::discard);
             worker.discard();
             com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(res);
             helper.succeed();
+        });
+    }
+
+    /**
+     * Nanolathe feedback: a worker standing at its own construction site sends NANO beam events while the site is
+     * unfinished. Checks the per-worker record BarFx keeps for its rate limit, so it never depends on global counts.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void builders_send_nano_beams(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 230;
+        int cx = base.getX() - 40, cz = base.getZ() + 40;   // away from the other platform tests
+        for (int dx = -8; dx <= 8; dx++)
+            for (int dz = -8; dz <= 8; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        String owner = "gametest_nano";
+        BlockPos origin = new BlockPos(cx, y, cz);
+        var site = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
+            Buildings.WIND_GENERATOR_VILLAGERS, origin, Rotation.NONE, owner, new int[0], false, false, true, true);
+        var worker = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (site == null || worker == null) {
+            helper.fail("could not set up the site (" + site + ") or the worker (" + worker + ")");
+            return;
+        }
+        worker.moveTo(cx - 0.5, y + 1, cz + 0.5, 0, 0);   // just outside the footprint, within build range
+        worker.setOwnerName(owner);
+        level.addFreshEntity(worker);
+        worker.getBuildRepairGoal().setBuildingTarget(site);
+        helper.succeedWhen(() -> {
+            if (com.solegendary.reignofnether.barfx.BarFx.lastNanoTime(worker) < 0)
+                helper.fail("worker at its site sent no nano beam (building " + worker.getBuildRepairGoal().isBuilding()
+                    + ", placed " + site.getBlocksPlaced() + "/" + site.getBlocksTotal() + ")");
+            worker.discard();
         });
     }
 

@@ -1,10 +1,13 @@
 package com.solegendary.reignofnether.barfx;
 
 import com.solegendary.reignofnether.registrars.PacketHandler;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -25,7 +28,13 @@ public final class BarFx {
     private BarFx() { }
 
     // ---- event types
-    public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5;
+    public static final byte SHOT = 0, IMPACT = 1, EXPLOSION = 2, DEATH = 3, BUILDING_PART = 4, COLLAPSE = 5, NANO = 6;
+
+    // ---- nanolathe beam tints (NANO kind): one per faction so a glance tells whose builders are at work
+    public static final byte N_SUNFORGED = 0, N_GRAVEBOUND = 1, N_HORDE = 2;
+
+    /** Minimum ticks between two nano beams from the same worker (a beam lives a little longer, so they overlap). */
+    public static final int NANO_INTERVAL = 8;
 
     // ---- weapon / projectile kinds (shots and impacts)
     public static final byte K_ARROW = 0, K_FIREBALL = 1, K_BIG_FIREBALL = 2, K_MAGIC = 3, K_THROWN = 4, K_TNT = 5,
@@ -66,11 +75,11 @@ public final class BarFx {
             return;
         List<Event> q = QUEUE.computeIfAbsent(sl.dimension(), k -> new ArrayList<>());
         if (q.size() >= MAX_PER_TICK) {
-            // when flooded, keep the big stuff and drop small shots/hits
-            if (e.type == SHOT || e.type == IMPACT)
+            // when flooded, keep the big stuff and drop small shots/hits/nano beams
+            if (isMinor(e.type))
                 return;
             for (int i = 0; i < q.size(); i++) {
-                if (q.get(i).type == SHOT || q.get(i).type == IMPACT) {
+                if (isMinor(q.get(i).type)) {
                     q.set(i, e);
                     return;
                 }
@@ -78,6 +87,11 @@ public final class BarFx {
             return;
         }
         q.add(e);
+    }
+
+    /** Cosmetic chatter that may be dropped first when a tick is flooded. */
+    private static boolean isMinor(byte type) {
+        return type == SHOT || type == IMPACT || type == NANO;
     }
 
     // ------------------------------------------------------------------ emit helpers
@@ -134,6 +148,55 @@ public final class BarFx {
                 Math.max(1, halfSize), Math.max(1, height), 0));
     }
 
+    /**
+     * Last game time each worker (by entity id) sent a nano beam. This is the per-worker rate limit: with 100+ workers
+     * building, a beam every {@link #NANO_INTERVAL} ticks each is ~12 tiny events a tick, well under MAX_PER_TICK.
+     * Entity ids are unique for the whole server run, so one map serves every level.
+     */
+    private static final Int2LongOpenHashMap LAST_NANO = new Int2LongOpenHashMap();
+
+    /**
+     * A worker's nanolathe beam from its hands to (tx,ty,tz): it is building, repairing or reclaiming there.
+     * Rate limited per worker to one beam every {@code interval} ticks; the client keeps it alive for
+     * {@code lifeTicks}. Returns true if a beam was queued.
+     */
+    public static boolean nano(LivingEntity worker, double tx, double ty, double tz, int interval, int lifeTicks) {
+        if (worker == null || !(worker.level() instanceof ServerLevel sl))
+            return false;
+        long now = sl.getGameTime();
+        int id = worker.getId();
+        long last = LAST_NANO.getOrDefault(id, Long.MIN_VALUE);
+        if (last != Long.MIN_VALUE && now >= last && now - last < interval)   // (now < last: time was set back)
+            return false;
+        if (LAST_NANO.size() > 8192)   // dead workers are never removed one by one; a rare reset is cheaper
+            LAST_NANO.clear();
+        LAST_NANO.put(id, now);
+        // hands: a bit in front of the body at chest height, so the beam leaves the worker rather than its feet
+        float yaw = worker.yBodyRot * ((float) Math.PI / 180f);
+        double reach = worker.getBbWidth() * .5 + .15;
+        double hx = worker.getX() - Math.sin(yaw) * reach;
+        double hy = worker.getY() + worker.getBbHeight() * .55;
+        double hz = worker.getZ() + Math.cos(yaw) * reach;
+        byte tint = N_SUNFORGED;
+        try {
+            if (worker instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) {
+                var f = com.solegendary.reignofnether.faction.Factions.getFaction(u);
+                if (f != null && f.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS))
+                    tint = N_GRAVEBOUND;
+                else if (f != null && f.equals(com.solegendary.reignofnether.faction.Factions.PIGLINS))
+                    tint = N_HORDE;
+            }
+        } catch (Exception ignored) { }
+        emit(sl, new Event(NANO, tint, (byte) Math.max(1, Math.min(lifeTicks, 100)),
+                (float) hx, (float) hy, (float) hz, (float) tx, (float) ty, (float) tz));
+        return true;
+    }
+
+    /** Game time of the worker's last nano beam, or -1 if it never sent one (used by the game test). */
+    public static long lastNanoTime(Entity worker) {
+        return worker == null ? -1 : LAST_NANO.getOrDefault(worker.getId(), -1L);
+    }
+
     /** Classifies a projectile entity (works on both sides; never throws). */
     public static byte kindOf(net.minecraft.world.entity.Entity e) {
         if (e == null) return K_OTHER;
@@ -183,6 +246,7 @@ public final class BarFx {
 
     static void clearAll() {
         QUEUE.clear();
+        LAST_NANO.clear();
         muteExplosions = 0;
     }
 }

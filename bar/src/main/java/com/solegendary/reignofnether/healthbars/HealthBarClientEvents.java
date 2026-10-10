@@ -207,6 +207,14 @@ public class HealthBarClientEvents {
         render(matrix, percent, percent, x, y, width, renderMode, BarState.BarStateType.HEALTH);
     }
 
+    /** A plain progress bar in one colour on the usual grey track (construction / production progress). */
+    public static void renderProgress(PoseStack matrix, float percent, double x, double y, float width,
+                                      RenderMode renderMode, float r, float g, float b) {
+        percent = Math.max(0, Math.min(1, percent));
+        render(matrix, percent, percent, x, y, width, renderMode, BarState.BarStateType.HEALTH,
+                r, g, b, r * 0.5f, g * 0.5f, b * 0.5f);
+    }
+
     private static void render(PoseStack matrix, float percent, float percent2, double x, double y,
                                float width, RenderMode renderMode, BarState.BarStateType barStateType) {
         // base colour on percentage health remaining (green @ 100%, yellow @ 50%, red @ 0%)

@@ -182,6 +182,9 @@ public class WreckServerEvents {
             float left = metalOf(nearest) - got;
             nearest.getPersistentData().putFloat(KEY_METAL, left);
             level.sendParticles(ParticleTypes.CRIT, nearest.getX(), nearest.getY() + 0.3, nearest.getZ(), 3, 0.3, 0.1, 0.3, 0.05);
+            // nanolathe beam to the wreck; reclaim steps once a second, so the beam lives a full step (no gaps)
+            com.solegendary.reignofnether.barfx.BarFx.nano(le, nearest.getX(), nearest.getY() + 0.4, nearest.getZ(),
+                com.solegendary.reignofnether.barfx.BarFx.NANO_INTERVAL, 22);
             if (left <= 0.01f) {
                 remove(level, nearest, true);
                 chainToNextWreck(nearest, le, u);

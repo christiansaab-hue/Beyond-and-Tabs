@@ -51,6 +51,7 @@ public final class BarFxClient {
         int groundKey = Integer.MIN_VALUE;
         float rate, acc;               // emitters
         boolean crater;
+        boolean steady;                // beams: hold full brightness, fade only at the very end (nano beams)
     }
 
     static final List<P> live = new ArrayList<>(), decals = new ArrayList<>();
@@ -95,6 +96,7 @@ public final class BarFxClient {
     private static void init(P p, int kind, float x, float y, float z, float life, float size, int color) {
         p.kind = kind; p.x = x; p.y = y; p.z = z; p.born = clock; p.life = Math.max(.01f, life); p.size = size; p.color = color;
         p.vx = p.vy = p.vz = 0; p.grow = 1; p.spin = 0; p.alpha = 1; p.ground = Float.NaN; p.groundKey = Integer.MIN_VALUE;
+        p.steady = false;
     }
 
     public static void clear() {
@@ -116,6 +118,7 @@ public final class BarFxClient {
                     case BarFx.DEATH -> death(e.kind, e.x, e.y, e.z, e.a, e.b);
                     case BarFx.BUILDING_PART -> buildingPart(e.x, e.y, e.z, (int) e.a);
                     case BarFx.COLLAPSE -> collapse(e.x, e.y, e.z, e.a, e.b);
+                    case BarFx.NANO -> nano(e.kind, e.flags, e.x, e.y, e.z, e.a, e.b, e.c, busy);
                     default -> { }
                 }
             }
@@ -339,6 +342,25 @@ public final class BarFxClient {
             emitter(x + rnd(-half, half) * .6f, g + .5f, z + rnd(-half, half) * .6f, rnd(10, 16), .25f, .6f, 0x2E2A26);
         scorch(x, g, z, half * 1.3f, 60, 0x1A1610);
         shake(.25f + half * .04f, x, g, z);
+    }
+
+    /**
+     * BAR's nanolathe: a thin faction-tinted beam from a worker's hands to the block it is building, repairing or
+     * reclaiming, with a soft glow and a couple of sparks where it lands. One event per worker every ~8 ticks; the
+     * beam lives slightly longer than that so consecutive beams overlap into a steady, faintly flickering stream.
+     */
+    static void nano(int tint, int lifeTicks, float x, float y, float z, float x2, float y2, float z2, boolean busy) {
+        int c = switch (tint) {
+            case BarFx.N_GRAVEBOUND -> 0x5FE6F0;   // soul-cyan
+            case BarFx.N_HORDE -> 0xFF8A2E;        // ember-orange
+            default -> 0xFFCF4A;                   // golden
+        };
+        float life = Math.max(.1f, lifeTicks / 20f);
+        // aim at a random point on the block, not its exact centre, so a crew spreads over the frame
+        x2 += rnd(-.35f, .35f); y2 += rnd(-.35f, .35f); z2 += rnd(-.35f, .35f);
+        P b = add(BEAM, x, y, z, life, .028f, c); b.x2 = x2; b.y2 = y2; b.z2 = z2; b.alpha = .7f; b.steady = true;
+        flash(x2, y2, z2, .22f, Math.min(life, .45f), c);
+        if (!busy) sparks(x2, y2, z2, 2, 1.1f, lighter(c, .3f), 0, 0);
     }
 
     // ------------------------------------------------------------------ building blocks
@@ -702,7 +724,8 @@ public final class BarFxClient {
                 flatRing(p.x, p.y + .15f, p.z, r, w, p.color, (1 - k) * .85f, 32);
             }
             case BEAM -> {
-                float a = 1 - k, w = p.size * (1 - k * .6f);
+                float a = (p.steady ? Math.min(1, (1 - k) * 4) : 1 - k) * p.alpha;
+                float w = p.size * (p.steady ? 1 : 1 - k * .6f);
                 streak(p.x, p.y, p.z, p.x2, p.y2, p.z2, w * 2.4f, p.color, a * .8f, a * .8f);
                 streak(p.x, p.y, p.z, p.x2, p.y2, p.z2, w * .6f, 0xFFFFFF, a, a);
             }
