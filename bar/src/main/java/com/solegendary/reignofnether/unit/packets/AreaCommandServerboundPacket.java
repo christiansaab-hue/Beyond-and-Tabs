@@ -9,7 +9,7 @@ import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
 
-// area reclaim / repair circle dragged by the client (see AreaCommandClientEvents); the server picks the targets
+// area reclaim / repair / attack circle dragged by the client (see AreaCommandClientEvents); the server picks the targets
 public class AreaCommandServerboundPacket {
 
     private final int mode;
@@ -47,7 +47,7 @@ public class AreaCommandServerboundPacket {
             ServerPlayer player = ctx.get().getSender();
             if (player == null || !(player.level() instanceof ServerLevel))
                 return;
-            // the owner is always the sender: AreaCommands only moves workers that player may control
+            // the owner is always the sender: AreaCommands only moves units that player may control
             ServerLevel level = player.getServer() != null ? player.getServer().overworld() : (ServerLevel) player.level();
             AreaCommands.issue(level, player.getName().getString(), mode, centre, radius, unitIds, shift);
         });

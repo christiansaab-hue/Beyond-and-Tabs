@@ -341,6 +341,95 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Area attack: a circle over four enemy units and two fighters deals the enemies out nearest-first (each fighter
+     * starts on the one nearest to it), then each fighter queues the rest of the circle so it doesn't idle; an own
+     * unit inside the circle and an enemy outside it are never targeted.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void area_attack_splits_enemies_between_fighters(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_area_attack";
+        String enemy = "gametest_area_attack_foe";
+        var type = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get();
+        List<com.solegendary.reignofnether.unit.units.villagers.VindicatorUnit> all = new ArrayList<>();
+        BlockPos centre = helper.absolutePos(new BlockPos(8, 2, 8));
+        int y = centre.getY(), z = centre.getZ();
+        // fighters at x=2 and x=13, enemies at 4, 6, 9, 11, an own unit at 7 and an enemy outside the circle
+        int[][] spots = { { 2, 8 }, { 13, 8 }, { 4, 8 }, { 6, 8 }, { 9, 8 }, { 11, 8 }, { 7, 8 }, { 8, 15 } };
+        for (int i = 0; i < spots.length; i++) {
+            var u = type.create(level);
+            if (u == null) {
+                helper.fail("could not create units");
+                return;
+            }
+            BlockPos p = helper.absolutePos(new BlockPos(spots[i][0], 2, spots[i][1]));
+            u.moveTo(p.getX() + 0.5, y, p.getZ() + 0.5, 0, 0);
+            u.setOwnerName(i < 2 || i == 6 ? owner : enemy);
+            level.addFreshEntity(u);
+            all.add(u);
+        }
+        var a = all.get(0);
+        var b = all.get(1);
+        helper.runAfterDelay(3, () -> {
+            try {
+                int handed = com.solegendary.reignofnether.unit.AreaCommands.issue(level, owner,
+                    com.solegendary.reignofnether.unit.AreaCommands.MODE_AUTO, centre, 6,
+                    new int[] { a.getId(), b.getId() }, false);
+                // 4 enemies, each fighter: its 2-target share + the other 2 as follow-ups
+                if (handed != 8)
+                    helper.fail("expected 8 attack orders (4 enemies x 2 fighters), got " + handed);
+                if (a.getTargetGoal().getTarget() != all.get(2) || b.getTargetGoal().getTarget() != all.get(5))
+                    helper.fail("each fighter should start on the enemy nearest to it");
+                var qa = com.solegendary.reignofnether.unit.UnitServerEvents.getQueuedActions(a.getId());
+                var qb = com.solegendary.reignofnether.unit.UnitServerEvents.getQueuedActions(b.getId());
+                if (qa.size() != 3 || qa.get(0).getTargetUnitId() != all.get(3).getId()
+                        || qa.get(0).getAction() != com.solegendary.reignofnether.unit.UnitAction.ATTACK)
+                    helper.fail("fighter A should queue its second-nearest enemy next, queue size " + qa.size());
+                if (qb.size() != 3 || qb.get(0).getTargetUnitId() != all.get(4).getId())
+                    helper.fail("fighter B should queue its second-nearest enemy next, queue size " + qb.size());
+                for (var q : List.of(qa, qb))
+                    for (var item : q)
+                        if (item.getTargetUnitId() == all.get(6).getId() || item.getTargetUnitId() == all.get(7).getId())
+                            helper.fail("an own unit or an enemy outside the circle was targeted");
+                helper.succeed();
+            } finally {
+                for (var u : all) {
+                    com.solegendary.reignofnether.unit.UnitServerEvents.clearQueuedActions(u.getId());
+                    u.discard();
+                }
+            }
+        });
+    }
+
+    /**
+     * Player panel: the roster each player receives lists itself, then its allies, then enemies, and only its own
+     * and its allies' lines carry income / commander health (an enemy's economy must never be sent).
+     */
+    @GameTest(template = ARENA)
+    public static void player_panel_hides_enemy_economy(GameTestHelper helper) {
+        String me = "gametest_panel_me", ally = "gametest_panel_ally", foe = "gametest_panel_foe";
+        List<com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row> rows = List.of(
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(foe, "", true, 9, 90, 0.5f),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(ally, "", true, 3, 30, 1f),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(me, "", true, 2, 20, 0.25f));
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+        try {
+            var list = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(me, rows);
+            if (list.size() != 3 || !list.get(0).name().equals(me) || !list.get(1).name().equals(ally)
+                    || !list.get(2).name().equals(foe))
+                helper.fail("expected order me, ally, foe");
+            else if (!list.get(0).hasAllyData() || !list.get(1).hasAllyData() || list.get(1).metalIncome() != 3)
+                helper.fail("own and allied lines should carry income");
+            else if (list.get(2).hasAllyData() || list.get(2).metalIncome() != 0 || list.get(2).commanderHp() >= 0)
+                helper.fail("the enemy line leaked economy / commander data");
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+        }
+    }
+
+    /**
      * Nanolathe feedback: a worker standing at its own construction site sends NANO beam events while the site is
      * unfinished. Checks the per-worker record BarFx keeps for its rate limit, so it never depends on global counts.
      */

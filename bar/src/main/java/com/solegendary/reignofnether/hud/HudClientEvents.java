@@ -1833,6 +1833,8 @@ public class HudClientEvents {
             return true;
         if (PlayerDisplayClientEvents.isMouseOverHud(mouseX, mouseY))
             return true;
+        if (com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.isMouseOverHud(mouseX, mouseY))
+            return true;
         if (CustomBuildingClientEvents.isMouseOverHud(mouseX, mouseY))
             return true;
         if (ScenarioClientEvents.isMouseOverHud(mouseX, mouseY))

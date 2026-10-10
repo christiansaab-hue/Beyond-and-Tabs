@@ -480,11 +480,17 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.unit.packets.UnitQueueClientboundPacket::decode)
                 .consumerMainThread(com.solegendary.reignofnether.unit.packets.UnitQueueClientboundPacket::handle)
                 .add();
-        // BAR area reclaim / repair circle (AreaCommandClientEvents -> AreaCommands)
+        // BAR area reclaim / repair / attack circle (AreaCommandClientEvents -> AreaCommands)
         INSTANCE.messageBuilder(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
                 .encoder(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket::encode)
                 .decoder(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket::handle)
+                .add();
+        // BAR player list: roster + allied income / commander health every 2 s (PlayerPanelServerEvents)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::decode)
+                .consumerMainThread(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::handle)
                 .add();
     }
 }

@@ -7,6 +7,7 @@ import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.registrars.PacketHandler;
+import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 import com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket;
@@ -30,6 +31,10 @@ import java.util.ArrayList;
  * is queued on the selected workers (split between them, nearest first); a circle with no wreck in it repairs every
  * damaged or unfinished own building inside instead. Hold Shift as well to append to the current queue.
  * The circle is drawn while dragging. Target selection happens on the server (AreaCommands), which knows the wrecks.
+ *
+ * Combat units in the selection turn the same circle into an area attack (every visible enemy unit and building
+ * inside, split between them nearest first). The circle is red for fighters, cyan for workers, and both for a mixed
+ * selection, where the workers reclaim / repair and the fighters attack.
  */
 public class AreaCommandClientEvents {
 
@@ -39,16 +44,21 @@ public class AreaCommandClientEvents {
 
     private static BlockPos centre = null;
     private static int radius = 0;
+    // what the selection holds, sampled when the drag starts (drives the circle colour and the hud message)
+    private static boolean dragHasWorkers = false;
+    private static boolean dragHasFighters = false;
 
     public static boolean isActive() {
         return centre != null;
     }
 
-    static boolean hasSelectedWorker() {
-        for (LivingEntity le : UnitClientEvents.getSelectedUnits())
-            if (le instanceof WorkerUnit && le instanceof Unit)
-                return true;
-        return false;
+    // the server sorts the ids the same way (AreaCommands.issue): workers reclaim / repair, other attackers attack
+    static boolean isWorker(LivingEntity le) {
+        return le instanceof WorkerUnit && le instanceof Unit;
+    }
+
+    static boolean isFighter(LivingEntity le) {
+        return !(le instanceof WorkerUnit) && le instanceof AttackerUnit && le instanceof Unit;
     }
 
     /**
@@ -57,8 +67,17 @@ public class AreaCommandClientEvents {
      */
     static boolean onRightDrag() {
         if (centre == null) {
-            if (!Keybindings.ctrlMod.isDown() || !hasSelectedWorker() || CursorClientEvents.getRightClickStartBp() == null)
+            if (!Keybindings.ctrlMod.isDown() || CursorClientEvents.getRightClickStartBp() == null)
                 return false;
+            boolean w = false, f = false;
+            for (LivingEntity le : UnitClientEvents.getSelectedUnits()) {
+                w |= isWorker(le);
+                f |= isFighter(le);
+            }
+            if (!w && !f)
+                return false;
+            dragHasWorkers = w;
+            dragHasFighters = f;
             centre = CursorClientEvents.getRightClickStartBp();
         }
         BlockPos cur = CursorClientEvents.getPreselectedBlockPos();
@@ -78,7 +97,7 @@ public class AreaCommandClientEvents {
                 return;
             ArrayList<Integer> ids = new ArrayList<>();
             for (LivingEntity le : UnitClientEvents.getSelectedUnits())
-                if (le instanceof WorkerUnit && le instanceof Unit)
+                if (isWorker(le) || isFighter(le))
                     ids.add(le.getId());
             if (ids.isEmpty())
                 return;
@@ -88,7 +107,9 @@ public class AreaCommandClientEvents {
             boolean shift = Keybindings.shiftMod.isDown();
             PacketHandler.INSTANCE.sendToServer(
                 new AreaCommandServerboundPacket(AreaCommands.MODE_AUTO, centre, radius, arr, shift));
-            HudClientEvents.showTemporaryMessage("Area reclaim / repair (radius " + radius + ")" + (shift ? " queued" : ""));
+            String what = dragHasWorkers && dragHasFighters ? "Area attack + reclaim / repair"
+                : dragHasFighters ? "Area attack" : "Area reclaim / repair";
+            HudClientEvents.showTemporaryMessage(what + " (radius " + radius + ")" + (shift ? " queued" : ""));
         } finally {
             cancel();
         }
@@ -97,6 +118,8 @@ public class AreaCommandClientEvents {
     static void cancel() {
         centre = null;
         radius = 0;
+        dragHasWorkers = false;
+        dragHasFighters = false;
     }
 
     @SubscribeEvent
@@ -117,17 +140,26 @@ public class AreaCommandClientEvents {
         Matrix4f m = pose.last().pose();
         Matrix3f n = pose.last().normal();
         float cx = centre.getX() + 0.5f, cy = centre.getY() + 1.1f, cz = centre.getZ() + 0.5f;
-        // cyan like the reclaim queue lines
-        float px = cx + radius, pz = cz;
+        // red for an attack circle, cyan (like the reclaim queue lines) for workers; a mixed selection draws both
+        if (dragHasFighters)
+            drawCircle(vc, m, n, cx, cy, cz, radius, 1.0f, 0.25f, 0.2f);
+        if (dragHasWorkers)
+            drawCircle(vc, m, n, cx, cy, cz, dragHasFighters ? radius - 0.35f : radius, 0.2f, 0.95f, 1.0f);
+        float r = dragHasFighters ? 1.0f : 0.2f, g = dragHasFighters ? 0.25f : 0.95f, b = dragHasFighters ? 0.2f : 1.0f;
+        UnitQueueLinesClient.line(vc, m, n, cx - 0.4f, cy, cz, cx + 0.4f, cy, cz, r, g, b, 0.9f);
+        UnitQueueLinesClient.line(vc, m, n, cx, cy, cz - 0.4f, cx, cy, cz + 0.4f, r, g, b, 0.9f);
+        pose.popPose();
+    }
+
+    private static void drawCircle(VertexConsumer vc, Matrix4f m, Matrix3f n, float cx, float cy, float cz, float rad,
+                                   float r, float g, float b) {
+        float px = cx + rad, pz = cz;
         for (int i = 1; i <= CIRCLE_SEGMENTS; i++) {
             double ang = Math.PI * 2 * i / CIRCLE_SEGMENTS;
-            float x = cx + (float) (Math.cos(ang) * radius), z = cz + (float) (Math.sin(ang) * radius);
-            UnitQueueLinesClient.line(vc, m, n, px, cy, pz, x, cy, z, 0.2f, 0.95f, 1.0f, 0.9f);
+            float x = cx + (float) (Math.cos(ang) * rad), z = cz + (float) (Math.sin(ang) * rad);
+            UnitQueueLinesClient.line(vc, m, n, px, cy, pz, x, cy, z, r, g, b, 0.9f);
             px = x;
             pz = z;
         }
-        UnitQueueLinesClient.line(vc, m, n, cx - 0.4f, cy, cz, cx + 0.4f, cy, cz, 0.2f, 0.95f, 1.0f, 0.9f);
-        UnitQueueLinesClient.line(vc, m, n, cx, cy, cz - 0.4f, cx, cy, cz + 0.4f, 0.2f, 0.95f, 1.0f, 0.9f);
-        pose.popPose();
     }
 }

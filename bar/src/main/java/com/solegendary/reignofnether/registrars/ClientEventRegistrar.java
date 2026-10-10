@@ -137,6 +137,8 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PatchQuickBuildClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.AreaCommandClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.player.PlayerPanelServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingLineClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.WindmillRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
