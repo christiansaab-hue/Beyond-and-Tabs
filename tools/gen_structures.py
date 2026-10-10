@@ -103,6 +103,7 @@ PALETTES = {
         cap_stair="spruce_stairs", cap_slab="spruce_slab", hub="stripped_spruce_log",
         furnace="blast_furnace", bars="iron_bars",
         accent="chipped:decorated_white_terracotta", lamp="chipped:wrought_iron_lantern",
+        core="lava_cauldron", pillar="quartz_pillar", band="gold_block",
     ),
     "_dark": dict(
         pad="polished_deepslate", pad_corner="soul_soil", ring="deepslate_bricks",
@@ -111,6 +112,7 @@ PALETTES = {
         cap_stair="dark_oak_stairs", cap_slab="dark_oak_slab", hub="stripped_dark_oak_log",
         furnace="blast_furnace", bars="chain",
         accent="chipped:checkered_deepslate_tiles", lamp="chipped:iron_bowl_soul_lantern",
+        core="soul_campfire", pillar="polished_basalt", band="crying_obsidian",
     ),
     "_nether": dict(
         pad="packed_mud", pad_corner="coarse_dirt", ring="mud_bricks",
@@ -119,6 +121,7 @@ PALETTES = {
         cap_stair="dark_oak_stairs", cap_slab="dark_oak_slab", hub="bone_block",
         furnace="blast_furnace", bars="chain",
         accent="chipped:decorated_red_terracotta", lamp="chipped:burning_coal_lantern",
+        core="magma_block", pillar="stripped_dark_oak_log", band="copper_block",
     ),
 }
 
@@ -237,6 +240,28 @@ def wind_generator(P):
     s.set(1, 6, 2, P["cap_stair"], facing="north", half="bottom")
     s.set(1, 6, 0, P["cap_stair"], facing="south", half="bottom")
     s.set(1, 7, 1, P["cap_slab"], type="bottom")
+    return s
+
+
+# ---- energy converter: a 3x3 crucible/furnace/smelter with its fire visible from the RTS camera --------
+def energy_converter(P):
+    s = Structure(3, 5, 3)
+    s.fill(0, 0, 0, 2, 0, 2, P["pad"])
+    s.set(1, 0, 1, P["ring"])
+    # four posts carrying a band, open sides so the core glows through
+    for (x, z) in [(0, 0), (2, 0), (0, 2), (2, 2)]:
+        s.set(x, 1, z, P["pillar"], **({"axis": "y"} if P["pillar"].endswith(("log", "basalt", "pillar")) else {}))
+        s.set(x, 2, z, P["pillar"], **({"axis": "y"} if P["pillar"].endswith(("log", "basalt", "pillar")) else {}))
+    s.set(1, 1, 1, P["furnace"], facing="north", lit="true")
+    core = {"lit": "true", "facing": "north", "signal_fire": "false", "waterlogged": "false"} if "campfire" in P["core"] else {}
+    s.set(1, 2, 1, P["core"], **core)
+    # band ring on top of the posts with a slab rim, chimney above the core
+    for (x, z) in [(0, 0), (2, 0), (0, 2), (2, 2)]:
+        s.set(x, 3, z, P["band"])
+    for (x, z) in [(1, 0), (0, 1), (2, 1), (1, 2)]:
+        s.set(x, 3, z, P["slab"], type="bottom")
+    s.set(1, 4, 1, P["bars"], **({"axis": "y"} if P["bars"] == "chain" else
+                                 {"north": "false", "south": "false", "east": "false", "west": "false", "waterlogged": "false"}))
     return s
 
 
@@ -376,5 +401,6 @@ if __name__ == "__main__":
             metal_extractor(P).write(f"{out}/metal_extractor{variant}.nbt")
             metal_extractor_t2(P).write(f"{out}/metal_extractor_t2{variant}.nbt")
             wind_generator(P).write(f"{out}/wind_generator{variant}.nbt")
+            energy_converter(P).write(f"{out}/energy_converter{variant}.nbt")
         kingdom_house().write(f"{out}/villager_house.nbt")
         fallen_house().write(f"{out}/haunted_house.nbt")

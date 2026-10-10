@@ -2258,5 +2258,11 @@
   "color.reignofnether.coral": "Coral",
   "color.reignofnether.ice": "Ice",
   "buildings.reignofnether.mausoleum.tooltip3": "or a %d block radius for additional mausoleums.",
-  "server.reignofnether.commander_fallen_team": "%s fights on without their commander - the team carries the battle."
+  "server.reignofnether.commander_fallen_team": "%s fights on without their commander - the team carries the battle.",
+  "buildings.villagers.reignofnether.energy_converter_villagers": "Alchemist's Crucible",
+  "buildings.monsters.reignofnether.energy_converter_monsters": "Soul Furnace",
+  "buildings.piglins.reignofnether.energy_converter_piglins": "Smelter Pit",
+  "buildings.reignofnether.energy_converter": "Energy Converter",
+  "buildings.reignofnether.energy_converter.tooltip1": "Turns spare energy into metal: up to 50 energy/s into 1 metal/s.",
+  "buildings.reignofnether.energy_converter.tooltip2": "Only runs while energy is over half full. Fragile - keep it behind the lines."
 }

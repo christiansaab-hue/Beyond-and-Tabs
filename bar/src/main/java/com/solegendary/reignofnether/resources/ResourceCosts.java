@@ -74,6 +74,7 @@ public class ResourceCosts {
     public static final ResourceCost STOCKPILE = new ResourceCost(ID, "STOCKPILE");
     public static final ResourceCost METAL_EXTRACTOR = new ResourceCost(ID, "METAL_EXTRACTOR");
     public static final ResourceCost WIND_GENERATOR = new ResourceCost(ID, "WIND_GENERATOR");
+    public static final ResourceCost ENERGY_CONVERTER = new ResourceCost(ID, "ENERGY_CONVERTER");
     public static final ResourceCost OAK_BRIDGE = new ResourceCost(ID, "OAK_BRIDGE");
     public static final ResourceCost SPRUCE_BRIDGE = new ResourceCost(ID, "SPRUCE_BRIDGE");
     public static final ResourceCost BLACKSTONE_BRIDGE = new ResourceCost(ID, "BLACKSTONE_BRIDGE");
@@ -294,6 +295,7 @@ public class ResourceCosts {
         STOCKPILE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.STOCKPILE);
         METAL_EXTRACTOR.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.METAL_EXTRACTOR);
         WIND_GENERATOR.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WIND_GENERATOR);
+        ENERGY_CONVERTER.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.ENERGY_CONVERTER);
         OAK_BRIDGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.OAK_BRIDGE);
         SPRUCE_BRIDGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.SPRUCE_BRIDGE);
         BLACKSTONE_BRIDGE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.BLACKSTONE_BRIDGE);

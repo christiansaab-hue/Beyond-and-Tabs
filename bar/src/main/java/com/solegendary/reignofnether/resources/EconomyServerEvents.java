@@ -39,6 +39,9 @@ public class EconomyServerEvents {
     public static final float BASE_ENERGY_INCOME = 20f;  // per second, while a completed capitol is owned
     public static final float DEFAULT_METAL_STORAGE = 1000f;
     public static final float DEFAULT_ENERGY_STORAGE = 1000f;
+    // energy converters: energy spent per metal made, and the energy fill level above which they run
+    public static final float CONVERSION_RATIO = 50f;
+    public static final float CONVERSION_THRESHOLD = 0.5f;
 
     private static final int TICKS_PER_SECOND = 20;
     private static final int SYNC_INTERVAL_TICKS = 5; // 4x per second
@@ -54,6 +57,8 @@ public class EconomyServerEvents {
         public float energyExpense = 0; // per second, measured over the last second
         // fraction (0-1) of the requested progress every consumer receives this tick; 1 = no stall
         public float stall = 1f;
+        // energy/s the player's completed converters can turn into metal
+        public float conversionCapacity = 0;
 
         // demand registered during the current tick
         private float metalDemand = 0;
@@ -92,6 +97,22 @@ public class EconomyServerEvents {
             return got;
         }
         return 0;
+    }
+
+    /**
+     * Energy converters, BAR-style: only the energy above {@link #CONVERSION_THRESHOLD} of storage is converted,
+     * so they never starve construction, and the metal made is capped by metal storage. Public for the game test.
+     */
+    public static void convertEnergy(Resources res, PlayerEconomy eco) {
+        if (eco.conversionCapacity <= 0)
+            return;
+        float spare = res.getEnergy() - eco.energyStorage * CONVERSION_THRESHOLD;
+        float metalRoom = eco.metalStorage - res.getMetal();
+        if (spare <= 0 || metalRoom <= 0)
+            return;
+        float energy = Math.min(spare, Math.min(eco.conversionCapacity / TICKS_PER_SECOND, metalRoom * CONVERSION_RATIO));
+        res.addEnergy(-energy);
+        res.addMetal(energy / CONVERSION_RATIO);
     }
 
     public static float getStall(String ownerName) {
@@ -167,27 +188,29 @@ public class EconomyServerEvents {
     // recompute income and storage from the buildings each player owns
     private static void recalculateIncomeAndStorage() {
         Map<String, Boolean> ownsCapitol = new HashMap<>();
-        Map<String, float[]> totals = new HashMap<>(); // metalIncome, energyIncome, metalStorage, energyStorage
+        Map<String, float[]> totals = new HashMap<>(); // metalIncome, energyIncome, metalStorage, energyStorage, conversion
 
         for (BuildingPlacement bpl : BuildingServerEvents.getBuildings()) {
             if (!bpl.isBuilt || bpl.ownerName == null || bpl.ownerName.isEmpty())
                 continue;
             if (bpl.isCapitol)
                 ownsCapitol.put(bpl.ownerName, true);
-            float[] t = totals.computeIfAbsent(bpl.ownerName, k -> new float[4]);
+            float[] t = totals.computeIfAbsent(bpl.ownerName, k -> new float[5]);
             t[0] += bpl.getMetalIncome();
             t[1] += bpl.getEnergyIncome();
             t[2] += bpl.getMetalStorage();
             t[3] += bpl.getEnergyStorage();
+            t[4] += bpl.getBuilding().getEnergyConversion();
         }
         for (Resources res : ResourcesServerEvents.resourcesList) {
             PlayerEconomy eco = getEconomy(res.ownerName);
-            float[] t = totals.getOrDefault(res.ownerName, new float[4]);
+            float[] t = totals.getOrDefault(res.ownerName, new float[5]);
             boolean capitol = ownsCapitol.getOrDefault(res.ownerName, false);
             eco.metalIncome = (capitol ? BASE_METAL_INCOME : 0) + t[0];
             eco.energyIncome = (capitol ? BASE_ENERGY_INCOME : 0) + t[1];
             eco.metalStorage = DEFAULT_METAL_STORAGE + t[2];
             eco.energyStorage = DEFAULT_ENERGY_STORAGE + t[3];
+            eco.conversionCapacity = t[4];
         }
     }
 
@@ -207,6 +230,8 @@ public class EconomyServerEvents {
                 res.addMetal(Math.min(metalIn, eco.metalStorage - res.getMetal()));
             if (energyIn > 0 && res.getEnergy() < eco.energyStorage)
                 res.addEnergy(Math.min(energyIn, eco.energyStorage - res.getEnergy()));
+
+            convertEnergy(res, eco);
 
             // stall for the next tick, from the demand registered this tick
             float stallMetal = eco.metalDemand <= 0 ? 1f : Math.max(0, res.getMetal()) / eco.metalDemand;

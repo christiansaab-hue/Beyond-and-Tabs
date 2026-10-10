@@ -70,6 +70,9 @@ public abstract class Building {
     public float getEnergyIncome() { return energyIncome; }
     public float getMetalStorage() { return metalStorage; }
     public float getEnergyStorage() { return energyStorage; }
+    // BAR energy converter: energy per second this building turns into metal (EconomyServerEvents.CONVERSION_RATIO)
+    protected float energyConversion = 0;
+    public float getEnergyConversion() { return energyConversion; }
 
     // ticks of construction needed for EACH block with a total build power of 1.0 (one worker), before
     // buildTimeModifier. Reign of Nether used 10 ticks/block for one villager with diminishing returns for more

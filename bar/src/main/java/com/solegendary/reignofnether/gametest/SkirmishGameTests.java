@@ -121,10 +121,13 @@ public class SkirmishGameTests {
         var wind = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
             Buildings.WIND_GENERATOR_VILLAGERS, new BlockPos(cx + 5, y, cz + 5), Rotation.NONE, owner, new int[0],
             false, false, true, true);
-        if (mex == null || wind == null)
-            helper.fail("placeBuilding returned null (mex " + mex + ", wind " + wind + ")");
+        var conv = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(
+            Buildings.ENERGY_CONVERTER_VILLAGERS, new BlockPos(cx - 7, y, cz + 5), Rotation.NONE, owner, new int[0],
+            false, false, true, true);
+        if (mex == null || wind == null || conv == null)
+            helper.fail("placeBuilding returned null (mex " + mex + ", wind " + wind + ", converter " + conv + ")");
         helper.runAfterDelay(40, () -> {
-            for (var placement : List.of(mex, wind)) {
+            for (var placement : List.of(mex, wind, conv)) {
                 if (placement.isDestroyedServerside
                         || !com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().contains(placement))
                     helper.fail(placement.getBuilding().structureName + " was destroyed right after being placed");
@@ -436,6 +439,27 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
             helper.succeed();
         });
+    }
+
+    /** Energy converters only burn energy above half storage, at 50 energy per metal. */
+    @GameTest(template = ARENA)
+    public static void energy_converter_turns_spare_energy_into_metal(GameTestHelper helper) {
+        var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy("gametest_alchemist");
+        eco.conversionCapacity = 50f;
+        var res = new com.solegendary.reignofnether.resources.Resources("gametest_alchemist", 0, 0, 0);
+        res.addEnergy(900);
+        for (int i = 0; i < 20; i++)
+            com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(res, eco);
+        if (Math.abs(res.getMetal() - 1f) > 0.05f || Math.abs(res.getEnergy() - 850f) > 1f)
+            helper.fail("one second of one converter: expected ~1 metal / 850 energy, got " + res.getMetal()
+                + " / " + res.getEnergy());
+        var low = new com.solegendary.reignofnether.resources.Resources("gametest_alchemist", 0, 0, 0);
+        low.addEnergy(400);
+        com.solegendary.reignofnether.resources.EconomyServerEvents.convertEnergy(low, eco);
+        if (low.getMetal() > 0)
+            helper.fail("converter ran below half energy storage");
+        eco.conversionCapacity = 0;
+        helper.succeed();
     }
 
     static ResourceLocation rl(String path) {

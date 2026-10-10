@@ -156,6 +156,8 @@ public class BotPlayer {
                 placeNear(level, kit.extractor(), patch.offset(-2, 0, -2), workers, 1);
             else if (winds < 2 + minutes && winds <= extractors * 2 && !workers.isEmpty())
                 placeNear(level, kit.wind(), home.offset(rng.nextInt(25) - 12, 0, rng.nextInt(25) - 12), workers, 1);
+            else if (!workers.isEmpty() && energyFull() && count(buildings, converterFor()) < 1 + (int) (minutes / 6))
+                placeNear(level, converterFor(), home.offset(rng.nextInt(21) - 10, 0, rng.nextInt(21) - 10), workers, 1);
             else if (farms < 1 && !workers.isEmpty())
                 placeNear(level, kit.farm(), home.offset(rng.nextInt(21) - 10, 0, rng.nextInt(21) - 10), workers, 1);
             else if (popCap - pop < 4 && !workers.isEmpty())
@@ -372,6 +374,23 @@ public class BotPlayer {
             if (bp.getBuilding() == b)
                 n++;
         return n;
+    }
+
+    Building converterFor() {
+        if (faction.equals(Factions.PIGLINS))
+            return Buildings.ENERGY_CONVERTER_PIGLINS;
+        if (faction.equals(Factions.MONSTERS))
+            return Buildings.ENERGY_CONVERTER_MONSTERS;
+        return Buildings.ENERGY_CONVERTER_VILLAGERS;
+    }
+
+    /** Energy over 80% of storage: the bot is floating energy, so a converter pays (what BAR players do). */
+    boolean energyFull() {
+        var eco = com.solegendary.reignofnether.resources.EconomyServerEvents.getEconomy(name);
+        for (var r : com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList)
+            if (r.ownerName.equals(name))
+                return r.getEnergy() > eco.energyStorage * 0.8f;
+        return false;
     }
 
     void sendReclaimer(List<LivingEntity> workers) {
