@@ -629,13 +629,15 @@ public class PlayerServerEvents {
      */
     public static void startRTSBot(String name, Vec3 pos, Faction faction, int colorMapId) {
         synchronized (rtsPlayers) {
-            ServerLevel level;
-            if (players.isEmpty()) {
+            if (players.isEmpty())
                 return;
-            } else {
-                level = (ServerLevel) players.get(0).level();
-            }
+            startRTSBot((ServerLevel) players.get(0).level(), name, pos, faction, colorMapId);
+        }
+    }
 
+    /** As above in a given level, with no human online required (headless bot-vs-bot game tests). */
+    public static void startRTSBot(ServerLevel level, String name, Vec3 pos, Faction faction, int colorMapId) {
+        synchronized (rtsPlayers) {
             EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(faction.workerEntityType);
             // the bot starts far from every player: load and hold its chunks first, or its workers spawn into
             // chunks that unload moments later and the bot is 'defeated' before it has built anything

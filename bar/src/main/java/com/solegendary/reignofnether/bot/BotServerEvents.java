@@ -27,7 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class BotServerEvents {
 
-    static final Map<String, BotPlayer> brains = new ConcurrentHashMap<>();
+    public static final Map<String, BotPlayer> brains = new ConcurrentHashMap<>();
+    /** The most recent exception each bot's think step threw (logged and swallowed in play; game tests read it). */
+    public static final Map<String, Throwable> thinkFailures = new ConcurrentHashMap<>();
     static int botNumber = 1;
 
     @SubscribeEvent
@@ -52,6 +54,7 @@ public class BotServerEvents {
                     try {
                         brain.think(level, gameTime);
                     } catch (Exception e) {
+                        thinkFailures.put(brain.name, e);
                         com.solegendary.reignofnether.ReignOfNether.LOGGER.error("[Bot] {} think failed", brain.name, e);
                     }
                 }

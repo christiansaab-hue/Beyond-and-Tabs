@@ -696,6 +696,126 @@ public class SkirmishGameTests {
         });
     }
 
+    static final int SOAK_TICKS = 20 * 60 * 4;   // four game-minutes of bot-vs-bot play
+
+    /**
+     * Soak: a Sunforged (villagers) bot and a Gravebound (monsters) bot play each other headless for four
+     * game-minutes. Each must grow (lay buildings or train units) and neither brain may throw. The bases sit
+     * ~1500 blocks from the test grid on dry ground so their battlefield (lanes, patches, ring wall <= 520 blocks)
+     * never reaches the other tests' arenas.
+     */
+    @GameTest(template = ARENA, timeoutTicks = SOAK_TICKS + 600)
+    public static void bots_play_each_other_without_errors(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String kingdom = "gametest_soak_kingdom", grave = "gametest_soak_grave";
+        BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
+        net.minecraft.world.phys.Vec3[] starts = soakStarts(level, origin.getX() + 1500, origin.getZ());
+        if (starts == null) {
+            helper.fail("no dry ground for two bot bases near x=" + (origin.getX() + 1500));
+            return;
+        }
+        var bots = com.solegendary.reignofnether.bot.BotServerEvents.brains;
+        var failures = com.solegendary.reignofnether.bot.BotServerEvents.thinkFailures;
+        List<String> names = List.of(kingdom, grave);
+        var factions = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
+            com.solegendary.reignofnether.faction.Factions.MONSTERS);
+        for (int i = 0; i < 2; i++) {
+            failures.remove(names.get(i));
+            com.solegendary.reignofnether.player.PlayerServerEvents.startRTSBot(level, names.get(i), starts[i],
+                factions.get(i), 0);
+            bots.put(names.get(i), new com.solegendary.reignofnether.bot.BotPlayer(names.get(i), factions.get(i),
+                com.solegendary.reignofnether.bot.BotPlayer.Difficulty.MEDIUM, BlockPos.containing(starts[i])));
+        }
+        for (String n : names)
+            if (!com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(n))
+                helper.fail("startRTSBot did not add " + n + " to the match");
+        int[] startUnits = { soakUnits(kingdom).size(), soakUnits(grave).size() };
+        int[] maxBuildings = new int[2], maxUnits = new int[2];
+        Runnable sample = () -> {
+            for (int i = 0; i < 2; i++) {
+                maxBuildings[i] = Math.max(maxBuildings[i], soakBuildings(names.get(i)).size());
+                maxUnits[i] = Math.max(maxUnits[i], soakUnits(names.get(i)).size());
+            }
+        };
+        for (int t = 20; t < SOAK_TICKS; t += 20)
+            helper.runAfterDelay(t, sample);
+        helper.runAfterDelay(SOAK_TICKS, () -> {
+            sample.run();
+            List<String> problems = new ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                String n = names.get(i);
+                Throwable err = failures.get(n);
+                if (err != null)
+                    problems.add(n + " think threw " + err);
+                if (maxBuildings[i] < 1 && maxUnits[i] <= startUnits[i])
+                    problems.add(n + " never built or trained anything (buildings " + maxBuildings[i] + ", units "
+                        + startUnits[i] + " -> " + maxUnits[i] + ")");
+            }
+            ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} buildings {} units {} (start {}), {} buildings {} units {} (start {})",
+                SOAK_TICKS, kingdom, maxBuildings[0], maxUnits[0], startUnits[0], grave, maxBuildings[1], maxUnits[1],
+                startUnits[1]);
+            // clean up: leave the match, forget the brains, drop the armies (buildings stay, ownerless and far away)
+            List<net.minecraft.world.entity.LivingEntity> leftovers = new ArrayList<>();
+            for (String n : names)
+                leftovers.addAll(soakUnits(n));
+            for (String n : names) {
+                com.solegendary.reignofnether.player.PlayerServerEvents.defeat(n, "gametest finished");
+                bots.remove(n);
+                failures.remove(n);
+            }
+            leftovers.forEach(net.minecraft.world.entity.Entity::discard);
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            helper.succeed();
+        });
+    }
+
+    /** Two dry, fairly flat base sites 160 blocks apart, searched eastward from (x, z); null if none found. */
+    static net.minecraft.world.phys.Vec3[] soakStarts(ServerLevel level, int x, int z) {
+        for (int step = 0; step < 16; step++) {
+            int bx = x + step * 96;
+            var a = soakDrySpot(level, bx, z);
+            var b = soakDrySpot(level, bx, z + 160);
+            if (a != null && b != null)
+                return new net.minecraft.world.phys.Vec3[] { a, b };
+        }
+        return null;
+    }
+
+    static net.minecraft.world.phys.Vec3 soakDrySpot(ServerLevel level, int x, int z) {
+        int minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
+        for (int dx = -12; dx <= 12; dx += 12)
+            for (int dz = -12; dz <= 12; dz += 12) {
+                level.getChunk((x + dx) >> 4, (z + dz) >> 4);   // generate it, or the heightmap reads the void
+                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x + dx, z + dz);
+                if (!level.getBlockState(new BlockPos(x + dx, y - 1, z + dz)).getFluidState().isEmpty())
+                    return null;
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+            }
+        if (maxY - minY > 10)
+            return null;
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z);
+        return new net.minecraft.world.phys.Vec3(x + 0.5, y, z + 0.5);
+    }
+
+    static List<net.minecraft.world.entity.LivingEntity> soakUnits(String owner) {
+        List<net.minecraft.world.entity.LivingEntity> out = new ArrayList<>();
+        for (var le : com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits())
+            if (le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName())
+                    && le.isAlive())
+                out.add(le);
+        return out;
+    }
+
+    static List<com.solegendary.reignofnether.building.BuildingPlacement> soakBuildings(String owner) {
+        List<com.solegendary.reignofnether.building.BuildingPlacement> out = new ArrayList<>();
+        for (var bp : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings())
+            if (owner.equals(bp.ownerName) && !bp.isDestroyedServerside)
+                out.add(bp);
+        return out;
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
