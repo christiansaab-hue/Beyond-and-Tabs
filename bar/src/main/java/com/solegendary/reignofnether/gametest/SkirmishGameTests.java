@@ -574,6 +574,30 @@ public class SkirmishGameTests {
         });
     }
 
+    /** The Gravebound Bone Dragon exists, is Gravebound, flies (a Ghast brain), and follows T3 rule (a). */
+    @GameTest(template = ARENA)
+    public static void bone_dragon_is_a_proper_t3(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var dragon = com.solegendary.reignofnether.registrars.EntityRegistrar.BONE_DRAGON_UNIT.get().create(level);
+        if (dragon == null) {
+            helper.fail("could not create the Bone Dragon");
+            return;
+        }
+        var f = com.solegendary.reignofnether.faction.Factions.getFaction(dragon);
+        if (f == null || !f.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS))
+            helper.fail("Bone Dragon is not Gravebound: " + f);
+        if (!(dragon instanceof net.minecraft.world.entity.FlyingMob))
+            helper.fail("Bone Dragon does not fly");
+        float ratio = (float) com.solegendary.reignofnether.resources.ResourceCosts.BONE_DRAGON.metal()
+            / com.solegendary.reignofnether.resources.ResourceCosts.RAVAGER.metal();
+        if (ratio < 4f || ratio > 6f)
+            helper.fail("T3 rule (a): Bone Dragon should cost 4-6x the Siege Ox, is " + ratio + "x");
+        if (dragon.getMaxHealth() < 800)
+            helper.fail("Bone Dragon health " + dragon.getMaxHealth());
+        dragon.discard();
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

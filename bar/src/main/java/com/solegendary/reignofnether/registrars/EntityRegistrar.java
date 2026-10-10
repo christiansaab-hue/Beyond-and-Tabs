@@ -203,6 +203,13 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_colossus_unit").toString()));
 
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit>> BONE_DRAGON_UNIT = ENTITIES.register("bone_dragon_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PHANTOM.getWidth() * com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit.SCALE,
+                           EntityType.PHANTOM.getHeight() * com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bone_dragon_unit").toString()));
+
     public static final RegistryObject<EntityType<WardenUnit>> WARDEN_UNIT = ENTITIES.register("warden_unit",
             () -> EntityType.Builder.of(WardenUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.WARDEN.getWidth(), EntityType.WARDEN.getHeight())
@@ -512,6 +519,7 @@ public class EntityRegistrar {
             case WitherSkeletonProd.itemName -> EntityRegistrar.WITHER_SKELETON_UNIT.get();
             case MagmaCubeProd.itemName -> EntityRegistrar.MAGMA_CUBE_UNIT.get();
             case GhastProd.itemName -> EntityRegistrar.GHAST_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.BoneDragonProd.itemName -> EntityRegistrar.BONE_DRAGON_UNIT.get();
             case NecromancerProd.itemName -> EntityRegistrar.NECROMANCER_UNIT.get();
             case PiglinMerchantProd.itemName -> EntityRegistrar.PIGLIN_MERCHANT_UNIT.get();
             case WildfireProd.itemName -> EntityRegistrar.WILDFIRE_UNIT.get();

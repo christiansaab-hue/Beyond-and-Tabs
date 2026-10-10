@@ -143,6 +143,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.BLAZE_UNIT.get(), BlazeUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.WITHER_SKELETON_UNIT.get(), WitherSkeletonRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.GHAST_UNIT.get(), GhastUnitRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.BONE_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.BoneDragonRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MAGMA_CUBE_UNIT.get(), MagmaCubeUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SLIME_UNIT.get(), SlimeUnitRenderer::new);
 

@@ -54,6 +54,7 @@ public class ProductionItems {
     public static final BlazeProd BLAZE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "blaze"), new BlazeProd());
     public static final WitherSkeletonProd WITHER_SKELETON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wither_skeleton"), new WitherSkeletonProd());
     public static final MagmaCubeProd MAGMA_CUBE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "magma_cube"), new MagmaCubeProd());
+    public static final com.solegendary.reignofnether.unit.units.monsters.BoneDragonProd BONE_DRAGON = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bone_dragon"), new com.solegendary.reignofnether.unit.units.monsters.BoneDragonProd());
     public static final GhastProd GHAST = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ghast"), new GhastProd());
     public static final RoyalGuardProd ROYAL_GUARD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "royal_guard"), new RoyalGuardProd());
     public static final RoyalGuardReviveProd ROYAL_GUARD_REVIVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "royal_guard_revive"), new RoyalGuardReviveProd());
@@ -167,6 +168,7 @@ public class ProductionItems {
         RAVAGER,
         WAR_MAMMOTH,
         SUN_COLOSSUS,
+        BONE_DRAGON,
         GRUNT,
         STRIDER,
         BRUTE,

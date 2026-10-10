@@ -55,6 +55,7 @@ public class Stronghold extends ProductionBuilding implements GarrisonableBuildi
         this.startingBlockTypes.add(Blocks.DEEPSLATE);
 
         this.productions.add(ProductionItems.WARDEN, Keybindings.abilitySlot1);
+        this.productions.add(ProductionItems.BONE_DRAGON, Keybindings.abilitySlot4);   // Gravebound T3 experimental
 
         setActiveAddon(GarrisonableBuildingAddon.class, this, true);
         setActiveAddon(RangeIndicatorAddon.class, this, true);

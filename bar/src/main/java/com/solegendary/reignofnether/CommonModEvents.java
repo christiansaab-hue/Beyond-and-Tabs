@@ -76,6 +76,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.BLAZE_UNIT.get(), BlazeUnit.createAttributes().build());
         evt.put(EntityRegistrar.WITHER_SKELETON_UNIT.get(), WitherSkeletonUnit.createAttributes().build());
         evt.put(EntityRegistrar.GHAST_UNIT.get(), GhastUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BONE_DRAGON_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit.createAttributes().build());
         evt.put(EntityRegistrar.MAGMA_CUBE_UNIT.get(), SlimeUnit.createAttributes().build());
         evt.put(EntityRegistrar.SLIME_UNIT.get(), SlimeUnit.createAttributes().build());
         evt.put(EntityRegistrar.ROYAL_GUARD_UNIT.get(), RoyalGuardUnit.createAttributes().build());

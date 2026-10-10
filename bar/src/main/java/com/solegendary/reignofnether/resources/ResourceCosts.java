@@ -40,6 +40,7 @@ public class ResourceCosts {
     public static final ResourceCost RAVAGER = new ResourceCost(ID, "RAVAGER");
     public static final ResourceCost WAR_MAMMOTH = new ResourceCost(ID, "WAR_MAMMOTH");
     public static final ResourceCost SUN_COLOSSUS = new ResourceCost(ID, "SUN_COLOSSUS");
+    public static final ResourceCost BONE_DRAGON = new ResourceCost(ID, "BONE_DRAGON");
     public static final ResourceCost GRUNT = new ResourceCost(ID, "GRUNT");
     public static final ResourceCost STRIDER = new ResourceCost(ID, "STRIDER");
     public static final ResourceCost BRUTE = new ResourceCost(ID, "BRUTE");
@@ -264,6 +265,7 @@ public class ResourceCosts {
         RAVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.RAVAGER);
         WAR_MAMMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WAR_MAMMOTH);
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
+        BONE_DRAGON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONE_DRAGON);
         ROYAL_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROYAL_GUARD);
         ENCHANTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ENCHANTER);
         // Piglins

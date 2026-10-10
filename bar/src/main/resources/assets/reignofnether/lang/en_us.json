@@ -2280,5 +2280,10 @@
   "buildings.reignofnether.energy_converter_monsters": "Soul Furnace",
   "buildings.reignofnether.metal_extractor_piglins": "Metal Extractor",
   "buildings.reignofnether.wind_generator_piglins": "Wind Generator",
-  "buildings.reignofnether.energy_converter_piglins": "Smelter Pit"
+  "buildings.reignofnether.energy_converter_piglins": "Smelter Pit",
+  "entity.reignofnether.bone_dragon_unit": "Bone Dragon",
+  "entity.reignofnether.bone_dragon_unit.tooltip1": "Gravebound experimental: a skeletal wyrm that flies over walls and lines.",
+  "entity.reignofnether.bone_dragon_unit.tooltip2": "Breathes soul-fire on anything below it.",
+  "entity.reignofnether.bone_dragon_unit.tooltip3": "Flies low and wears no armour - ranged units and anti-air shred it.",
+  "entity.reignofnether.bone_dragon_unit.tooltip4": "Requires a Stronghold."
 }

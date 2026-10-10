@@ -106,6 +106,9 @@ public class PortraitRendererModifiers {
         } else if (entity instanceof WitherSkeleton) {
             yOffset = -15;
             scale = -4;
+        } else if (entity instanceof com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit) {   // before Ghast: it is one, but drawn as a wyrm
+            yOffset = -20;
+            scale = -12;
         } else if (entity instanceof Ghast) {
             yOffset = -118;
             scale = -37;
