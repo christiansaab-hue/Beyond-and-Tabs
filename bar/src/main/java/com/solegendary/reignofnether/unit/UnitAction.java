@@ -161,5 +161,6 @@ public enum UnitAction {
     COMMANDER_DGUN,    // Beyond and Tabs: the commander's D-gun line shot
     COMMANDER_RAISE_DEAD, // Beyond and Tabs: Gravebound commander raises wrecks as Ghouls
     TRAMPLE,              // Beyond and Tabs: War Mammoth charge
-    SOLAR_LANCE           // Beyond and Tabs: Sun Colossus beam
+    SOLAR_LANCE,          // Beyond and Tabs: Sun Colossus beam
+    RECLAIM               // Beyond and Tabs: walk a worker to one wreck and stay on it until it is stripped (area reclaim)
 }

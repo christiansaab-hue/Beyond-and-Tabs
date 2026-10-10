@@ -272,6 +272,75 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Area reclaim: a circle over four wrecks and two workers deals the wrecks out nearest-first, two each, the first
+     * started at once (worker busy on it) and the second shift-queued; a wreck outside the circle is left alone.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void area_reclaim_splits_wrecks_between_workers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_area_reclaim";
+        var a = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var b = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        if (a == null || b == null) {
+            helper.fail("could not create workers");
+            return;
+        }
+        BlockPos centre = helper.absolutePos(new BlockPos(8, 2, 8));
+        int y = centre.getY(), z = centre.getZ();
+        a.moveTo(helper.absolutePos(new BlockPos(2, 2, 8)).getX() + 0.5, y, z + 0.5, 0, 0);
+        b.moveTo(helper.absolutePos(new BlockPos(13, 2, 8)).getX() + 0.5, y, z + 0.5, 0, 0);
+        a.setOwnerName(owner);
+        b.setOwnerName(owner);
+        level.addFreshEntity(a);
+        level.addFreshEntity(b);
+        List<net.minecraft.world.entity.Entity> wrecks = new ArrayList<>();
+        for (int x : new int[] { 4, 6, 9, 11 })   // A is nearest 4 then 6; B nearest 11 then 9
+            wrecks.add(com.solegendary.reignofnether.resources.WreckServerEvents.spawnWreck(level,
+                helper.absolutePos(new BlockPos(x, 2, 8)).getX() + 0.5, y, z + 0.5, 100f, null));
+        var outside = com.solegendary.reignofnether.resources.WreckServerEvents.spawnWreck(level,
+            centre.getX() + 0.5, y, helper.absolutePos(new BlockPos(8, 2, 15)).getZ() + 0.5, 100f, null);
+        helper.runAfterDelay(3, () -> {
+            try {
+                if (wrecks.contains(null) || outside == null) {
+                    helper.fail("test wrecks did not spawn");
+                    return;
+                }
+                int handed = com.solegendary.reignofnether.unit.AreaCommands.issue(level, owner,
+                    com.solegendary.reignofnether.unit.AreaCommands.MODE_RECLAIM, centre, 6,
+                    new int[] { a.getId(), b.getId() }, false);
+                if (handed != 4)
+                    helper.fail("expected the 4 wrecks inside the circle to be handed out, got " + handed);
+                var ta = com.solegendary.reignofnether.resources.WreckServerEvents.getReclaimTarget(a);
+                var tb = com.solegendary.reignofnether.resources.WreckServerEvents.getReclaimTarget(b);
+                if (ta != wrecks.get(0) || tb != wrecks.get(3))
+                    helper.fail("each worker should start on the wreck nearest to it");
+                if (com.solegendary.reignofnether.unit.interfaces.WorkerUnit.isIdle(a))
+                    helper.fail("a worker with a reclaim order counts as idle (its queue would skip ahead)");
+                var qa = com.solegendary.reignofnether.unit.UnitServerEvents.getQueuedActions(a.getId());
+                var qb = com.solegendary.reignofnether.unit.UnitServerEvents.getQueuedActions(b.getId());
+                if (qa.size() != 1 || qa.get(0).getTargetUnitId() != wrecks.get(1).getId()
+                        || qa.get(0).getAction() != com.solegendary.reignofnether.unit.UnitAction.RECLAIM)
+                    helper.fail("worker A should have its second-nearest wreck queued, queue size " + qa.size());
+                if (qb.size() != 1 || qb.get(0).getTargetUnitId() != wrecks.get(2).getId())
+                    helper.fail("worker B should have its second-nearest wreck queued, queue size " + qb.size());
+                helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.unit.UnitServerEvents.clearQueuedActions(a.getId());
+                com.solegendary.reignofnether.unit.UnitServerEvents.clearQueuedActions(b.getId());
+                com.solegendary.reignofnether.resources.WreckServerEvents.clearReclaimTarget(a);
+                com.solegendary.reignofnether.resources.WreckServerEvents.clearReclaimTarget(b);
+                for (var w : wrecks)
+                    if (w != null)
+                        w.discard();
+                if (outside != null)
+                    outside.discard();
+                a.discard();
+                b.discard();
+            }
+        });
+    }
+
+    /**
      * Nanolathe feedback: a worker standing at its own construction site sends NANO beam events while the site is
      * unfinished. Checks the per-worker record BarFx keeps for its rate limit, so it never depends on global counts.
      */

@@ -136,6 +136,9 @@ public interface WorkerUnit {
         boolean isFarming = resGoal.isFarming();
         boolean isAttacking = ((Unit) unit).getTargetGoal().getTarget() != null;
 
-        return !isMoving && !isGathering && !isBuilding && isGatheringIdle && !isAttacking && !isFarming;
+        // an explicit RECLAIM order keeps the worker busy until its wreck is stripped (see WreckServerEvents)
+        boolean isReclaiming = com.solegendary.reignofnether.resources.WreckServerEvents.isReclaiming((Mob) unit);
+
+        return !isMoving && !isGathering && !isBuilding && isGatheringIdle && !isAttacking && !isFarming && !isReclaiming;
     }
 }

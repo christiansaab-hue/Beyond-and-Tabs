@@ -735,6 +735,9 @@ public interface Unit {
         Unit.resetBehaviours(unit);
         if (unit instanceof WorkerUnit workerUnit) {
             WorkerUnit.resetBehaviours(workerUnit);
+            // any new order replaces an explicit reclaim (RECLAIM sets its target after this reset)
+            if (!((Entity) unit).level().isClientSide())
+                com.solegendary.reignofnether.resources.WreckServerEvents.clearReclaimTarget((Entity) unit);
         }
         if (unit instanceof AttackerUnit attackerUnit) {
             AttackerUnit.resetBehaviours(attackerUnit);

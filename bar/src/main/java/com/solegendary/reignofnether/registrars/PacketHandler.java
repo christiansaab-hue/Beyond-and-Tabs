@@ -474,5 +474,17 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.startpos.CapturePointsClientboundPacket::decode)
                 .consumerMainThread(com.solegendary.reignofnether.startpos.CapturePointsClientboundPacket::handle)
                 .add();
+        // BAR command queue lines: the owner's units' shift-queues, sent only when they change (UnitQueueSync)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.unit.packets.UnitQueueClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.unit.packets.UnitQueueClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.unit.packets.UnitQueueClientboundPacket::decode)
+                .consumerMainThread(com.solegendary.reignofnether.unit.packets.UnitQueueClientboundPacket::handle)
+                .add();
+        // BAR area reclaim / repair circle (AreaCommandClientEvents -> AreaCommands)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket::new)
+                .consumerMainThread(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket::handle)
+                .add();
     }
 }

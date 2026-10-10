@@ -26,7 +26,9 @@ import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * BAR wrecks and reclaim. A unit worth at least {@link #MIN_COST} metal leaves a wreck where it falls holding
@@ -56,6 +58,9 @@ public class WreckServerEvents {
     public static final double CHAIN_RANGE = 10.0;
 
     private static final List<Entity> wrecks = new ArrayList<>();
+    // explicit RECLAIM orders: worker entity id -> the wreck it was told to strip. While an entry is live the
+    // worker counts as busy (WorkerUnit.isIdle), so shift-queued orders behind it wait their turn. Server only.
+    private static final Map<Integer, Entity> reclaimTargets = new HashMap<>();
 
     public static List<Entity> getWrecks() {
         return wrecks;
@@ -67,6 +72,28 @@ public class WreckServerEvents {
 
     public static float metalOf(Entity wreck) {
         return wreck.getPersistentData().getFloat(KEY_METAL);
+    }
+
+    public static void setReclaimTarget(LivingEntity worker, Entity wreck) {
+        reclaimTargets.put(worker.getId(), wreck);
+    }
+
+    public static Entity getReclaimTarget(LivingEntity worker) {
+        Entity w = reclaimTargets.get(worker.getId());
+        return w == null || w.isRemoved() ? null : w;
+    }
+
+    public static void clearReclaimTarget(Entity worker) {
+        if (!reclaimTargets.isEmpty())
+            reclaimTargets.remove(worker.getId());
+    }
+
+    /** True while a worker still has a live wreck to strip (keeps it out of the idle pool). Server side only. */
+    public static boolean isReclaiming(Entity worker) {
+        if (reclaimTargets.isEmpty() || worker.level().isClientSide())
+            return false;
+        Entity w = reclaimTargets.get(worker.getId());
+        return w != null && !w.isRemoved();
     }
 
     @SubscribeEvent
@@ -133,6 +160,7 @@ public class WreckServerEvents {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent evt) {
         wrecks.clear();
+        reclaimTargets.clear();
     }
 
     @SubscribeEvent
@@ -148,8 +176,10 @@ public class WreckServerEvents {
     /** One reclaim step covering {@code seconds} of work. Public for the game test. */
     public static void tickReclaim(ServerLevel level, float seconds) {
         wrecks.removeIf(Entity::isRemoved);
-        if (wrecks.isEmpty())
+        if (wrecks.isEmpty()) {
+            reclaimTargets.clear();
             return;
+        }
         long now = level.getGameTime();
         for (Entity w : new ArrayList<>(wrecks)) {
             long born = w.getPersistentData().getLong(KEY_BORN);
@@ -158,13 +188,29 @@ public class WreckServerEvents {
             else if (now - born > LIFETIME_TICKS)
                 remove(level, w, false);
         }
+        // drop orders whose wreck is gone (decayed, raised, stripped by someone else) or whose worker died
+        reclaimTargets.values().removeIf(Entity::isRemoved);
         double r2 = RECLAIM_RANGE * RECLAIM_RANGE;
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (!(le instanceof WorkerUnit worker) || !(le instanceof Unit u) || !le.isAlive() || le.level() != level)
                 continue;
             Entity nearest = null;
             double best = r2;
+            Entity ordered = reclaimTargets.isEmpty() ? null : reclaimTargets.get(le.getId());
+            if (ordered != null) {
+                double d = ordered.distanceToSqr(le);
+                if (d <= r2) {
+                    // an explicit order strips ITS wreck first, not whatever heap happens to be closer
+                    best = -1;
+                    nearest = ordered;
+                } else if (u.getMoveGoal().getMoveTarget() == null && ((net.minecraft.world.entity.Mob) le).getNavigation().isDone()) {
+                    // stopped short (crowded heap, blocked path): walk on instead of standing there busy forever
+                    u.setMoveTarget(ordered.blockPosition());
+                }
+            }
             for (Entity w : wrecks) {
+                if (best < 0)
+                    break;
                 if (w.isRemoved())
                     continue;
                 double d = w.distanceToSqr(le);
@@ -198,7 +244,9 @@ public class WreckServerEvents {
      * idle worker chains, so it never overrides an order its owner gave meanwhile.
      */
     static void chainToNextWreck(Entity emptied, LivingEntity worker, Unit unit) {
-        if (!unit.isIdle())
+        // a worker with orders queued behind this one (area reclaim, shift-queue) follows those instead; a plain
+        // MOVE here would also wipe that queue
+        if (!unit.isIdle() || UnitServerEvents.hasQueuedActions(worker.getId()))
             return;
         Entity next = null;
         double best = CHAIN_RANGE * CHAIN_RANGE;
@@ -239,5 +287,6 @@ public class WreckServerEvents {
             level.playSound(null, w.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.BLOCKS, 0.3f, 1.6f);
         w.discard();
         wrecks.remove(w);
+        reclaimTargets.values().removeIf(t -> t == w);
     }
 }

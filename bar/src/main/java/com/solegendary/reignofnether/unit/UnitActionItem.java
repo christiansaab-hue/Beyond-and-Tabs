@@ -45,6 +45,8 @@ public class UnitActionItem {
     public final UnitAction getAction() { return action; }
     public final int[] getUnitIds() { return unitIds; }
     public final BlockPos getPreselectedBlockPos() { return preselectedBlockPos; }
+    public final int getTargetUnitId() { return unitId; }
+    public final String getOwnerName() { return ownerName; }
 
     public boolean equals(UnitActionItem unitActionItem) {
         if (unitActionItem == null)
@@ -73,7 +75,8 @@ public class UnitActionItem {
         UnitAction.RETURN_RESOURCES,
         UnitAction.RETURN_RESOURCES_TO_CLOSEST,
         UnitAction.DELETE,
-        UnitAction.DISCARD
+        UnitAction.DISCARD,
+        UnitAction.RECLAIM
     );
 
     public UnitActionItem(
@@ -386,6 +389,18 @@ public class UnitActionItem {
                             workerUnit.getBuildRepairGoal().setBuildingTarget(building);
                         }
                     } else {
+                        unit.setMoveTarget(preselectedBlockPos);
+                    }
+                }
+                case RECLAIM -> {
+                    // unitId is the wreck; the worker walks onto it and WreckServerEvents keeps it busy (not idle)
+                    // until the wreck is gone, so the next shift-queued order only starts once this one is done
+                    Entity wreck = unitId >= 0 ? level.getEntity(unitId) : null;
+                    if (!level.isClientSide() && unit instanceof WorkerUnit &&
+                            com.solegendary.reignofnether.resources.WreckServerEvents.isWreck(wreck) && !wreck.isRemoved()) {
+                        com.solegendary.reignofnether.resources.WreckServerEvents.setReclaimTarget((LivingEntity) unit, wreck);
+                        unit.setMoveTarget(wreck.blockPosition());
+                    } else if (level.isClientSide()) {
                         unit.setMoveTarget(preselectedBlockPos);
                     }
                 }
