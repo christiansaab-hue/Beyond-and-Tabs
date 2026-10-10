@@ -2308,15 +2308,18 @@ public class SkirmishGameTests {
         net.minecraft.world.entity.LivingEntity wolfOnCommander = wolf.getTarget();
         wolf.setTarget(grunt);
         net.minecraft.world.entity.LivingEntity wolfOnGrunt = wolf.getTarget();
-        foe.setTarget(commander);
-        net.minecraft.world.entity.LivingEntity foeOnCommander = foe.getTarget();
+        // a unit's own target goes through its RoN target goal (which wants real RTS players), so ask the guard
+        // itself: the target-change event for an enemy unit on the commander must not be cancelled
+        var evt = new net.minecraftforge.event.entity.living.LivingChangeTargetEvent(foe, commander,
+            net.minecraftforge.event.entity.living.LivingChangeTargetEvent.LivingTargetType.MOB_TARGET);
+        boolean foeBlocked = net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(evt);
         for (var e : List.<net.minecraft.world.entity.Entity>of(commander, grunt, foe, wolf))
             e.discard();
         if (wolfOnCommander == commander)
             helper.fail("a wild wolf was allowed to target a commander");
         else if (wolfOnGrunt != grunt)
             helper.fail("a wild wolf could not target an ordinary unit (the guard is too broad)");
-        else if (foeOnCommander != commander)
+        else if (foeBlocked)
             helper.fail("an enemy unit could not target the commander");
         else
             helper.succeed();
