@@ -2271,5 +2271,14 @@
   "server.reignofnether.t3_arrived": "%s has fielded an experimental: %s!",
   "entity.reignofnether.sun_colossus_unit": "Sun Colossus",
   "entity.reignofnether.sun_colossus_unit.tooltip1": "Sunforged experimental: a gilded paladin-statue that fires the Solar Lance.",
-  "entity.reignofnether.sun_colossus_unit.tooltip2": "Very slow, nothing to hit flyers with - artillery and flyers pick it apart."
+  "entity.reignofnether.sun_colossus_unit.tooltip2": "Very slow, nothing to hit flyers with - artillery and flyers pick it apart.",
+  "buildings.reignofnether.metal_extractor_villagers": "Metal Extractor",
+  "buildings.reignofnether.wind_generator_villagers": "Wind Generator",
+  "buildings.reignofnether.energy_converter_villagers": "Alchemist's Crucible",
+  "buildings.reignofnether.metal_extractor_monsters": "Metal Extractor",
+  "buildings.reignofnether.wind_generator_monsters": "Wind Generator",
+  "buildings.reignofnether.energy_converter_monsters": "Soul Furnace",
+  "buildings.reignofnether.metal_extractor_piglins": "Metal Extractor",
+  "buildings.reignofnether.wind_generator_piglins": "Wind Generator",
+  "buildings.reignofnether.energy_converter_piglins": "Smelter Pit"
 }

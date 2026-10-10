@@ -75,8 +75,21 @@ public class BotPlayer {
         this.home = home;
     }
 
-    int targetWorkers() { return switch (difficulty) { case EASY -> 5; case MEDIUM -> 7; case HARD -> 9; }; }
-    int attackArmySize() { return switch (difficulty) { case EASY -> 10; case MEDIUM -> 14; case HARD -> 18; }; }
+    // playtest (Oct 10): two hard bots with 9 workers and one build site at a time were crushed by a player with
+    // 80+ workers. Workers now grow with the clock (BAR players keep making constructors), and harder bots run
+    // several build sites at once.
+    long minutesIn = 0;
+    int targetWorkers() {
+        int base = switch (difficulty) { case EASY -> 5; case MEDIUM -> 7; case HARD -> 9; };
+        int cap = switch (difficulty) { case EASY -> 10; case MEDIUM -> 18; case HARD -> 28; };
+        int perMinute = switch (difficulty) { case EASY -> 0; case MEDIUM -> 1; case HARD -> 2; };
+        return (int) Math.min(cap, base + minutesIn * perMinute / 2);
+    }
+    int maxConcurrentSites() {
+        int base = switch (difficulty) { case EASY -> 1; case MEDIUM -> 2; case HARD -> 3; };
+        return base + (int) (minutesIn / 8);
+    }
+    int attackArmySize() { return switch (difficulty) { case EASY -> 10; case MEDIUM -> 14; case HARD -> 18; } + (int) Math.min(20, minutesIn / 2); }
     long attackCooldownTicks() { return switch (difficulty) { case EASY -> 20 * 240; case MEDIUM -> 20 * 170; case HARD -> 20 * 120; }; }
 
     // ------------------------------------------------------------------ the think step, about once a second
@@ -84,6 +97,7 @@ public class BotPlayer {
     public void think(ServerLevel level, long gameTime) {
         if (startedAt < 0)
             startedAt = gameTime;
+        minutesIn = (gameTime - startedAt) / (20 * 60);
         List<LivingEntity> mine = new ArrayList<>(), workers = new ArrayList<>(), army = new ArrayList<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (!(le instanceof Unit u) || !name.equals(u.getOwnerName()) || !le.isAlive())
@@ -143,9 +157,9 @@ public class BotPlayer {
         // 3b) reclaim: one idle worker walks to the nearest wreck in our territory (BAR players do this by habit)
         sendReclaimer(workers);
 
-        // 4) expand the economy (one site at a time so the flow economy isn't buried in stall)
+        // 4) expand the economy (a few sites at a time - more for harder bots - so the flow economy isn't buried)
         long minutes = (gameTime - startedAt) / (20 * 60);
-        if (unbuilt <= 1) {
+        if (unbuilt < maxConcurrentSites()) {
             int extractors = count(buildings, kit.extractor()), winds = count(buildings, kit.wind());
             int farms = count(buildings, kit.farm()), houses = count(buildings, kit.house());
             int armyBuildings = count(buildings, kit.armyBuilding());

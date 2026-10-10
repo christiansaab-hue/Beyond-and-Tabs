@@ -990,7 +990,9 @@ public class OrthoviewClientEvents {
         float bot = -zoomFinal / 2;
 
         // BarFx camera shake: nudge the view a little on big nearby blasts
-        float shakeScale = Math.max(.5f, zoomFinal / 30f);
+        // playtest (Oct 10): shaking grew with zoom (x3 zoomed out) and a big fight shook the whole screen.
+        // Keep it a small fixed nudge, and none at all in strategic view.
+        float shakeScale = com.solegendary.reignofnether.orthoview.StrategicViewClientEvents.isStrategicView() ? 0f : .4f;
         float shX = com.solegendary.reignofnether.barfx.BarFxClient.shakeX() * shakeScale;
         float shY = com.solegendary.reignofnether.barfx.BarFxClient.shakeY() * shakeScale;
         left += shX; rgt += shX; top += shY; bot += shY;

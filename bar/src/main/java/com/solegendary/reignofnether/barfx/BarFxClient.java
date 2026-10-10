@@ -413,8 +413,8 @@ public final class BarFxClient {
         } else { fx = camX; fz = camZ; }
         float d = (float) Math.hypot(x - fx, z - fz);
         float range = ortho ? 30 + zoom : 40;
-        float a = amount * Math.max(0, 1 - d / range);
-        if (a > 0) shakeAmt = Math.min(1.2f, shakeAmt + a);
+        float a = amount * .5f * Math.max(0, 1 - d / range);
+        if (a > 0) shakeAmt = Math.min(.35f, shakeAmt + a);   // was 1.2: a base dying shook the screen nonstop
     }
 
     /** Current camera shake offset in blocks (orthographic view) - horizontal. */

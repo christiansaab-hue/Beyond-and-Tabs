@@ -73,7 +73,7 @@ public final class EconomyBarRenderer {
         // stall warning under the bar
         if (eco.stall < 0.99f) {
             String stallStr = "Build speed " + Math.round(eco.stall * 100) + "%  -  short on "
-                + (eco.metalExpense > eco.metalIncome + 0.01f && eco.metalExpense >= eco.energyExpense ? "metal" : "energy");
+                + (shortOnMetal(resources, eco) ? "metal" : "energy");
             int w = font.width(stallStr) + 10;
             int sx = screenWidth / 2 - w / 2;
             gg.fill(sx, bottom, sx + w, bottom + 12, 0xC0401010);
@@ -147,5 +147,15 @@ public final class EconomyBarRenderer {
 
     static FormattedCharSequence line(String s) {
         return FormattedCharSequence.forward(s, Style.EMPTY);
+    }
+
+    /**
+     * Which pool is causing the stall. Comparing raw expenses was wrong (energy numbers are always bigger), so
+     * this compares how full each pool is: the emptier one (relative to its storage) is the one you're short on.
+     */
+    static boolean shortOnMetal(Resources resources, ClientEconomy eco) {
+        float metalFill = resources.ore / Math.max(1f, eco.metalStorage);
+        float energyFill = resources.wood / Math.max(1f, eco.energyStorage);
+        return metalFill <= energyFill;
     }
 }
