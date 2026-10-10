@@ -74,6 +74,8 @@ public class WreckServerEvents {
         LivingEntity le = evt.getEntity();
         if (le.level().isClientSide() || !(le.level() instanceof ServerLevel level) || !(le instanceof Unit unit))
             return;
+        if (com.solegendary.reignofnether.unit.DragonRaiseServerEvents.isRisen(le))
+            return;   // a Bone Dragon's risen skeleton was free - its death must not pay out metal
         ResourceCost cost = unit.getCost();
         if (cost == null || cost.metal() < MIN_COST)
             return;

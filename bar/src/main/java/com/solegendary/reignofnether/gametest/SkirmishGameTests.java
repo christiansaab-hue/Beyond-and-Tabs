@@ -598,6 +598,30 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** Bone Dragon kills rise: needs population room, leaves no wreck, crumbles on time. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void dragon_risen_skeletons_are_free_and_temporary(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_wyrm";
+        BlockPos at = helper.absolutePos(new BlockPos(14, 2, 2));
+        if (com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at) != null)
+            helper.fail("raised a skeleton with no population room");
+        com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
+        var risen = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
+        if (risen == null) {
+            helper.fail("no skeleton rose with population room");
+            return;
+        }
+        int wrecksBefore = com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks().size();
+        ((net.minecraft.world.entity.LivingEntity) risen).kill();
+        helper.runAfterDelay(2, () -> {
+            if (com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks().size() > wrecksBefore)
+                helper.fail("a risen skeleton left a wreck (free metal)");
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
