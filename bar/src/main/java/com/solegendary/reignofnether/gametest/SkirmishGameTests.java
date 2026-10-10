@@ -646,7 +646,7 @@ public class SkirmishGameTests {
                 helper.fail("could not create T2 constructor " + i);
                 return;
             }
-            if (!(e instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit w) || w.getBuildPower() < 1.99f)
+            if (!(((Object) e) instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit w) || w.getBuildPower() < 1.99f)
                 helper.fail(e.getType() + " is not a double-speed worker");
             if (!com.solegendary.reignofnether.unit.T2Workers.isT2Worker(e))
                 helper.fail(e.getType() + " not recognised as a T2 worker");
