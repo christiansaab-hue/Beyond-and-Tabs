@@ -87,6 +87,9 @@ public class StartPosServerboundPacket {
                 case RESERVE -> {
                     if (StartPosServerEvents.isStartingGame())
                         return;
+                    // the lobby greys preview factions out; a modified client still mustn't reserve one
+                    if (faction.preview)
+                        return;
                     for (StartPos startPos : StartPosServerEvents.startPoses) {
                         if (startPos.pos.equals(blockPos) && startPos.enabled) {
                             startPos.reset();

@@ -26,6 +26,9 @@ public class Faction {
 	public ResourceLocation idleWorkerIcon = ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/villager.png");
 	public boolean hasCubeMap = true;
 	public boolean playable = true;
+	// a faction that is announced in the lobby (greyed tile, "coming soon") but has no units or buildings yet;
+	// the server refuses to start or reserve it, so nothing downstream ever meets a faction without a capitol
+	public boolean preview = false;
 	public ResourceLocation key;
 	public ResourceLocation workerEntityType;
 	public ResourceLocation scoutEntityType;
@@ -76,6 +79,13 @@ public class Faction {
 		return this;
 	}
 	
+	/** Lobby-only placeholder: also unplayable, so it stays out of PLAYABLE_FACTIONS (sandbox, scenario, random). */
+	public Faction setPreview() {
+		this.preview = true;
+		this.playable = false;
+		return this;
+	}
+
 	public Faction noCubeMap() {
 		this.hasCubeMap = false;
 		return this;
