@@ -115,7 +115,8 @@ public class TimeClientEvents {
     @SubscribeEvent
     public static void renderOverlay(RenderGuiOverlayEvent.Post evt) {
         if (!OrthoviewClientEvents.isEnabled() || MC.isPaused() || !HudClientEvents.enabled
-                || !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) || MC.screen instanceof MatchStartScreen) {
+                || !TutorialClientEvents.isAtOrPastStage(TutorialStage.MINIMAP_CLICK) || MC.screen instanceof MatchStartScreen
+                || com.solegendary.reignofnether.matchstart.MatchEndClientEvents.isMatchEndMoment()) { // keep the title/results clear
             return;
         }
 

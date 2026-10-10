@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.mixin;
 
 import com.mojang.blaze3d.platform.Window;
+import com.solegendary.reignofnether.matchstart.MatchEndClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -30,6 +31,12 @@ public class ForgeGuiMixin extends Gui {
             remap=false
     )
     protected void renderChat(int width, int height, GuiGraphics guiGraphics, CallbackInfo ci) {
+        // victory/defeat moment: the chat log ("X has lost all their buildings...") covered the big title and the
+        // results popup, so it's hidden until the popup is dismissed (still shown while typing)
+        if (MatchEndClientEvents.shouldHideChat()) {
+            ci.cancel();
+            return;
+        }
         if (!OrthoviewClientEvents.isEnabled())
             return;
 
