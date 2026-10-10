@@ -905,7 +905,40 @@ public class MinimapClientEvents {
         for (MapMarker marker : mapMarkers) {
             drawMapMarker(marker);
         }
+        // allies' Alt-drag lines and label pings (and our own line while we draw it)
+        MapDrawClientEvents.drawOnMinimap();
+    }
 
+    /**
+     * Draws a 2px-thick line between two world XZ points into the overlay (Bresenham, clipped per pixel), for the
+     * map drawings. Writes into the same buffer as the markers, so it costs nothing extra to show.
+     */
+    static void plotOverlayLine(int x1, int z1, int x2, int z2, int rgb, int alpha) {
+        int argb = MiscUtil.reverseHexRGB(rgb) | (Mth.clamp(alpha, 0, 255) << 24);
+        int dx = Math.abs(x2 - x1), dz = -Math.abs(z2 - z1);
+        int sx = x1 < x2 ? 1 : -1, sz = z1 < z2 ? 1 : -1;
+        int err = dx + dz;
+        int x = x1, z = z1;
+        int width = mapColoursOverlays.length, height = width > 0 ? mapColoursOverlays[0].length : 0;
+        // the line is at most a few hundred blocks; the guard just stops a bad input from spinning
+        for (int steps = 0; steps < 2048; steps++) {
+            int xN = x - xc_world + (mapGuiRadius * 2);
+            int zN = z - zc_world + (mapGuiRadius * 2);
+            for (int ox = 0; ox < 2; ox++)
+                for (int oz = 0; oz < 2; oz++)
+                    if (xN + ox >= 0 && xN + ox < width && zN + oz >= 0 && zN + oz < height)
+                        mapColoursOverlays[xN + ox][zN + oz] = argb;
+            if (x == x2 && z == z2)
+                break;
+            int e2 = 2 * err;
+            if (e2 >= dz) { err += dz; x += sx; }
+            if (e2 <= dx) { err += dx; z += sz; }
+        }
+    }
+
+    /** World position under a point on the minimap (null when the point is off the map). */
+    public static BlockPos minimapScreenToWorld(float x, float y) {
+        return getWorldPosOnMinimap(x, y, false);
     }
 
     private static void drawBuildingOnMap(int xc, int zc, int color, int radius, int thickness) {
@@ -1464,6 +1497,7 @@ public class MinimapClientEvents {
         }
 
         renderMap(evt.getGuiGraphics());
+        MapDrawClientEvents.renderMinimapLabels(evt.getGuiGraphics());
 
         //MiscUtil.drawDebugStrings(evt.getGuiGraphics(), MC.font, new String[] {
         //        "camrotX: " + OrthoviewClientEvents.getCamRotX()

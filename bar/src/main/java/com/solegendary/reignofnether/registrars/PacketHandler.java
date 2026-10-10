@@ -26,6 +26,8 @@ import com.solegendary.reignofnether.hud.custombutton.CustomButtonClientboundPac
 import com.solegendary.reignofnether.items.ItemClientboundPacket;
 import com.solegendary.reignofnether.items.ItemServerboundPacket;
 import com.solegendary.reignofnether.items.ItemShopClientboundPacket;
+import com.solegendary.reignofnether.minimap.MapDrawClientboundPacket;
+import com.solegendary.reignofnether.minimap.MapDrawServerboundPacket;
 import com.solegendary.reignofnether.minimap.MapMarkerClientboundPacket;
 import com.solegendary.reignofnether.minimap.MapMarkerServerboundPacket;
 import com.solegendary.reignofnether.orthoview.CameraClientboundPacket;
@@ -491,6 +493,17 @@ public final class PacketHandler {
                 .encoder(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::encode)
                 .decoder(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::decode)
                 .consumerMainThread(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::handle)
+                .add();
+        // BAR map drawing: Alt-drag lines and Alt-double-click labels, rate-limited and relayed to allies only
+        INSTANCE.messageBuilder(MapDrawServerboundPacket.class, index++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(MapDrawServerboundPacket::encode)
+                .decoder(MapDrawServerboundPacket::new)
+                .consumerMainThread(MapDrawServerboundPacket::handle)
+                .add();
+        INSTANCE.messageBuilder(MapDrawClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(MapDrawClientboundPacket::encode)
+                .decoder(MapDrawClientboundPacket::new)
+                .consumerMainThread(MapDrawClientboundPacket::handle)
                 .add();
     }
 }

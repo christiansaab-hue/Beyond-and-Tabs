@@ -1469,6 +1469,49 @@ public class SkirmishGameTests {
         });
     }
 
+    /**
+     * Map drawing (Alt-drag lines / labels): the server allows 10 drawings per 5 s per player and relays each one to
+     * the sender and their allies only. Uses its own limiter instance and unique names, so it can't collide with
+     * other tests or real players.
+     */
+    @GameTest(template = ARENA)
+    public static void map_drawing_is_rate_limited_and_ally_only(GameTestHelper helper) {
+        var rules = new com.solegendary.reignofnether.minimap.MapDrawRules();
+        java.util.UUID p = java.util.UUID.randomUUID(), other = java.util.UUID.randomUUID();
+        long t0 = 1_000_000L;
+        for (int i = 0; i < com.solegendary.reignofnether.minimap.MapDrawRules.MAX_STROKES; i++)
+            if (!rules.tryConsume(p, t0 + i * 10L))
+                helper.fail("drawing " + (i + 1) + " of 10 inside the window was refused");
+        if (rules.tryConsume(p, t0 + 200))
+            helper.fail("an 11th drawing inside 5 s was allowed");
+        if (!rules.tryConsume(other, t0 + 200))
+            helper.fail("one player's spam used up another player's budget");
+        if (!rules.tryConsume(p, t0 + com.solegendary.reignofnether.minimap.MapDrawRules.WINDOW_MS + 1))
+            helper.fail("drawing still refused after the 5 s window slid past the first stroke");
+
+        String a = "gt_draw_" + p.toString().substring(0, 8), b = a + "_ally", c = a + "_enemy";
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(a, b);
+        try {
+            Set<String> to = com.solegendary.reignofnether.minimap.MapDrawRules.recipients(a, List.of(c, b, a),
+                com.solegendary.reignofnether.alliance.AlliancesServerEvents::isAllied);
+            if (!to.contains(a) || !to.contains(b))
+                helper.fail("drawing not relayed to the sender and their ally: " + to);
+            if (to.contains(c))
+                helper.fail("drawing leaked to an enemy: " + to);
+        } finally {
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(a, b);
+        }
+
+        if (com.solegendary.reignofnether.minimap.MapDrawRules.isValidStroke(new int[] { 0 }, new int[] { 0 }))
+            helper.fail("a one-point stroke was accepted");
+        if (com.solegendary.reignofnether.minimap.MapDrawRules.isValidStroke(new int[] { 0, 500 }, new int[] { 0, 0 }))
+            helper.fail("a 500-block segment was accepted");
+        String label = com.solegendary.reignofnether.minimap.MapDrawRules.sanitiseLabel("§cattack here now please hurry!!");
+        if (label.length() > com.solegendary.reignofnether.minimap.MapDrawRules.MAX_LABEL_CHARS || label.contains("§"))
+            helper.fail("label not sanitised: '" + label + "'");
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

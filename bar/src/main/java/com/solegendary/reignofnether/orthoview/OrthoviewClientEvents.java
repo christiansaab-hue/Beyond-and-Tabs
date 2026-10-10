@@ -536,7 +536,9 @@ public class OrthoviewClientEvents {
 
         // ---- grab-drag the map (middle mouse, or Alt + left mouse) ----
         boolean mmb = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == GLFW.GLFW_PRESS;
-        boolean altLmb = alt && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        // ...unless the left button is drawing a map line (Alt-drag on the minimap / Ctrl+Alt-drag in the world)
+        boolean altLmb = alt && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS
+                && !com.solegendary.reignofnether.minimap.MapDrawClientEvents.isDrawing();
         double cursorX = MC.mouseHandler.xpos();
         double cursorY = MC.mouseHandler.ypos();
         int winW = Math.max(1, MC.getWindow().getScreenWidth());

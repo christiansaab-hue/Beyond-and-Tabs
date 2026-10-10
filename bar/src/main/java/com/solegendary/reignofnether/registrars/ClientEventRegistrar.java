@@ -91,6 +91,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.hud.NotificationClientEvents.class);
         vanillaEventBus.register(CursorClientEvents.class);
         vanillaEventBus.register(MinimapClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.minimap.MapDrawClientEvents.class);
         vanillaEventBus.register(TimeClientEvents.class);
         vanillaEventBus.register(BlockClientEvents.class);
         vanillaEventBus.register(FogOfWarClientEvents.class);
