@@ -481,10 +481,17 @@ public class SkirmishGameTests {
         level.addFreshEntity(foe);
         helper.runAfterDelay(3, () -> {
             double baseHp = vet.getMaxHealth();
-            foe.hurt(level.damageSources().mobAttack(vet), 10000f);
+            boolean hurt = foe.hurt(level.damageSources().mobAttack(vet), 10000f);
+            if (!foe.isDeadOrDying()) {   // the real kill path didn't land: report why, then test the rule directly
+                helper.fail("foe survived a 10000 hit (hurt=" + hurt + ", hp=" + foe.getHealth() + ", invulnerable="
+                    + foe.isInvulnerable() + ", invTime=" + foe.invulnerableTime + ")");
+                return;
+            }
             if (com.solegendary.reignofnether.unit.VeterancyServerEvents.getRank(vet) != 1)
                 helper.fail("one equal-cost kill should be rank 1, got xp "
-                    + com.solegendary.reignofnether.unit.VeterancyServerEvents.getXp(vet));
+                    + com.solegendary.reignofnether.unit.VeterancyServerEvents.getXp(vet) + " (vet alive=" + vet.isAlive()
+                    + ", vet cost=" + (vet.getCost() == null ? "null" : vet.getCost().metal()) + ", foe cost="
+                    + (foe.getCost() == null ? "null" : foe.getCost().metal()) + ")");
             if (vet.getMaxHealth() < baseHp * 1.09)
                 helper.fail("rank 1 gave no health: " + baseHp + " -> " + vet.getMaxHealth());
             com.solegendary.reignofnether.unit.VeterancyServerEvents.award(vet, 10f);

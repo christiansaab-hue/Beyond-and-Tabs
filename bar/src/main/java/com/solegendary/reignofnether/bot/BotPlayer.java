@@ -155,15 +155,15 @@ public class BotPlayer {
             if (patch != null && !workers.isEmpty())
                 placeNear(level, kit.extractor(), patch.offset(-2, 0, -2), workers, 1);
             else if (winds < 2 + minutes && winds <= extractors * 2 && !workers.isEmpty())
-                placeNear(level, kit.wind(), home.offset(rng.nextInt(25) - 12, 0, rng.nextInt(25) - 12), workers, 1);
+                placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             else if (!workers.isEmpty() && energyFull() && count(buildings, converterFor()) < 1 + (int) (minutes / 6))
-                placeNear(level, converterFor(), home.offset(rng.nextInt(21) - 10, 0, rng.nextInt(21) - 10), workers, 1);
+                placeNear(level, converterFor(), layoutSlot(Layout.CONVERTER, count(buildings, converterFor())), workers, 1);
             else if (farms < 1 && !workers.isEmpty())
-                placeNear(level, kit.farm(), home.offset(rng.nextInt(21) - 10, 0, rng.nextInt(21) - 10), workers, 1);
+                placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
             else if (popCap - pop < 4 && !workers.isEmpty())
-                placeNear(level, kit.house(), home.offset(rng.nextInt(29) - 14, 0, rng.nextInt(29) - 14), workers, 1);
+                placeNear(level, kit.house(), layoutSlot(Layout.HOUSE, houses), workers, 1);
             else if (armyBuildings < 1 + (int) (minutes / 4) && minutes >= 1 && !workers.isEmpty())
-                placeNear(level, kit.armyBuilding(), home.offset(rng.nextInt(25) - 12, 0, rng.nextInt(25) - 12), workers, 2);
+                placeNear(level, kit.armyBuilding(), layoutSlot(Layout.ARMY, armyBuildings), workers, 2);
             else if (kit.tower() != null && count(buildings, kit.tower()) < 1 + (int) (minutes / 5) && minutes >= 2 && !workers.isEmpty()) {
                 // a tower between home and the nearest threat
                 BlockPos threat = nearestEnemyBuilding(home);
@@ -374,6 +374,34 @@ public class BotPlayer {
             if (bp.getBuilding() == b)
                 n++;
         return n;
+    }
+
+    enum Layout { WIND, CONVERTER, FARM, HOUSE, ARMY }
+
+    /**
+     * A tidy BAR-style base instead of buildings dropped at random: "back" is away from the nearest enemy.
+     * Wind generators fill rows of six behind the capitol (4-block pitch for their 3x3), converters sit at the
+     * far end of the wind field, farms and houses line the two flanks, army buildings face the enemy in a row.
+     * placeNear still spirals out from the slot when the ground there is bad, so this never blocks a build.
+     */
+    BlockPos layoutSlot(Layout kind, int index) {
+        BlockPos threat = nearestEnemyBuilding(home);
+        double bx = 0, bz = 1;   // default "back" = +z
+        if (threat != null) {
+            double dx = home.getX() - threat.getX(), dz = home.getZ() - threat.getZ();
+            double len = Math.hypot(dx, dz);
+            if (len > 1) { bx = dx / len; bz = dz / len; }
+        }
+        double px = -bz, pz = bx;   // perpendicular ("right")
+        double back, side;
+        switch (kind) {
+            case WIND -> { back = 14 + (index / 6) * 4; side = (index % 6 - 2.5) * 4; }
+            case CONVERTER -> { back = 14 + 4 * 3 + 2; side = (index % 2 == 0 ? -1 : 1) * (14 + (index / 2) * 4); }
+            case FARM -> { back = 4 + index * 12; side = 27; }
+            case HOUSE -> { back = (index / 2) * 8 - 4; side = (index % 2 == 0 ? -1 : 1) * 15 * (index % 4 < 2 ? 1 : -1); }
+            default -> { back = -12; side = (index % 3 - 1) * 11; }
+        }
+        return home.offset((int) Math.round(bx * back + px * side), 0, (int) Math.round(bz * back + pz * side));
     }
 
     Building converterFor() {
