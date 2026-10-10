@@ -1981,6 +1981,31 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** A Horde commander's D-gun / War-Drums must stay on the commander: Grunts used to share one static ability set. */
+    @GameTest(template = ARENA)
+    public static void commander_abilities_do_not_leak_to_plain_grunts(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var commander = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        var plain = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        if (commander == null || plain == null) {
+            helper.fail("could not create grunts");
+            return;
+        }
+        com.solegendary.reignofnether.player.CommanderServerEvents.ensureAbility(commander);
+        boolean commanderHas = false;
+        for (var a : commander.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun)
+                commanderHas = true;
+        if (!commanderHas)
+            helper.fail("the commander grunt did not get its D-gun");
+        for (var a : plain.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun)
+                helper.fail("a plain grunt got the commander's D-gun");
+        commander.discard();
+        plain.discard();
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
