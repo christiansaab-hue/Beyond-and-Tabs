@@ -59,6 +59,8 @@ public class WraithUnit extends Monster implements Unit, AttackerUnit, KeyframeA
     static {
         ABILITIES.add(new Fear(), Keybindings.abilitySlot1);
         ABILITIES.add(new Possess(), Keybindings.abilitySlot2);
+        // Beyond and Tabs: the Gravebound faction power (appended so Fear stays index 0, the default autocast)
+        ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.CryptTide(), Keybindings.abilitySlot3);
     }
 
     //region

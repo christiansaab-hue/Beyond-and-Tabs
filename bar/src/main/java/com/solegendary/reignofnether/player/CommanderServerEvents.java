@@ -57,7 +57,7 @@ public class CommanderServerEvents {
     public static void ensureAbility(Entity entity) {
         if (!(entity instanceof Unit unit) || unit.getAbilities() == null)
             return;
-        boolean hasSignature = false, hasDGun = false, hasRaise = false;
+        boolean hasSignature = false, hasDGun = false, hasRaise = false, hasDrums = false;
         for (com.solegendary.reignofnether.ability.Ability a : unit.getAbilities().get()) {
             if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility)
                 hasSignature = true;
@@ -65,6 +65,8 @@ public class CommanderServerEvents {
                 hasDGun = true;
             if (a instanceof com.solegendary.reignofnether.ability.abilities.RaiseDead)
                 hasRaise = true;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.WarDrums)
+                hasDrums = true;
         }
         if (!hasSignature)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
@@ -73,6 +75,9 @@ public class CommanderServerEvents {
         var faction = com.solegendary.reignofnether.faction.Factions.getFaction(unit);
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS) && !hasRaise)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.RaiseDead());
+        // the Horde's faction power rides on the Warlord: the drummer leads from the front
+        if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.PIGLINS) && !hasDrums)
+            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.WarDrums());
     }
 
     /** Client side: tags don't sync, but the commander's translated name does - that's how the client knows. */

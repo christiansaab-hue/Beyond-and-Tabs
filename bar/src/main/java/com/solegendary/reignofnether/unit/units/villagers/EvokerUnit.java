@@ -65,6 +65,8 @@ public class EvokerUnit extends Evoker implements Unit, AttackerUnit, RangedAtta
         ABILITIES.add(new SetFangsCircle());
         ABILITIES.add(new CastSummonVexes(), Keybindings.abilitySlot3);
         ABILITIES.add(new MountRavager(), Keybindings.abilitySlot4);
+        // Beyond and Tabs: the Sunforged faction power (appended: index 0 must stay the fangs line)
+        ABILITIES.add(new BastionAegis(), Keybindings.abilitySlot5);
     }
 
     public CastSummonVexes getSummonVexes() {
