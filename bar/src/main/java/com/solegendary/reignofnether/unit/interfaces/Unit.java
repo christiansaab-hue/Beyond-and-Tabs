@@ -338,14 +338,25 @@ public interface Unit {
                     unitMob.getTarget() == null || !unitMob.getTarget().isAlive()) {
                 unitMob.setTarget(null);
                 unit.getTargetGoal().setTarget(null);
+            } else if (com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(unit.getTargetGoal().getTarget(), unit.getOwnerName())) {
+                // the target went under cover (Shade Ranger cloak / Verdant thicket): lose it, whichever path set it
+                // - a forced order, retaliation, attack-move or a queued area attack. The cover's own transition
+                // hooks only reach units within a grid radius; this catches everyone. A flag read in the common case.
+                unitMob.setTarget(null);
+                unit.getTargetGoal().setTarget(null);
             }
 
             // no iframes after being damaged so multiple units can attack at once
             unitMob.invulnerableTime = 0;
 
             // enact target-following, and stop followTarget being reset
-            if (unit.getFollowTarget() != null && unitMob.tickCount % 20 == 0)
-                unit.setMoveTarget(unit.getFollowTarget().blockPosition());
+            if (unit.getFollowTarget() != null && unitMob.tickCount % 20 == 0) {
+                // an enemy that went under cover can't be tailed: stop where we were heading (last seen position)
+                if (com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(unit.getFollowTarget(), unit.getOwnerName()))
+                    unit.setFollowTarget(null);
+                else
+                    unit.setMoveTarget(unit.getFollowTarget().blockPosition());
+            }
         }
 
         // slow regen for monster and piglin units
@@ -1011,7 +1022,8 @@ public interface Unit {
     default void aggroToEnemyIfIdle(Unit aggroTarget) {
         if (((Entity) this).level().isClientSide())
             return;
-        if (isIdle() && !AlliancesServerEvents.isAlliedOrOwned(this.getOwnerName(), aggroTarget.getOwnerName()))
+        if (isIdle() && !AlliancesServerEvents.isAlliedOrOwned(this.getOwnerName(), aggroTarget.getOwnerName())
+                && !com.solegendary.reignofnether.unit.Concealment.isHiddenFrom((Entity) aggroTarget, this.getOwnerName()))
             this.getTargetGoal().setTarget((LivingEntity) aggroTarget);
     }
 

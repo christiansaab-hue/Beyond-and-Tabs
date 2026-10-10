@@ -3591,6 +3591,184 @@ public class SkirmishGameTests {
         });
     }
 
+    // ------------------------------------------------------------------ cover vs. orders (Concealment)
+
+    /**
+     * A direct ATTACK order on a cloaked enemy is refused by the server (a modified client can still send the id):
+     * the attacker gets no target and walks to where the ranger stands instead. Control first: the same order on the
+     * visible ranger does make it the target. Everything runs inside one callback so the ranger's own tick can't
+     * change its cloak in between.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void cloaked_enemy_direct_attack_order_is_refused(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_cloak_order", foeOwner = "gametest_cloak_order_foe";
+        var ranger = com.solegendary.reignofnether.registrars.EntityRegistrar.SHADE_RANGER_UNIT.get().create(level);
+        var attacker = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (ranger == null || attacker == null) {
+            helper.fail("could not create the cloak order units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        ranger.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        attacker.moveTo(at.getX() + 10.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        ranger.setOwnerName(foeOwner);
+        attacker.setOwnerName(owner);
+        level.addFreshEntity(ranger);
+        level.addFreshEntity(attacker);
+        helper.runAfterDelay(3, () -> {
+            try {
+                int[] ids = { attacker.getId() };
+                ranger.setInvisible(false);
+                new com.solegendary.reignofnether.unit.UnitActionItem(owner,
+                        com.solegendary.reignofnether.unit.UnitAction.ATTACK, ranger.getId(), ids).action(level);
+                if (attacker.getTargetGoal().getTarget() != ranger) {
+                    helper.fail("control: an attack order on the visible ranger did not target it");
+                    return;
+                }
+                ranger.setInvisible(true);   // cloaked (ShadeRangerUnit.isCloaked: alive + invisible)
+                if (!com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(ranger, owner)
+                        || com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(ranger, foeOwner)) {
+                    helper.fail("Concealment: a cloaked ranger must be hidden from its enemy and only its enemy");
+                    return;
+                }
+                new com.solegendary.reignofnether.unit.UnitActionItem(owner,
+                        com.solegendary.reignofnether.unit.UnitAction.ATTACK, ranger.getId(), ids).action(level);
+                if (attacker.getTargetGoal().getTarget() != null)
+                    helper.fail("the server let a direct attack order lock onto a cloaked enemy");
+                else if (attacker.getMoveGoal().getMoveTarget() == null)
+                    helper.fail("the refused attack order did not become a move to the cloaked enemy's position");
+                else
+                    helper.succeed();
+            } finally {
+                ranger.discard();
+                attacker.discard();
+            }
+        });
+    }
+
+    /**
+     * Holy Bell breaks thicket cover: a unit hidden in its own thicket is out in the open after the bell (and a cover
+     * pass doesn't re-hide it while the reveal lasts), then hides again once the reveal is over. The ringer is never
+     * added to the level, so it can't reveal the bush just by standing near it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100 + com.solegendary.reignofnether.ability.abilities.HolyBell.REVEAL_TICKS)
+    public static void holy_bell_breaks_thicket_cover(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bell_thicket", foeOwner = "gametest_bell_thicket_foe";
+        openGround(helper, 2, 10, 6, 14);
+        BlockPos spot = helper.absolutePos(new BlockPos(4, 2, 12));
+        if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
+            helper.fail("could not place a thicket at " + spot);
+            return;
+        }
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var architect = com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get().create(level);
+        if (friend == null || architect == null) {
+            helper.fail("could not create the bell/thicket units");
+            com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+            return;
+        }
+        friend.setOwnerName(owner);
+        architect.setOwnerName(foeOwner);
+        friend.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        architect.moveTo(spot.getX() + 10.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(friend);
+        boolean[] done = { false };
+        Runnable cleanup = () -> {
+            done[0] = true;
+            friend.discard();
+            architect.discard();
+            com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+        };
+        helper.runAfterDelay(10, () -> {
+            com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+            if (!com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || !friend.isInvisible()) {
+                helper.fail("precondition: the unit in its own thicket is not hidden");
+                cleanup.run();
+                return;
+            }
+            var rung = com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, foeOwner);
+            com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+            if (!rung.contains(friend)) {
+                helper.fail("Holy Bell skipped a unit hidden in a thicket");
+                cleanup.run();
+            } else if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || friend.isInvisible()
+                    || com.solegendary.reignofnether.unit.Concealment.isHiddenFrom(friend, foeOwner)) {
+                helper.fail("the thicket kept the unit hidden through the Holy Bell reveal");
+                cleanup.run();
+            }
+        });
+        helper.runAfterDelay(10 + com.solegendary.reignofnether.ability.abilities.HolyBell.REVEAL_TICKS / 2, () -> {
+            if (done[0])
+                return;
+            com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+            if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || friend.isInvisible()) {
+                helper.fail("the unit re-hid in the thicket halfway through the Holy Bell reveal");
+                cleanup.run();
+            }
+        });
+        helper.runAfterDelay(20 + com.solegendary.reignofnether.ability.abilities.HolyBell.REVEAL_TICKS, () -> {
+            if (done[0])
+                return;
+            try {
+                com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+                if (!com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend))
+                    helper.fail("the unit never hid again after the Holy Bell reveal ran out");
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /** Hidden is not invulnerable: the Elder Treant's boulder (splash) still hurts a unit hidden in a thicket. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void splash_damage_hits_thicket_hidden_unit(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_splash_hidden", foeOwner = "gametest_splash_hidden_foe";
+        openGround(helper, 8, 8, 12, 12);
+        BlockPos spot = helper.absolutePos(new BlockPos(10, 2, 10));
+        if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
+            helper.fail("could not place a thicket at " + spot);
+            return;
+        }
+        var hidden = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var treant = com.solegendary.reignofnether.registrars.EntityRegistrar.ELDER_TREANT_UNIT.get().create(level);
+        if (hidden == null || treant == null) {
+            helper.fail("could not create the splash test units");
+            com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+            return;
+        }
+        hidden.setOwnerName(owner);
+        treant.setOwnerName(foeOwner);
+        hidden.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        // never added to the level: it's only the boulder's thrower, and can't wander up and see into the bush
+        treant.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() - 12.5, 0, 0);
+        level.addFreshEntity(hidden);
+        helper.runAfterDelay(10, () -> {
+            try {
+                com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+                if (!com.solegendary.reignofnether.blocks.ThicketCover.isHidden(hidden)) {
+                    helper.fail("precondition: the unit in its own thicket is not hidden");
+                    return;
+                }
+                float hp = hidden.getHealth();
+                var hit = com.solegendary.reignofnether.ability.abilities.BoulderToss.impact(level, treant, foeOwner,
+                        new net.minecraft.world.phys.Vec3(hidden.getX(), hidden.getY(), hidden.getZ()));
+                if (!hit.contains(hidden) || (hidden.isAlive() && hidden.getHealth() >= hp))
+                    helper.fail("splash damage skipped a unit hidden in a thicket - hidden must not mean invulnerable");
+                else
+                    helper.succeed();
+            } finally {
+                hidden.discard();
+                treant.discard();
+                com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+            }
+        });
+    }
+
     /** Fire set beside a thicket burns it away within a second or two (and it does not come back). */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void verdant_thicket_burns(GameTestHelper helper) {

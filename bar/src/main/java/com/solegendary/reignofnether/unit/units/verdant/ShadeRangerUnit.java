@@ -56,6 +56,7 @@ public class ShadeRangerUnit extends ThornbowUnit {
 
     private int stillTicks = 0;
     private double lastX = Double.NaN, lastZ = Double.NaN;
+    private long revealedUntil = 0;   // game time; a Holy Bell reveal keeps the cloak off until then
     private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results, reused (server thread)
 
     public ShadeRangerUnit(EntityType<? extends Skeleton> entityType, Level level) {
@@ -106,8 +107,9 @@ public class ShadeRangerUnit extends ThornbowUnit {
         else if (stillTicks < CLOAK_DELAY_TICKS)
             stillTicks++;
         // re-asserted every tick: vanilla resets the invisible flag whenever a potion effect changes
-        boolean want = stillTicks >= CLOAK_DELAY_TICKS
-                || com.solegendary.reignofnether.blocks.ThicketCover.isHidden(this);   // thicket cover wins too
+        boolean want = (stillTicks >= CLOAK_DELAY_TICKS
+                || com.solegendary.reignofnether.blocks.ThicketCover.isHidden(this))   // thicket cover wins too
+                && sl.getGameTime() >= revealedUntil;                                   // ...but not the bell
         if (want != isInvisible()) {
             setInvisible(want);
             if (want)
@@ -124,6 +126,12 @@ public class ShadeRangerUnit extends ThornbowUnit {
             if (level() instanceof ServerLevel sl)
                 sl.sendParticles(ParticleTypes.LARGE_SMOKE, getX(), getY() + 1, getZ(), 6, 0.25, 0.4, 0.25, 0.01);
         }
+    }
+
+    /** Drops its cover now and keeps it from re-cloaking for {@code ticks} (Holy Bell, via Concealment.revealFor). */
+    public void revealFor(int ticks) {
+        revealedUntil = Math.max(revealedUntil, level().getGameTime() + ticks);
+        reveal();
     }
 
     /** Just faded: anyone already shooting at it loses the target (one grid query, only on the transition). */

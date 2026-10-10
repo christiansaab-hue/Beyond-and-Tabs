@@ -78,8 +78,13 @@ public class ThicketCover {
 
     /** One cover pass over every unit on the server. Public for the game test (which can't wait for the cadence). */
     public static void refresh(MinecraftServer server) {
-        if (ThicketBlockEntity.LIVE.isEmpty() && HIDDEN.isEmpty())
-            return;   // no thickets anywhere (most games without a Verdant player): nothing to do
+        if (ThicketBlockEntity.LIVE.isEmpty() && HIDDEN.isEmpty()) {
+            // no thickets anywhere (most games without a Verdant player): nothing to do. Reveals recorded meanwhile
+            // (Shade Ranger shots, Holy Bell) can't matter without a bush to hide in - drop them so they don't pile up
+            if (!REVEALED_UNTIL.isEmpty())
+                REVEALED_UNTIL.clear();
+            return;
+        }
         next.clear();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (!(le instanceof Unit u) || !le.isAlive() || !(le.level() instanceof ServerLevel sl) || sl.getServer() != server)
@@ -128,7 +133,7 @@ public class ThicketCover {
             return false;
         long now = sl.getGameTime();
         if (isEngaged(u)) {
-            REVEALED_UNTIL.put(le.getId(), now + REVEAL_TICKS);
+            extendReveal(le.getId(), now + REVEAL_TICKS);
             return false;
         }
         if (REVEALED_UNTIL.containsKey(le.getId()) && REVEALED_UNTIL.get(le.getId()) > now)
@@ -174,9 +179,20 @@ public class ThicketCover {
 
     /** Drops a unit's cover now, for {@link #REVEAL_TICKS} (it attacked). */
     public static void reveal(LivingEntity le) {
-        REVEALED_UNTIL.put(le.getId(), le.level().getGameTime() + REVEAL_TICKS);
+        revealFor(le, REVEAL_TICKS);
+    }
+
+    /** Drops a unit's cover now and keeps it out of any thicket for {@code ticks} (Holy Bell: Concealment.revealFor). */
+    public static void revealFor(LivingEntity le, int ticks) {
+        extendReveal(le.getId(), le.level().getGameTime() + ticks);
         if (HIDDEN.remove(le.getId()) != null)
             unhide(le);
+    }
+
+    // never shortens a reveal: a 3 s "it fired" must not cut a 6 s Holy Bell reveal short
+    private static void extendReveal(int id, long until) {
+        if (!REVEALED_UNTIL.containsKey(id) || REVEALED_UNTIL.get(id) < until)
+            REVEALED_UNTIL.put(id, until);
     }
 
     // a hit landed by a unit in a thicket (melee or a projectile it fired) gives it away at once, not at the next pass

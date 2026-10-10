@@ -34,6 +34,7 @@ import java.util.Set;
  * Sunforged Kingdom (Royal Architect): <b>Holy Bell</b>. The architect rings a consecrated bell: every enemy unit
  * within {@link #RADIUS} blocks glows for {@link #REVEAL_TICKS} ticks, and the fog of war lifts around each of
  * them for the caster and the caster's allies for the same time (the same server-side reveal RoN uses for archers firing out of the fog).
+ * Rung-out units also lose any cover (Shade Ranger cloak, Verdant thicket) for that time: Concealment.revealFor.
  * BAR's radar pulse, fantasy-first: it answers stealth and flanks around the base, it deals no damage.
  * {@link #CD_SECONDS} s cooldown.
  */
@@ -88,6 +89,9 @@ public class HolyBell extends Ability {
             String o = u.getOwnerName();
             if (o == null || o.isEmpty() || owner.equals(o) || AlliancesServerEvents.isAllied(owner, o))
                 continue;   // neutral creeps aren't hiding from anyone
+            // "nothing hides from the bell": a cloaked Shade Ranger or a unit in a Verdant thicket loses its cover
+            // for the whole reveal, so the glow marks something the caster's side can actually see and shoot
+            com.solegendary.reignofnether.unit.Concealment.revealFor(le, REVEAL_TICKS);
             le.addEffect(new MobEffectInstance(MobEffects.GLOWING, REVEAL_TICKS, 0, false, false));
             // lifts the caster's fog around the enemy (capped sight radius, expires by itself)
             FogOfWarServerEvents.revealRangedUnit(le.getId(), owner, REVEAL_TICKS);

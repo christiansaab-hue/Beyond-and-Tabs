@@ -319,6 +319,18 @@ public class UnitActionItem {
                 }
                 case ATTACK -> {
                     LivingEntity le = (LivingEntity) level.getEntity(unitId);
+                    if (!level.isClientSide() && le != null && Concealment.isHiddenFrom(le, unit.getOwnerName())) {
+                        // the target is cloaked / in a thicket for this unit's side: a direct order on it (a stale
+                        // click, a queued area attack, or a modified client that sent the id anyway) becomes a move
+                        // to where it stands - walking up close is how a thicket gets seen into
+                        // (a repeat order on a target it already had skipped the reset above: drop it here)
+                        if (unit.getTargetGoal() != null && unit.getTargetGoal().getTarget() == le) {
+                            ((Mob) unit).setTarget(null);
+                            unit.getTargetGoal().setTarget(null);
+                        }
+                        unit.setMoveTarget(le.blockPosition());
+                        continue;
+                    }
                     if (unit instanceof AttackerUnit attackerUnit) {
                         if (unit instanceof WorkerUnit && ResourceSources.isHuntableAnimal(le) && Unit.atMaxResources(unit)) {
                             if (level.isClientSide()) {
@@ -376,6 +388,10 @@ public class UnitActionItem {
                 }
                 case FOLLOW -> {
                     LivingEntity livingEntity = (LivingEntity) level.getEntity(unitId);
+                    if (!level.isClientSide() && livingEntity != null && Concealment.isHiddenFrom(livingEntity, unit.getOwnerName())) {
+                        unit.setMoveTarget(livingEntity.blockPosition());   // can't tail what this side can't see
+                        continue;
+                    }
                     if (livingEntity != null) {
                         MiscUtil.addUnitCheckpoint(unit, unitId, true);
                     }
@@ -469,7 +485,16 @@ public class UnitActionItem {
                             (ability.isOffCooldown(unit) || ability.canBypassCooldown(unit)) &&
                             canAffordManaCost(ability, unit)
                         ) {
-                            if (ability.canTargetEntities && this.unitId > 0) {
+                            Entity abilityTarget = ability.canTargetEntities && this.unitId > 0 ? level.getEntity(unitId) : null;
+                            if (abilityTarget != null && !level.isClientSide() && Concealment.isHiddenFrom(abilityTarget, unit.getOwnerName())) {
+                                // an entity-targeted ability can't lock onto a hidden enemy: it is cast at the ground
+                                // where the target stands instead (an ability with no ground form simply does nothing)
+                                ability.use(level, unit, abilityTarget.blockPosition());
+                                usedAbility = ability;
+                                if (ability.oneClickOneUse) {
+                                    break actionableUnitsLoop;
+                                }
+                            } else if (ability.canTargetEntities && this.unitId > 0) {
                                 ability.use(level, unit, (LivingEntity) level.getEntity(unitId));
                                 usedAbility = ability;
                                 if (ability.oneClickOneUse) {

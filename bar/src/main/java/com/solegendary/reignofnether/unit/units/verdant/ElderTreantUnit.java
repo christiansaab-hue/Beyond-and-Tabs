@@ -110,7 +110,7 @@ public class ElderTreantUnit extends SentinelTreantUnit {
         LivingEntity best = null;
         double bestD = max2;
         for (LivingEntity le : UnitGrid.near(sl, getX(), getZ(), BOULDER_RANGE, scratch)) {
-            if (le == this || !le.isAlive() || !isEnemy(owner, le) || ShadeRangerUnit.isCloaked(le))
+            if (le == this || !le.isAlive() || !isEnemy(owner, le) || com.solegendary.reignofnether.unit.Concealment.isConcealed(le))
                 continue;
             double d = le.distanceToSqr(this);
             if (d < bestD && d >= min2) {

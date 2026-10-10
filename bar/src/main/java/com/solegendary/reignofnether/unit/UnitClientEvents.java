@@ -175,10 +175,22 @@ public class UnitClientEvents {
     private static boolean rightClickMoveDeferred = false;
     private static boolean rightClickActionTaken = false;
 
+    /**
+     * Is this unit hidden from the local player - a cloaked Shade Ranger or a unit in a Verdant thicket, seen from
+     * the enemy side (EntityMixin.isInvisibleTo gives its owner and allies a ghost instead)? Such a unit isn't drawn,
+     * so it must not be hoverable, selectable or right-click attackable either: its hitbox would give it away. The
+     * server refuses orders on it too (Concealment); this keeps the cursor honest.
+     */
+    public static boolean isHiddenFromLocalPlayer(LivingEntity e) {
+        return e instanceof Unit && e.isInvisible() && MC.player != null && e.isInvisibleTo(MC.player);
+    }
+
     public static void addPreselectedUnit(LivingEntity unit) {
         if (unit instanceof Player player && (player.isSpectator() || player.isCreative()))
             return;
         if (!FogOfWarClientEvents.isInBrightChunk(unit))
+            return;
+        if (isHiddenFromLocalPlayer(unit))
             return;
         if (unit.isPassenger())
             return;
@@ -193,6 +205,8 @@ public class UnitClientEvents {
         CursorClientEvents.setLeftClickAction(null);
         if (!FogOfWarClientEvents.isInBrightChunk(unit))
             return;
+        if (isHiddenFromLocalPlayer(unit))
+            return;
         if (unit.isPassenger())
             return;
         selectedUnits.add(unit);
@@ -203,6 +217,8 @@ public class UnitClientEvents {
     public static void addSelectedUnit(LivingEntity unit) {
         CursorClientEvents.setLeftClickAction(null);
         if (!FogOfWarClientEvents.isInBrightChunk(unit))
+            return;
+        if (isHiddenFromLocalPlayer(unit))
             return;
         if (unit.isPassenger())
             return;
@@ -660,7 +676,8 @@ public class UnitClientEvents {
             ticksToNextVisCheck = VIS_CHECK_TICKS_MAX;
 
             // prevent selection of units out of view
-            selectedUnits.removeIf(e -> !FogOfWarClientEvents.isInBrightChunk(e));
+            // (an enemy that went under cover - cloak / thicket - drops out of the selection the same way)
+            selectedUnits.removeIf(e -> !FogOfWarClientEvents.isInBrightChunk(e) || isHiddenFromLocalPlayer(e));
         }
 
         // calculate vecs used to hide leaf blocks around units

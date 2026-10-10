@@ -177,7 +177,8 @@ public class AreaCommands {
             if (le.isRemoved() || !le.isAlive() || le.level() != level || !(le instanceof Unit u)
                     || !isEnemyOwner(owner, u.getOwnerName())
                     || !inCircle(centre, radius, le.getX(), le.getY(), le.getZ())
-                    || !visibleTo(player, le.getX(), le.getZ()))
+                    || !visibleTo(player, le.getX(), le.getZ())
+                    || Concealment.isConcealed(le))   // cloaked / in a thicket: not visible to this (enemy) side
                 continue;
             out.add(new Target(le.getX(), le.getY(), le.getZ(), le.getId(), le.blockPosition()));
             if (out.size() >= MAX_TARGETS)
