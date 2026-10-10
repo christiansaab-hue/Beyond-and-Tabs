@@ -439,13 +439,24 @@ public class BotPlayer {
      * Fog) on any unit that carries one: same rule as the commander's signature - only once three or more enemy
      * units are within 12 blocks. The ground-targeted ones (Crypt Tide, Magma Rupture, Withering Fog) are aimed at
      * the nearest of them; the rest are cast where the unit stands. The enemy scan only runs for a unit with a
-     * power off cooldown, so an idle army costs nothing here.
+     * power off cooldown, so an idle army costs nothing here. Sunrise Sortie and Soul Wisps have their own triggers
+     * ({@link #useSortie}, {@link #useWisps}).
      */
     void useFactionPowers(ServerLevel level, List<LivingEntity> mine) {
         for (LivingEntity le : mine) {
             if (!(le instanceof Unit u) || u.getAbilities() == null)
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.SunriseSortie) {
+                    if (a.isOffCooldown(u))
+                        useSortie(level, le, u, a);
+                    continue;
+                }
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.SoulWisps) {
+                    if (a.isOffCooldown(u))
+                        useWisps(level, le, u, a);
+                    continue;
+                }
                 boolean aimed = a instanceof com.solegendary.reignofnether.ability.abilities.CryptTide
                         || a instanceof com.solegendary.reignofnether.ability.abilities.MagmaRupture
                         || a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog;
@@ -481,6 +492,66 @@ public class BotPlayer {
                     a.use(level, u, aimed ? nearest.blockPosition() : le.blockPosition());
             }
         }
+    }
+
+    /**
+     * Sunrise Sortie: charge at the nearest enemy within 14 blocks, but only when three or more enemies stand in
+     * front along that line (a forward cone toward it) - a charge into one straggler wastes a 50 s cooldown.
+     */
+    void useSortie(ServerLevel level, LivingEntity le, Unit u, com.solegendary.reignofnether.ability.Ability a) {
+        double r = com.solegendary.reignofnether.ability.abilities.SunriseSortie.LENGTH + 2;
+        LivingEntity nearest = null;
+        double best = r * r;
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), r, scan)) {
+            if (!isEnemyUnit(other))
+                continue;
+            double d = other.distanceToSqr(le);
+            if (d < best) {
+                best = d;
+                nearest = other;
+            }
+        }
+        if (nearest == null)
+            return;
+        double fx = nearest.getX() - le.getX(), fz = nearest.getZ() - le.getZ();
+        double fl = Math.sqrt(fx * fx + fz * fz);
+        if (fl < 0.5)
+            return;
+        fx /= fl;
+        fz /= fl;
+        int ahead = 0;
+        for (LivingEntity other : scan) {   // still holds the grid query above
+            if (!isEnemyUnit(other) || other.distanceToSqr(le) > r * r)
+                continue;
+            double ox = other.getX() - le.getX(), oz = other.getZ() - le.getZ();
+            double ol = Math.sqrt(ox * ox + oz * oz);
+            if (ol < 0.5 || (ox * fx + oz * fz) / ol >= 0.7)
+                ahead++;
+        }
+        if (ahead >= 3)
+            a.use(level, u, nearest.blockPosition());
+    }
+
+    /** Soul Wisps: whenever the Embalmer is stripping a wreck, or an enemy unit comes within the wisps' reach. */
+    void useWisps(ServerLevel level, LivingEntity le, Unit u, com.solegendary.reignofnether.ability.Ability a) {
+        boolean go = com.solegendary.reignofnether.resources.WreckServerEvents.isReclaiming(le);
+        if (!go) {
+            double r = com.solegendary.reignofnether.ability.abilities.SoulWisps.RADIUS;
+            for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), r, scan))
+                if (isEnemyUnit(other) && other.distanceToSqr(le) <= r * r) {
+                    go = true;
+                    break;
+                }
+        }
+        if (go)
+            a.use(level, u, le.blockPosition());
+    }
+
+    boolean isEnemyUnit(LivingEntity other) {
+        if (!(other instanceof Unit ou) || !other.isAlive())
+            return false;
+        String o = ou.getOwnerName();
+        return o != null && !o.equals(name) && !AlliancesServerEvents.isAllied(name, o);
     }
 
     /**
