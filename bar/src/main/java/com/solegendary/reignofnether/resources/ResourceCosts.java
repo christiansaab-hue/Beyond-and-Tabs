@@ -52,6 +52,10 @@ public class ResourceCosts {
     // Verdant Court
     public static final ResourceCost SEEDSHAPER = new ResourceCost(ID, "SEEDSHAPER");
     public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
+    // Verdant Court T1, slice 2 (design/verdant_court_plan.md)
+    public static final ResourceCost MOONWELL_BEARER = new ResourceCost(ID, "MOONWELL_BEARER");
+    public static final ResourceCost OWL_WATCHER = new ResourceCost(ID, "OWL_WATCHER");
+    public static final ResourceCost HIVE_KEEPER = new ResourceCost(ID, "HIVE_KEEPER");
     public static final ResourceCost LEAFBLADE = new ResourceCost(ID, "LEAFBLADE");
     public static final ResourceCost THORNBOW = new ResourceCost(ID, "THORNBOW");
     public static final ResourceCost SENTINEL_TREANT = new ResourceCost(ID, "SENTINEL_TREANT");
@@ -199,6 +203,7 @@ public class ResourceCosts {
     // ABILITIES
 
     public static final ResourceCost ENCHANT_MAIMING = new ResourceCost(ID, "ENCHANT_MAIMING");
+    public static final ResourceCost VINE_SNARE = new ResourceCost(ID, "VINE_SNARE");   // Verdant Seedshaper trap
     public static final ResourceCost ENCHANT_QUICK_CHARGE = new ResourceCost(ID, "ENCHANT_QUICK_CHARGE");
     public static final ResourceCost ENCHANT_SHARPNESS = new ResourceCost(ID, "ENCHANT_SHARPNESS");
     public static final ResourceCost ENCHANT_MULTISHOT = new ResourceCost(ID, "ENCHANT_MULTISHOT");
@@ -294,6 +299,9 @@ public class ResourceCosts {
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
         SEEDSHAPER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEEDSHAPER);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
+        MOONWELL_BEARER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.MOONWELL_BEARER);
+        OWL_WATCHER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.OWL_WATCHER);
+        HIVE_KEEPER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.HIVE_KEEPER);
         LEAFBLADE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LEAFBLADE);
         THORNBOW.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.THORNBOW);
         SENTINEL_TREANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SENTINEL_TREANT);
@@ -437,6 +445,7 @@ public class ResourceCosts {
         RESEARCH_PILLAGER_CROSSBOWS.bakeValues(ReignOfNetherCommonConfigs.ResearchCosts.RESEARCH_PILLAGER_CROSSBOWS);
         // ******************* ABILITIES ******************* //
         ENCHANT_MAIMING.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_MAIMING);
+        VINE_SNARE.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.VINE_SNARE);
         ENCHANT_QUICK_CHARGE.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_QUICK_CHARGE);
         ENCHANT_SHARPNESS.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_SHARPNESS);
         ENCHANT_MULTISHOT.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_MULTISHOT);

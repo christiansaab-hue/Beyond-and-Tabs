@@ -174,5 +174,6 @@ public enum UnitAction {
     SOUL_WISPS,           // Beyond and Tabs: Gravebound Embalmer reclaim/harass wisps
     LEAF_DASH,            // Beyond and Tabs: Verdant Court Leafblade gap-closing dash
     AWAKEN_THICKET,       // Beyond and Tabs: Verdant Court Elder Druid temporary treant
-    STAG_LEAP             // Beyond and Tabs: Verdant Court Stag Lancer leaping charge
+    STAG_LEAP,            // Beyond and Tabs: Verdant Court Stag Lancer leaping charge
+    PLANT_VINE_SNARE      // Beyond and Tabs: Verdant Court Seedshaper hidden root trap
 }

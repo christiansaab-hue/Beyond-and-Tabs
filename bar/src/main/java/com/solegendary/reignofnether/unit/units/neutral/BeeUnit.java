@@ -168,6 +168,11 @@ public class BeeUnit extends Bee implements Unit, AttackerUnit {
 
     final static public int LIFETIME_TICKS = 20 * 20; // 20s
 
+    // Beyond and Tabs: the Verdant Hive Keeper releases short-lived bees whose stings also poison (anti-swarm).
+    // Summoners set these right after spawning; the defaults keep the beenest-armour bee exactly as it was.
+    public int lifetimeTicks = LIFETIME_TICKS;
+    public int stingPoisonTicks = 0;
+
     public BeeUnit(EntityType<? extends Bee> entityType, Level level) {
         super(entityType, level);
         this.moveControl = new FlyingUnitMoveControl(this);
@@ -202,9 +207,9 @@ public class BeeUnit extends Bee implements Unit, AttackerUnit {
         AttackerUnit.tick(this);
         updateRotation();
 
-        if (isSummoned() && !hasEffectWithDuration(MobEffectRegistrar.LIMITED_LIFESPAN.get()) && tickCount < LIFETIME_TICKS)
-            this.addEffect(new MobEffectInstance(MobEffectRegistrar.LIMITED_LIFESPAN.get(), LIFETIME_TICKS, 0, true, false));
-        if (isSummoned() && tickCount > LIFETIME_TICKS && !isDeadOrDying() && !isRemoved())
+        if (isSummoned() && !hasEffectWithDuration(MobEffectRegistrar.LIMITED_LIFESPAN.get()) && tickCount < lifetimeTicks)
+            this.addEffect(new MobEffectInstance(MobEffectRegistrar.LIMITED_LIFESPAN.get(), lifetimeTicks - tickCount, 0, true, false));
+        if (isSummoned() && tickCount > lifetimeTicks && !isDeadOrDying() && !isRemoved())
             kill();
     }
 
@@ -276,6 +281,8 @@ public class BeeUnit extends Bee implements Unit, AttackerUnit {
         boolean flag = pEntity.hurt(this.damageSources().sting(this), (float)(this.getAttributeValue(AttributeRegistrar.ATTACK_DAMAGE.get())));
         if (flag) {
             this.playSound(SoundEvents.BEE_STING, 1.0F, 1.0F);
+            if (stingPoisonTicks > 0 && pEntity instanceof LivingEntity le && le.isAlive())
+                le.addEffect(new MobEffectInstance(MobEffects.POISON, stingPoisonTicks, 0), this);
         }
         return flag;
     }

@@ -83,7 +83,8 @@ public class BotPlayer {
             return new Kit(Buildings.HEARTWOOD_HALL, null, null,
                 Buildings.METAL_EXTRACTOR_VERDANT, Buildings.WIND_GENERATOR_VERDANT, Buildings.GROVE,
                 null, ProductionItems.SEEDSHAPER,
-                List.of(ProductionItems.LEAFBLADE, ProductionItems.THORNBOW, ProductionItems.SENTINEL_TREANT),
+                List.of(ProductionItems.LEAFBLADE, ProductionItems.THORNBOW, ProductionItems.SENTINEL_TREANT,
+                        ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER),
                 Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT),
                 null, null, Buildings.ENERGY_CONVERTER_VERDANT);
@@ -267,6 +268,9 @@ public class BotPlayer {
                 if (pp.productionQueue.size() < 2)
                     pp.startProductionItem(kit.army().get(rng.nextInt(kit.army().size())));
             }
+
+        // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
+        verdantHabits(level, mine, army, workers, buildings, gameTime, minutes);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too
@@ -483,6 +487,11 @@ public class BotPlayer {
                         useWisps(level, le, u, a);
                     continue;
                 }
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.LeafDash) {
+                    if (a.isOffCooldown(u))
+                        useLeafDash(level, le, u, a);
+                    continue;
+                }
                 boolean aimed = a instanceof com.solegendary.reignofnether.ability.abilities.CryptTide
                         || a instanceof com.solegendary.reignofnether.ability.abilities.MagmaRupture
                         || a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog
@@ -573,6 +582,163 @@ public class BotPlayer {
         }
         if (go)
             a.use(level, u, le.blockPosition());
+    }
+
+    /**
+     * Leaf Dash: close on the nearest enemy ranged unit (archers, casters - what a Leafblade is for) within the
+     * dash's reach, but only one at least 3 blocks off: next to it, the blade just swings.
+     */
+    void useLeafDash(ServerLevel level, LivingEntity le, Unit u, com.solegendary.reignofnether.ability.Ability a) {
+        double r = com.solegendary.reignofnether.ability.abilities.LeafDash.LENGTH + 1;
+        LivingEntity best = null;
+        double bestD = r * r;
+        for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), r, scan)) {
+            if (!(other instanceof com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit) || !isEnemyUnit(other))
+                continue;
+            double d = other.distanceToSqr(le);
+            if (d < 9 || d >= bestD || Math.abs(other.getY() - le.getY()) > 3)
+                continue;
+            bestD = d;
+            best = other;
+        }
+        if (best != null)
+            a.use(level, u, best);
+    }
+
+    // ------------------------------------------------------------------ Verdant Court habits (slice 2)
+
+    /** Game time of the last Vine Snare errand this bot sent (one every 30 s at most). */
+    long lastSnareAt = -1;
+    /** The narrowest point on the way from home toward the enemy, and its "across" direction; recomputed every 5 min. */
+    BlockPos choke = null;
+    double chokeAcrossX = 1, chokeAcrossZ = 0;
+    long chokeAt = -1;
+
+    /**
+     * For any bot whose units carry them (the Verdant Court today): Seedshapers plant a couple of Vine Snares across
+     * the choke point nearest home (from minute 2, up to 2 + 1 per 6 min, max 4), one Owl Watcher hovers over that
+     * choke as a picket, and Moonwell Bearers - not fighters, so they never get army orders - follow the army's
+     * centre. Cheap: one centroid pass over the army and a few checks a think; the choke scan is a few dozen
+     * heightmap reads every 5 minutes.
+     */
+    void verdantHabits(ServerLevel level, List<LivingEntity> mine, List<LivingEntity> army, List<LivingEntity> workers,
+                       List<BuildingPlacement> buildings, long gameTime, long minutes) {
+        // healers follow the army
+        if (!army.isEmpty()) {
+            double cx = 0, cz = 0;
+            for (LivingEntity le : army) { cx += le.getX(); cz += le.getZ(); }
+            BlockPos centre = null;
+            List<LivingEntity> lagging = new ArrayList<>();
+            for (LivingEntity le : mine) {
+                if (!(le instanceof com.solegendary.reignofnether.unit.units.verdant.MoonwellBearerUnit mb))
+                    continue;
+                if (centre == null)
+                    centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
+                BlockPos mt = mb.getMoveGoal() == null ? null : mb.getMoveGoal().getMoveTarget();
+                if (le.distanceToSqr(centre.getX() + 0.5, le.getY(), centre.getZ() + 0.5) > 10 * 10
+                        && (mt == null || mt.distSqr(centre) > 8 * 8))
+                    lagging.add(le);
+            }
+            if (centre != null)
+                order(lagging, UnitAction.MOVE, centre);
+        }
+        if (minutes < 2 || home == null)
+            return;
+        if (choke == null || gameTime - chokeAt > 20 * 60 * 5) {
+            chokeAt = gameTime;
+            findChoke(level);
+        }
+        if (choke == null)
+            return;
+        // one Owl Watcher, parked over the choke
+        if (faction.equals(Factions.VERDANT_COURT)) {
+            LivingEntity owl = null;
+            for (LivingEntity le : mine)
+                if (le instanceof com.solegendary.reignofnether.unit.units.verdant.OwlWatcherUnit)
+                    owl = le;
+            if (owl == null) {
+                for (BuildingPlacement bp : buildings)
+                    if (bp.isBuilt && bp.getBuilding() == kit.armyBuilding() && bp instanceof ProductionPlacement pp) {
+                        boolean queued = false;
+                        for (var item : pp.productionQueue)
+                            if (item.item == ProductionItems.OWL_WATCHER)
+                                queued = true;
+                        if (!queued)
+                            pp.startProductionItem(ProductionItems.OWL_WATCHER);
+                        break;
+                    }
+            } else if (owl instanceof Unit ou && ou.isIdle()
+                    && owl.distanceToSqr(choke.getX() + 0.5, owl.getY(), choke.getZ() + 0.5) > 4 * 4) {
+                order(List.of(owl), UnitAction.MOVE, choke.above(3));
+            }
+        }
+        // snares across the choke
+        int want = (int) Math.min(4, 2 + minutes / 6);
+        int have = com.solegendary.reignofnether.blocks.VineSnareBlockEntity.countOwned(level, name);
+        if (have >= want || (lastSnareAt >= 0 && gameTime - lastSnareAt < 20 * 30))
+            return;
+        for (LivingEntity w : workers) {
+            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w))
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.PlantVineSnare) || !a.isOffCooldown(u))
+                    continue;
+                // across the gap: centre, then 2 blocks either side, then 4
+                int k = have + 1;
+                int side = (k / 2) * 2 * (k % 2 == 0 ? 1 : -1);
+                BlockPos at = choke.offset((int) Math.round(chokeAcrossX * side), 0, (int) Math.round(chokeAcrossZ * side));
+                a.use(level, u, MiscUtil.getHighestNonAirBlock(level, at));
+                lastSnareAt = gameTime;
+                return;
+            }
+        }
+    }
+
+    /**
+     * The choke point toward the nearest enemy: of the points 14..30 blocks out along the line from home, the one
+     * where the walkable ground across the line (columns within a block of the centre's height, no water) is
+     * narrowest. Leaves {@link #choke} null when there is no enemy to face.
+     */
+    void findChoke(ServerLevel level) {
+        BlockPos threat = nearestEnemyBuilding(home);
+        if (threat == null)
+            return;
+        double dx = threat.getX() - home.getX(), dz = threat.getZ() - home.getZ();
+        double len = Math.hypot(dx, dz);
+        if (len < 30)
+            return;
+        dx /= len;
+        dz /= len;
+        double ax = -dz, az = dx;   // across the line
+        BlockPos best = null;
+        int bestWidth = Integer.MAX_VALUE;
+        for (int out = 14; out <= Math.min(30, len - 12); out += 4) {
+            BlockPos c = BlockPos.containing(home.getX() + dx * out, 0, home.getZ() + dz * out);
+            level.getChunk(c.getX() >> 4, c.getZ() >> 4);
+            BlockPos cg = ground(level, c.getX(), c.getZ());
+            if (!level.getFluidState(cg).isEmpty() || !level.getFluidState(cg.above()).isEmpty())
+                continue;
+            int width = 1;
+            for (int dir = -1; dir <= 1; dir += 2)
+                for (int s = 1; s <= 10; s++) {
+                    BlockPos g = ground(level, (int) Math.floor(c.getX() + ax * s * dir), (int) Math.floor(c.getZ() + az * s * dir));
+                    if (Math.abs(g.getY() - cg.getY()) > 1 || !level.getFluidState(g).isEmpty() || !level.getFluidState(g.above()).isEmpty())
+                        break;
+                    width++;
+                }
+            if (width < bestWidth) {
+                bestWidth = width;
+                best = cg;
+            }
+        }
+        choke = best;
+        chokeAcrossX = ax;
+        chokeAcrossZ = az;
+    }
+
+    /** The top solid block of a column from the heightmap (a single read, unlike a scan down from build height). */
+    static BlockPos ground(ServerLevel level, int x, int z) {
+        return new BlockPos(x, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, z);
     }
 
     boolean isEnemyUnit(LivingEntity other) {

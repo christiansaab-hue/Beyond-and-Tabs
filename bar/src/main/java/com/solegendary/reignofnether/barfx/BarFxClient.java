@@ -126,7 +126,7 @@ public final class BarFxClient {
                     case BarFx.DEATH -> {
                         // the flash always shows (it is what says "something died"); debris only within budget
                         boolean full = deaths++ < (busy ? DEATH_BUDGET / 3 : DEATH_BUDGET);
-                        death(e.kind, e.flags & 3, (e.flags >> 2) & 3, e.x, e.y, e.z, e.a, e.b, full);
+                        death(e.kind, BarFx.deathFaction(e.flags), BarFx.deathTier(e.flags), e.x, e.y, e.z, e.a, e.b, full);
                     }
                     case BarFx.SCORCH -> scorchRing(e.x, e.y, e.z, e.a, busy);
                     case BarFx.BUILDING_PART -> buildingPart(e.x, e.y, e.z, (int) e.a);
@@ -297,7 +297,7 @@ public final class BarFxClient {
      * A unit falls. Every death gets a short flash; then, by kind, constructs burst into sparks and leave a smoking
      * wreck, bones scatter, slimes splatter and living things leave a puff of dust. RTS units also throw a puff of
      * faction-tinted debris (Sunforged: gold and iron nuggets in white smoke; Gravebound: bone fragments and rising
-     * soul wisps; Horde: ember sparks in dark smoke) sized by cost tier: T1 small, T2 medium, T3 a proper blast with a
+     * soul wisps; Horde: ember sparks in dark smoke; Verdant: leaves, petals and green sparkles) sized by cost tier: T1 small, T2 medium, T3 a proper blast with a
      * brief light ring. Never any camera shake - a big fight would never stop shaking.
      * full = false (over the per-tick budget): just the flash.
      */
@@ -376,15 +376,49 @@ public final class BarFxClient {
                 }
                 P f = add(FIRE, x, cy, z, .4f, ps, 0xFF8A30); f.vy = 1; f.grow = 1.4f;
             }
+            case BarFx.F_VERDANT -> {
+                // leaves and petals fluttering down, green sparkles and a soft mossy puff: an elf goes back to the
+                // forest rather than bursting. Our own leaf-green / azalea-pink chunks carry the debris budget; a few
+                // vanilla cherry-petal, spore-blossom and happy-villager particles add the flutter and the sparkle
+                chunks(x, cy, z, (bits + 1) / 2, speed * .7f, 0x4E9A3C, 3f);
+                chunks(x, cy, z, bits / 2, speed * .7f, 0xE59AC8, 3f);
+                sparks(x, cy, z, bits, speed * .8f, 0x9CF07A, 0, 0);
+                for (int i = 0; i < puffs; i++) {
+                    P p = smoke(x + rnd(-.3f, .3f), cy, z + rnd(-.3f, .3f), ps, rnd(1.2f, 1.8f), 0x8FB27A, .35f);
+                    p.vy = rnd(.3f, .6f); p.grow = 1.8f;
+                }
+                verdantPetals(tier, x, cy, z, scale);
+            }
             default -> { }
         }
         if (tier >= 3) {
             // a proper blast: bright core, brief light ring along the ground, a scorch where it stood (no shake)
             float g = groundOr(x, y, z);
-            int core = faction == BarFx.F_GRAVEBOUND ? 0x9FF0FF : faction == BarFx.F_HORDE ? 0xFFA040 : 0xFFE0A0;
+            int core = faction == BarFx.F_GRAVEBOUND ? 0x9FF0FF : faction == BarFx.F_HORDE ? 0xFFA040
+                    : faction == BarFx.F_VERDANT ? 0xB8FFB0 : 0xFFE0A0;
             flash(x, cy, z, 1.6f + scale * .6f, .3f, core);
             ring(x, g, z, 3f + scale * 1.2f, .45f, core);
             scorch(x, g, z, 1f + scale * .6f, 30, 0x16120E);
+        }
+    }
+
+    /**
+     * Vanilla leaf / petal / sparkle particles for a Verdant death (counts by tier, so a big fight stays cheap: at most
+     * 12 for a T3, 4 for a T1). They live in the vanilla particle engine, which has its own cap.
+     */
+    static void verdantPetals(int tier, float x, float cy, float z, float scale) {
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null)
+            return;
+        int n = tier >= 3 ? 12 : tier == 2 ? 7 : 4;
+        float r = .4f * scale;
+        for (int i = 0; i < n; i++) {
+            double px = x + rnd(-r, r), py = cy + rnd(-.2f, .5f), pz = z + rnd(-r, r);
+            switch (i % 3) {
+                case 0 -> level.addParticle(net.minecraft.core.particles.ParticleTypes.CHERRY_LEAVES, px, py, pz, 0, 0, 0);
+                case 1 -> level.addParticle(net.minecraft.core.particles.ParticleTypes.SPORE_BLOSSOM_AIR, px, py, pz, 0, 0, 0);
+                default -> level.addParticle(net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, px, py, pz, 0, 0, 0);
+            }
         }
     }
 

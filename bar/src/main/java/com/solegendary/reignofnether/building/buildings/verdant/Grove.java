@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * Verdant Court T1 lab - the <b>Grove</b> (design/verdant_court_plan.md, slice 1): a training glade under a living arch
- * (grove.nbt, tools/gen_structures.py) that trains the Court's T1 army: Leafblades, Thornbows and Sentinel Treants.
+ * (grove.nbt, tools/gen_structures.py) that trains the Court's T1 army: Leafblades, Thornbows, Sentinel Treants, Moonwell Bearers, Hive Keepers and Owl Watchers.
  * Needs a finished Heartwood Hall, as the Barracks needs a Town Centre.
  */
 public class Grove extends ProductionBuilding {
@@ -46,6 +46,10 @@ public class Grove extends ProductionBuilding {
         this.productions.add(ProductionItems.LEAFBLADE, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.THORNBOW, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.SENTINEL_TREANT, Keybindings.abilitySlot3);
+        // slice 2: the rest of the T1 roster
+        this.productions.add(ProductionItems.MOONWELL_BEARER, Keybindings.abilitySlot4);
+        this.productions.add(ProductionItems.HIVE_KEEPER, Keybindings.abilitySlot5);
+        this.productions.add(ProductionItems.OWL_WATCHER, Keybindings.abilitySlot6);
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

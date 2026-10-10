@@ -63,7 +63,7 @@ public final class FactionTraits {
     public final Ambience ambience;
     /** BarFx.N_* nanolathe beam tint. */
     public final byte nanoTint;
-    /** BarFx.F_* death debris (2-bit wire field, all four values taken: new factions use F_NONE until widened). */
+    /** BarFx.F_* death debris (3-bit wire field: F_NONE, four factions, room for three more). */
     public final byte deathDebris;
     public final CommanderDGun.Kind dgunKind;
     /** CommanderAbility.Kind.NONE = the commander gets no signature ability. */
@@ -167,8 +167,8 @@ public final class FactionTraits {
 
     /**
      * Verdant Court: living wood, moss and lanterns in green and silver. Slice 1 (design/verdant_court_plan.md) gives
-     * the Grove Warden its Thornburst cone and Wildstride and the Seedshapers their quick-build extractor; death
-     * debris (the 2-bit wire field is full) and a faction mechanic (Living Terrain, slice 3) stay off.
+     * the Grove Warden its Thornburst cone and Wildstride and the Seedshapers their quick-build extractor; slice 2 its
+     * death debris (leaves, petals and green sparkles). A faction mechanic (Living Terrain, slice 3) stays off.
      */
     public static final FactionTraits VERDANT = new Builder("verdant")
         .accent(0xFF5CD69A)
@@ -180,7 +180,7 @@ public final class FactionTraits {
         .banner(Blocks.GREEN_WOOL.defaultBlockState(), Blocks.LIGHT_GRAY_WOOL.defaultBlockState())
         .scaffold(Blocks.OAK_LOG.defaultBlockState(), Blocks.MOSS_BLOCK.defaultBlockState(), ScaffoldDecor.LANTERNS)
         .ambience(Ambience.SPORES)
-        .fx(BarFx.N_VERDANT, BarFx.F_NONE)
+        .fx(BarFx.N_VERDANT, BarFx.F_VERDANT)
         .commander(CommanderDGun.Kind.THORNBURST, CommanderAbility.Kind.WILDSTRIDE)
         .wreck(Blocks.MOSSY_COBBLESTONE.defaultBlockState(), 1f)
         .extractor(() -> Buildings.METAL_EXTRACTOR_VERDANT)

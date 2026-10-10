@@ -59,6 +59,9 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
         UnitCosts.SEEDSHAPER.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
+        UnitCosts.MOONWELL_BEARER.define(BUILDER);
+        UnitCosts.OWL_WATCHER.define(BUILDER);
+        UnitCosts.HIVE_KEEPER.define(BUILDER);
         UnitCosts.LEAFBLADE.define(BUILDER);
         UnitCosts.THORNBOW.define(BUILDER);
         UnitCosts.SENTINEL_TREANT.define(BUILDER);
@@ -211,6 +214,7 @@ public class ReignOfNetherCommonConfigs {
         //*Abilities*
         BUILDER.comment("Ability Cost Configurations");
         AbilityCosts.ENCHANT_MAIMING.define(BUILDER);
+        AbilityCosts.VINE_SNARE.define(BUILDER);
         AbilityCosts.ENCHANT_QUICK_CHARGE.define(BUILDER);
         AbilityCosts.ENCHANT_SHARPNESS.define(BUILDER);
         AbilityCosts.ENCHANT_MULTISHOT.define(BUILDER);
@@ -260,6 +264,12 @@ public class ReignOfNetherCommonConfigs {
         // Verdant Court (T1, balanced against the other factions' T1 - see ResourceCosts)
         public static final ResourceCostConfigEntry SEEDSHAPER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.SEEDSHAPER, "Seedshaper Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
+        // slice 2: the healer sits between a Thornbow (65m/150e) and the Kingdom's T2 Witch (170m/210e); the owl is the
+        // cheapest scout in the game (25m/40e vs the Scout Dog's 30m/40e) because it cannot fight; the Hive Keeper
+        // prices like the Horde's Headhunter (90m/150e vs 70m/160e)
+        public static final ResourceCostConfigEntry MOONWELL_BEARER = ResourceCostConfigEntry.Unit(70,60,40,30,2, ResourceCosts.MOONWELL_BEARER, "Moonwell Bearer Config");
+        public static final ResourceCostConfigEntry OWL_WATCHER = ResourceCostConfigEntry.Unit(45,0,0,12,1, ResourceCosts.OWL_WATCHER, "Owl Watcher Config");
+        public static final ResourceCostConfigEntry HIVE_KEEPER = ResourceCostConfigEntry.Unit(90,50,20,28,2, ResourceCosts.HIVE_KEEPER, "Hive Keeper Config");
         public static final ResourceCostConfigEntry LEAFBLADE = ResourceCostConfigEntry.Unit(130,0,0,26,2, ResourceCosts.LEAFBLADE, "Leafblade Config");
         public static final ResourceCostConfigEntry THORNBOW = ResourceCostConfigEntry.Unit(80,60,0,24,2, ResourceCosts.THORNBOW, "Thornbow Config");
         public static final ResourceCostConfigEntry SENTINEL_TREANT = ResourceCostConfigEntry.Unit(0,60,240,45,4, ResourceCosts.SENTINEL_TREANT, "Sentinel Treant Config");
@@ -426,6 +436,8 @@ public class ReignOfNetherCommonConfigs {
     }
     public static class AbilityCosts implements Costs {
         public static final ResourceCostConfigEntry ENCHANT_MAIMING = ResourceCostConfigEntry.Ability(0,20, 30, ResourceCosts.ENCHANT_MAIMING, "Maiming Enchantment Config");
+        // 15m/30e: a trap is cheap, but each one is a worker's errand and a player holds at most PlantVineSnare.MAX_PER_PLAYER
+        public static final ResourceCostConfigEntry VINE_SNARE = ResourceCostConfigEntry.Ability(0,20, 10, ResourceCosts.VINE_SNARE, "Vine Snare Config");
         public static final ResourceCostConfigEntry ENCHANT_QUICK_CHARGE = ResourceCostConfigEntry.Ability(0,40, 20, ResourceCosts.ENCHANT_QUICK_CHARGE, "Quick Charge Enchantment Config");
         public static final ResourceCostConfigEntry ENCHANT_SHARPNESS = ResourceCostConfigEntry.Ability(0,40, 60, ResourceCosts.ENCHANT_SHARPNESS, "Sharpness Enchantment Config");
         public static final ResourceCostConfigEntry ENCHANT_MULTISHOT = ResourceCostConfigEntry.Ability(0,70, 35, ResourceCosts.ENCHANT_MULTISHOT, "Multishot Enchantment Config");

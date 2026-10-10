@@ -169,6 +169,30 @@ powers. Tier 3 stays off the Heartwood Hall and the bot never researches it (nul
 Not done: Wisp Choir, Bloom Priestess, Storm Oak, Great Elk Herd; own portraits for the T2 units (recoloured
 slice-1 skins and a drawn stag icon for now).
 
+### Slice 2 status (branch `verdant-slice-2`)
+
+Implemented (all trained at the Grove, slots 4-6, or planted by a Seedshaper):
+- **Moonwell Bearer** (`MoonwellBearerUnit`, witch body holding a soul lantern, thin copy of WitchUnit): non-attacker;
+  every second heals the 3 most hurt friendly units within 6 blocks by 2 HP (night: 8 blocks, 3.5 HP). Never foes,
+  never itself. 100m/150e.
+- **Owl Watcher** (`OwlWatcherUnit`, grey vanilla parrot - Alex's Mobs has no owl): silent low flyer on the BeeUnit
+  flight plumbing, sight 28, no attack, scout (left out of army counts). 25m/40e, the cheapest unit in the game.
+- **Hive Keeper** (`HiveKeeperUnit extends VindicatorUnit`, honey-and-moss texture): weak melee; when an enemy is within
+  10 blocks it releases 3 summoned `BeeUnit`s (8 s life, poison-on-sting, population-free, no wreck), then a 12 s
+  refill. `BeeUnit` gained `lifetimeTicks` / `stingPoisonTicks` (defaults keep the beenest-armour bee unchanged). 90m/150e.
+- **Vine Snare** (`PlantVineSnare` ability on every Seedshaper, hotkey 8; `VineSnareBlock` + block entity + renderer):
+  15m/30e paid on planting; the Seedshaper walks to the spot if needed. The block has no model, shape or collision;
+  only its owner and allies see it (BER). The first enemy walking unit inside it gets Slowness VII for 3 s and the
+  snare is removed. Max 6 per player (`VineSnareBlockEntity.LIVE`).
+- **Death debris**: the death-FX faction field is now 3 bits (`BarFx.deathFlags/deathFaction/deathTier`, tier moved to
+  bits 3-4); `F_VERDANT` = leaf-green and azalea-pink chunks, green sparks, a mossy puff and a few vanilla
+  cherry-petal / spore-blossom / happy-villager particles (`BarFxClient.verdantPetals`).
+- **Bot**: Leaf Dash onto the nearest enemy ranged unit 3-9 blocks away (`useLeafDash`); army mix adds Hive Keeper and
+  Moonwell Bearer; Bearers follow the army centre; from minute 2 it computes the narrowest crossing 14-30 blocks toward
+  the nearest enemy (`findChoke`), keeps one Owl Watcher over it and has idle Seedshapers plant 2-4 snares across it.
+- GameTests: `verdant_moonwell_heals_friend_not_foe`, `verdant_vine_snare_roots_first_enemy_and_is_spent`,
+  `verdant_hive_keeper_bees_sting_a_foe`, `death_fx_packet_carries_all_four_factions`.
+
 ## 4. Later slices
 
 | Slice | Content | Notes |

@@ -64,6 +64,11 @@ import java.util.List;
  */
 public class SeedshaperUnit extends Vindicator implements Unit, WorkerUnit, AttackerUnit, ArmSwingingUnit {
     public static final Abilities ABILITIES = new Abilities();
+    static {
+        // slice 2: every Seedshaper can plant Vine Snares (hotkey8: the Court's build menu uses slots 1/6 and 5-7)
+        ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.PlantVineSnare(),
+                com.solegendary.reignofnether.keybinds.Keybindings.hotkey8);
+    }
 
     //region
     @Override
