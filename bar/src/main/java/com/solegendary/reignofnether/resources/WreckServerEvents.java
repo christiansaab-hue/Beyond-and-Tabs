@@ -257,7 +257,8 @@ public class WreckServerEvents {
             }
             if (nearest == null)
                 continue;
-            float want = Math.min(metalOf(nearest), worker.getBuildPower() * RECLAIM_PER_POWER * factionReclaim(u) * seconds);
+            float want = Math.min(metalOf(nearest), worker.getBuildPower() * RECLAIM_PER_POWER * factionReclaim(u)
+                * com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(le) * seconds);
             float got = EconomyServerEvents.addReclaimedMetal(u.getOwnerName(), want);
             if (got <= 0)
                 continue;

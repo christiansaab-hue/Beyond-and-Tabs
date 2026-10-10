@@ -169,5 +169,7 @@ public enum UnitAction {
     TOTEM_OF_THE_PACK,    // Beyond and Tabs: Horde Bonewright wolf totem
     MAGMA_RUPTURE,        // Beyond and Tabs: Horde Blaze ground-crack eruption
     HOLY_BELL,            // Beyond and Tabs: Sunforged Royal Architect reveal pulse
-    WITHERING_FOG         // Beyond and Tabs: Gravebound Bone Dragon lingering fog line
+    WITHERING_FOG,        // Beyond and Tabs: Gravebound Bone Dragon lingering fog line
+    SUNRISE_SORTIE,       // Beyond and Tabs: Sunforged Lord Marshal line charge
+    SOUL_WISPS            // Beyond and Tabs: Gravebound Embalmer reclaim/harass wisps
 }

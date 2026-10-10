@@ -1,5 +1,8 @@
 package com.solegendary.reignofnether.unit.units.monsters;
 
+import com.solegendary.reignofnether.ability.Abilities;
+import com.solegendary.reignofnether.ability.abilities.SoulWisps;
+import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 
@@ -18,6 +21,25 @@ import javax.annotation.Nullable;
 public class EmbalmerUnit extends ZombieVillagerUnit {
 
     public static final float BUILD_POWER = 2.0f;
+
+    // ZombieVillagerUnit clones its shared static set, so adding to that would give every Gravedigger the wisps: the
+    // Embalmer keeps its own. No initializer on purpose - ZombieVillagerUnit's constructor fills it through
+    // updateAbilityButtons() before this class' field initializers would run, and one would wipe it again.
+    private Abilities embalmerAbilities;
+
+    @Override
+    public void updateAbilityButtons() {
+        super.updateAbilityButtons();
+        embalmerAbilities = ZombieVillagerUnit.ABILITIES.clone();
+        embalmerAbilities.add(new SoulWisps(), Keybindings.abilitySlot1);
+    }
+
+    @Override
+    public Abilities getAbilities() {
+        if (embalmerAbilities == null)
+            updateAbilityButtons();
+        return embalmerAbilities;
+    }
 
     public EmbalmerUnit(EntityType<? extends Vindicator> entityType, Level level) {
         super(entityType, level);

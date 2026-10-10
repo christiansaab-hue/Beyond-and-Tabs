@@ -1470,6 +1470,124 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Sunrise Sortie: the Lord Marshal (and its melee escort) charges forward along the aimed line, hurts the enemy
+     * it runs through, and leaves a friend standing on the path alone. The charge is stepped by hand.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void sunrise_sortie_charges_through_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_sunrise_sortie";
+        var marshal = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+        var escort = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.PILLAGER_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (marshal == null || escort == null || friend == null || foe == null) {
+            helper.fail("could not create sunrise sortie units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(1, 2, 7));
+        marshal.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        escort.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 2.5, 0, 0);
+        friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        marshal.setOwnerName(owner);
+        escort.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName("gametest_sunrise_sortie_foe");
+        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(marshal, escort, friend, foe))
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(marshal);
+        if (marshal.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.SunriseSortie))
+            helper.fail("the Sunforged commander has no Sunrise Sortie");
+        helper.runAfterDelay(3, () -> {
+            float foeHp = foe.getHealth(), friendHp = friend.getHealth();
+            double x0 = marshal.getX();
+            var charge = com.solegendary.reignofnether.ability.abilities.SunriseSortie.begin(level, marshal, owner,
+                new net.minecraft.world.phys.Vec3(1, 0, 0));
+            // stepped by hand: the test must not depend on the server tick running the charge
+            com.solegendary.reignofnether.ability.abilities.SunriseSortie.cancel(charge);
+            for (int i = 0; i < com.solegendary.reignofnether.ability.abilities.SunriseSortie.DURATION_TICKS; i++)
+                com.solegendary.reignofnether.ability.abilities.SunriseSortie.step(charge);
+            try {
+                if (!charge.riders.contains(escort))
+                    helper.fail("the melee escort did not join the sortie");
+                if (charge.riders.contains(friend))
+                    helper.fail("a ranged unit was swept into the melee sortie");
+                if (marshal.getX() - x0 < 8)
+                    helper.fail("the Marshal only charged " + (marshal.getX() - x0) + " blocks");
+                if (foe.isAlive() && foe.getHealth() >= foeHp)
+                    helper.fail("Sunrise Sortie did not hurt the enemy on its path");
+                if (friend.getHealth() < friendHp)
+                    helper.fail("Sunrise Sortie hurt a friendly unit on its path");
+            } finally {
+                for (var e : List.<net.minecraft.world.entity.LivingEntity>of(marshal, escort, friend, foe))
+                    e.discard();
+            }
+            helper.succeed();
+        });
+    }
+
+    /** Soul Wisps: Gravebound workers by the Embalmer reclaim faster, the wisps lash an enemy in reach and never a friend. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void soul_wisps_boost_reclaim_and_hit_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_soul_wisps";
+        var embalmer = com.solegendary.reignofnether.registrars.EntityRegistrar.EMBALMER_UNIT.get().create(level);
+        var digger = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get().create(level);
+        var farDigger = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.PILLAGER_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (embalmer == null || digger == null || farDigger == null || friend == null || foe == null) {
+            helper.fail("could not create soul wisps units");
+            return;
+        }
+        // the wisps live on the Embalmer's own ability set, not on the shared Gravedigger one
+        if (embalmer.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.SoulWisps))
+            helper.fail("the Embalmer has no Soul Wisps");
+        if (digger.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.SoulWisps))
+            helper.fail("a plain Gravedigger got the Embalmer's wisps");
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        embalmer.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        digger.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        farDigger.moveTo(at.getX() + 10.5, at.getY(), at.getZ() + 10.5, 0, 0);
+        // the friend stands closer than the foe: a pulse that took the nearest unit instead of the nearest enemy fails
+        friend.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 2.5, 0, 0);
+        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 4.5, 0, 0);
+        embalmer.setOwnerName(owner);
+        digger.setOwnerName(owner);
+        farDigger.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName("gametest_soul_wisps_foe");
+        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(embalmer, digger, farDigger, friend, foe))
+            level.addFreshEntity(e);
+        helper.runAfterDelay(3, () -> {
+            float before = com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(digger);
+            float foeHp = foe.getHealth(), friendHp = friend.getHealth(), diggerHp = digger.getHealth();
+            var w = com.solegendary.reignofnether.ability.abilities.SoulWisps.summon(level, embalmer, owner);
+            try {
+                if (com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(digger) <= before)
+                    helper.fail("Soul Wisps did not speed up a Gravebound worker's reclaim");
+                if (com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(embalmer) <= 1f)
+                    helper.fail("Soul Wisps did not speed up the Embalmer's own reclaim");
+                if (com.solegendary.reignofnether.ability.abilities.SoulWisps.reclaimMultiplier(farDigger) != 1f)
+                    helper.fail("Soul Wisps sped up a worker far out of reach");
+                var hit = com.solegendary.reignofnether.ability.abilities.SoulWisps.pulse(w);
+                if (hit != foe)
+                    helper.fail("the wisps did not lash the enemy in reach");
+                if (foe.isAlive() && foe.getHealth() >= foeHp)
+                    helper.fail("the wisps did not hurt the enemy");
+                if (friend.getHealth() < friendHp || digger.getHealth() < diggerHp)
+                    helper.fail("the wisps hurt a friendly unit");
+            } finally {
+                com.solegendary.reignofnether.ability.abilities.SoulWisps.dispel(w);
+                for (var e : List.<net.minecraft.world.entity.LivingEntity>of(embalmer, digger, farDigger, friend, foe))
+                    e.discard();
+            }
+            helper.succeed();
+        });
+    }
+
+    /**
      * Map drawing (Alt-drag lines / labels): the server allows 10 drawings per 5 s per player and relays each one to
      * the sender and their allies only. Uses its own limiter instance and unique names, so it can't collide with
      * other tests or real players.

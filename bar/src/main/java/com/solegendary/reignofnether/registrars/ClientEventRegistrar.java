@@ -135,6 +135,8 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BastionAegis.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.WitheringFog.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SunriseSortie.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SoulWisps.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PatchQuickBuildClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.AreaCommandClientEvents.class);
