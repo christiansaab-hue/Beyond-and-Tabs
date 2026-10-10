@@ -440,7 +440,10 @@ public class SkirmishGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int y = 230;
-        int cx = base.getX() - 40, cz = base.getZ() + 40;   // away from the other platform tests
+        // in this test's own column, at its own height: an offset (it was -40/+40) lands in whichever arena the grid
+        // puts there, and once the test count shifted the grid this platform sat over the stamped-patch test's centre
+        // and broke its heightmap (solidTop 230)
+        int cx = base.getX(), cz = base.getZ();
         for (int dx = -8; dx <= 8; dx++)
             for (int dz = -8; dz <= 8; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
