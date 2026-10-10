@@ -115,6 +115,16 @@ public class NonUnitServerEvents {
         if (!(le instanceof Unit) && evt.getNewTarget() instanceof Unit unit)
             if (Factions.getFaction(unit).equals(getNonUnitFaction(le)))
                 evt.setCanceled(true);
+
+        // wildlife and stray mobs never go for a commander: with commanderDefeat on, losing it loses the match, and
+        // neutralAggro turns every wild hunter near a unit (Alex's Mobs roadrunners, rattlesnakes, emus, bears...)
+        // onto the closest unit - a roadrunner wandering into a base must not decide a 1v1. Only player-owned units
+        // (and an Evoker's vexes) may hunt one; the commander can still fight wildlife, it just won't be chased.
+        if (!evt.getEntity().level().isClientSide() && evt.getNewTarget() != null
+                && com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(evt.getNewTarget())
+                && !(le instanceof Unit)
+                && !(le instanceof Vex vex && vex.getOwner() instanceof Unit))
+            evt.setCanceled(true);
     }
 
     private static boolean shouldMobBeAggressive(Mob mob) {

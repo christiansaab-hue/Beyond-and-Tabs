@@ -937,10 +937,39 @@ public class SkirmishGameTests {
                 maxUnits[i] = Math.max(maxUnits[i], soakUnits(names.get(i)).size());
             }
         };
+        // a fresh Runnable per sample: GameTestInfo keys its delayed tasks by the Runnable itself, so scheduling the
+        // same instance 239 times kept only the last one (the "max" counts were really just the final state)
         for (int t = 20; t < SOAK_TICKS; t += 20)
-            helper.runAfterDelay(t, sample);
+            helper.runAfterDelay(t, new Runnable() {
+                @Override
+                public void run() {
+                    sample.run();
+                }
+            });
+        // how the soak sides lose units (cause, killer, place, time; commander flagged) - a failure says why a side
+        // stalled. Capped, and unregistered when the test ends.
+        long t0 = level.getGameTime();
+        List<String> deaths = java.util.Collections.synchronizedList(new ArrayList<>());
+        java.util.function.Consumer<net.minecraftforge.event.entity.living.LivingDeathEvent> onDeath = evt -> {
+            if (evt.getEntity().level() != level || deaths.size() >= 6
+                    || !(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    || !names.contains(u.getOwnerName()))
+                return;
+            var src = evt.getSource();
+            var killer = src.getEntity();
+            deaths.add(u.getOwnerName().replace("gametest_soak_", "")
+                + (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(evt.getEntity()) ? " COMMANDER " : " ")
+                + net.minecraft.world.entity.EntityType.getKey(evt.getEntity().getType()).getPath()
+                + " t" + (level.getGameTime() - t0) + " " + src.getMsgId()
+                + (killer != null ? " by " + net.minecraft.world.entity.EntityType.getKey(killer.getType())
+                    + (killer instanceof com.solegendary.reignofnether.unit.interfaces.Unit ku ? "(" + ku.getOwnerName() + ")" : "") : "")
+                + " at " + evt.getEntity().blockPosition().toShortString());
+        };
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
+            false, net.minecraftforge.event.entity.living.LivingDeathEvent.class, onDeath);
         helper.runAfterDelay(SOAK_TICKS, () -> {
             sample.run();
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
             List<String> problems = new ArrayList<>();
             for (int i = 0; i < 2; i++) {
                 String n = names.get(i);
@@ -950,8 +979,11 @@ public class SkirmishGameTests {
                 // capitol + at least two more: a bot that stops after its capitol has stalled (the old bad-patch bug)
                 if (maxBuildings[i] < 3 || maxUnits[i] <= startUnits[i])
                     problems.add(n + " stalled (buildings " + maxBuildings[i] + ", units "
-                        + startUnits[i] + " -> " + maxUnits[i] + ")");
+                        + startUnits[i] + " -> " + maxUnits[i] + (com.solegendary.reignofnether.player.PlayerServerEvents
+                            .isRTSPlayer(n) ? "" : ", defeated") + ")");
             }
+            if (!problems.isEmpty() && !deaths.isEmpty())
+                problems.add("deaths " + deaths);
             ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} buildings {} units {} (start {}), {} buildings {} units {} (start {})",
                 SOAK_TICKS, kingdom, maxBuildings[0], maxUnits[0], startUnits[0], grave, maxBuildings[1], maxUnits[1],
                 startUnits[1]);
@@ -2242,6 +2274,52 @@ public class SkirmishGameTests {
                 e.discard();
             helper.succeed();
         });
+    }
+
+    /**
+     * Wildlife never hunts a commander: neutralAggro points every wild hunter (Alex's Mobs roadrunners, rattlesnakes...)
+     * at the closest unit, and a commander killed by one lost a 1v1 to a bird (the flaky bot soak). A wild wolf may
+     * still go for an ordinary unit, and an enemy unit may still target the commander.
+     */
+    @GameTest(template = ARENA)
+    public static void wildlife_does_not_hunt_commanders(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var reg = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get();
+        var commander = reg.create(level);
+        var grunt = reg.create(level);
+        var foe = reg.create(level);
+        var wolf = net.minecraft.world.entity.EntityType.WOLF.create(level);
+        if (commander == null || grunt == null || foe == null || wolf == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        commander.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        grunt.moveTo(at.getX() + 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 2.5, 0, 0);
+        wolf.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        commander.setOwnerName("gametest_wild_cmdr");
+        grunt.setOwnerName("gametest_wild_cmdr");
+        foe.setOwnerName("gametest_wild_foe");
+        for (var e : List.<net.minecraft.world.entity.Entity>of(commander, grunt, foe, wolf))
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(commander);
+        wolf.setTarget(commander);
+        net.minecraft.world.entity.LivingEntity wolfOnCommander = wolf.getTarget();
+        wolf.setTarget(grunt);
+        net.minecraft.world.entity.LivingEntity wolfOnGrunt = wolf.getTarget();
+        foe.setTarget(commander);
+        net.minecraft.world.entity.LivingEntity foeOnCommander = foe.getTarget();
+        for (var e : List.<net.minecraft.world.entity.Entity>of(commander, grunt, foe, wolf))
+            e.discard();
+        if (wolfOnCommander == commander)
+            helper.fail("a wild wolf was allowed to target a commander");
+        else if (wolfOnGrunt != grunt)
+            helper.fail("a wild wolf could not target an ordinary unit (the guard is too broad)");
+        else if (foeOnCommander != commander)
+            helper.fail("an enemy unit could not target the commander");
+        else
+            helper.succeed();
     }
 
     static ResourceLocation rl(String path) {
