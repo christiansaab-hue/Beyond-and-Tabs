@@ -204,6 +204,14 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_colossus_unit").toString()));
 
+    // Verdant Court T3: the golem body at the walker's scale, so its hitbox matches the tree you see
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit>> WORLD_TREE_WALKER_UNIT = ENTITIES.register("world_tree_walker_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.SCALE,
+                           EntityType.IRON_GOLEM.getHeight() * com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "world_tree_walker_unit").toString()));
+
     // Verdant Court (design/verdant_court_plan.md, slice 1)
     public static final RegistryObject<EntityType<SeedshaperUnit>> SEEDSHAPER_UNIT = ENTITIES.register("seedshaper_unit",
             () -> EntityType.Builder.of(SeedshaperUnit::new, MobCategory.CREATURE)
@@ -599,6 +607,7 @@ public class EntityRegistrar {
             case WindcallerProd.itemName -> EntityRegistrar.WINDCALLER_UNIT.get();
             case IronGolemProd.itemName -> EntityRegistrar.IRON_GOLEM_UNIT.get();
             case com.solegendary.reignofnether.unit.units.villagers.SunColossusProd.itemName -> EntityRegistrar.SUN_COLOSSUS_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerProd.itemName -> EntityRegistrar.WORLD_TREE_WALKER_UNIT.get();
             case SeedshaperProd.itemName -> EntityRegistrar.SEEDSHAPER_UNIT.get();
             case FoxCourierProd.itemName -> EntityRegistrar.FOX_COURIER_UNIT.get();
             case MoonwellBearerProd.itemName -> EntityRegistrar.MOONWELL_BEARER_UNIT.get();

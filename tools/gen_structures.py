@@ -585,6 +585,107 @@ def circle_of_elders():
     return s
 
 
+def heart_of_the_wild():
+    """The Court's T3 lab: a giant hollow elder tree, a living cathedral. A ring-shaped trunk of oak wood (radius ~3.5)
+    rises from a mossy stone plinth with a tall pointed arch at -z; inside, a moss nave round a froglight heart and a
+    moonwell basin and lanterns standing on mossy walls. Mangrove roots
+    buttress the trunk like flying buttresses; four great boughs at y=11 carry a huge azalea crown (flowering every
+    few leaves) with froglights glowing through it. Nothing hangs (the build order runs bottom-up). 15 x 19 x 15."""
+    W, H = 15, 19
+    s = Structure(W, H, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            d = ((x - c) ** 2 + (z - c) ** 2) ** 0.5
+            if edge:
+                s.set(x, 0, z, "mossy_stone_bricks")
+            elif d <= 2.2:
+                s.set(x, 0, z, "calcite")                # the silver floor of the nave
+            else:
+                s.set(x, 0, z, "moss_block")
+    for z in range(0, c - 2):
+        s.set(c, 0, z, "calcite")                        # silver path in to the arch
+    s.set(c, 0, c, "verdant_froglight", axis="y")       # the heart of the wild
+    s.set(c, 1, c, "water_cauldron", level="3")          # moonwell basin over the heart
+    # the hollow trunk: a ring of oak wood, flaring at the foot and narrowing as it climbs
+    for y in range(1, 12):
+        r_out = 4.2 if y <= 2 else 3.8 if y <= 7 else 3.3
+        r_in = r_out - 1.3
+        for x in range(W):
+            for z in range(W):
+                d = ((x - c) ** 2 + (z - c) ** 2) ** 0.5
+                if r_in < d <= r_out:
+                    # the pointed arch at -z: 3 wide up to y=5, 1 wide at y=6
+                    if z < c and abs(x - c) <= 1 and y <= (6 if x == c else 5):
+                        continue
+                    s.set(x, y, z, "oak_wood", axis="y")
+    # the arch frame: stripped wood round the opening, a froglight keystone
+    for y in range(1, 6):
+        for x in (c - 2, c + 2):
+            for z in range(0, c):
+                if (x, y, z) in s.blocks:
+                    s.set(x, y, z, "stripped_oak_wood", axis="y")
+                    break
+    for z in range(0, c):
+        if (c, 7, z) in s.blocks:
+            s.set(c, 7, z, "verdant_froglight", axis="y")
+            break
+    # windows of light: froglights set into the trunk wall on three sides
+    for (x, z) in [(c + 4, c), (c - 4, c), (c, c + 4)]:
+        for y in (4, 8):
+            xx = x - (1 if x > c else -1 if x < c else 0) * (1 if y == 8 else 0)
+            zz = z - (1 if z > c else 0) * (1 if y == 8 else 0)
+            if (xx, y, zz) in s.blocks:
+                s.set(xx, y, zz, "verdant_froglight", axis="y")
+    # inside the nave: lanterns standing on mossy walls round the basin
+    for (dx, dz) in [(-2, 0), (2, 0), (0, 2), (-1, 2), (1, 2)]:
+        x, z = c + dx, c + dz
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "mossy_cobblestone_wall")
+            s.set(x, 2, z, "lantern", hanging="false", waterlogged="false")
+    # buttress roots splaying from the trunk foot to the plinth corners and sides
+    for (dx, dz) in [(1, 1), (-1, 1), (1, -1), (-1, -1), (1, 0), (-1, 0), (0, 1)]:
+        for i in range(4, 7):
+            x, z = c + dx * i, c + dz * i
+            if 0 < x < W - 1 and 0 < z < W - 1:
+                y = max(1, 3 - (i - 4))
+                for yy in range(1, y + 1):
+                    if (x, yy, z) not in s.blocks:
+                        s.set(x, yy, z, "mangrove_roots", waterlogged="false")
+    # crown of the trunk: a solid wooden cap at y=12 the boughs grow from
+    for x in range(W):
+        for z in range(W):
+            if ((x - c) ** 2 + (z - c) ** 2) ** 0.5 <= 3.3:
+                s.set(x, 12, z, "oak_wood", axis="y")
+    # four great boughs reaching out at y=12-13
+    for (dx, dz, ax) in [(1, 0, "x"), (-1, 0, "x"), (0, 1, "z"), (0, -1, "z")]:
+        for i in range(3, 7):
+            s.set(c + dx * i, 12 + (1 if i >= 5 else 0), c + dz * i, "oak_log", axis=ax)
+    # the crown: a huge dome of azalea from y=13, with froglights glowing through it
+    for y, r in [(13, 6.6), (14, 7.0), (15, 6.6), (16, 5.6), (17, 4.0), (18, 2.2)]:
+        for x in range(W):
+            for z in range(W):
+                d = ((x - c) ** 2 + (z - c) ** 2) ** 0.5
+                if d <= r and (x, y, z) not in s.blocks:
+                    leaf = "flowering_azalea_leaves" if (x * 7 + z * 3 + y) % 4 == 0 else "azalea_leaves"
+                    s.set(x, y, z, leaf, **LEAF)
+    for (x, z) in [(c + 4, c + 3), (c - 4, c - 3), (c - 3, c + 4), (c + 3, c - 4), (c, c)]:
+        s.set(x, 15, z, "verdant_froglight", axis="y")
+    # moss carpet and ferns on the lawn round the tree
+    for (x, z) in [(2, 3), (12, 3), (2, 11), (12, 11), (3, 2), (11, 12)]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "moss_carpet")
+    for (x, z) in [(1, 7), (13, 7), (7, 13), (1, 1), (13, 13)]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "fern")
+    for (x, z) in [(2, 1), (12, 1)]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "flowering_azalea")
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -599,3 +700,4 @@ if __name__ == "__main__":
         heartwood_hall().write(f"{out}/heartwood_hall.nbt")
         grove().write(f"{out}/grove.nbt")
         circle_of_elders().write(f"{out}/circle_of_elders.nbt")
+        heart_of_the_wild().write(f"{out}/heart_of_the_wild.nbt")

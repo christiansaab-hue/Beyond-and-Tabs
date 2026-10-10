@@ -76,9 +76,8 @@ public class BotPlayer {
                 Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,
                 List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER),
                 Buildings.CASTLE, ProductionItems.SUN_COLOSSUS, Buildings.ENERGY_CONVERTER_VILLAGERS);
-        // the Verdant Court has T1 and T2 so far (slices 1 and 4): no farm, house, tower or T3 yet - every use of those
-        // below checks for null, so the bot techs to its Circle of Elders like the others but never researches Tier 3
-        // (fieldExperimentals stops at a null T3 building), a dead end with nothing to unlock
+        // the Verdant Court has no farm, house or tower yet - every use of those below checks for null; it techs to its
+        // Circle of Elders and then, like the others, to the Heart of the Wild and the World Tree Walker
         if (faction.equals(Factions.VERDANT_COURT))
             return new Kit(Buildings.HEARTWOOD_HALL, null, null,
                 Buildings.METAL_EXTRACTOR_VERDANT, Buildings.WIND_GENERATOR_VERDANT, Buildings.GROVE,
@@ -87,7 +86,7 @@ public class BotPlayer {
                         ProductionItems.HIVE_KEEPER, ProductionItems.MOONWELL_BEARER),
                 Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
                 List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT),
-                null, null, Buildings.ENERGY_CONVERTER_VERDANT);
+                Buildings.HEART_OF_THE_WILD, ProductionItems.WORLD_TREE_WALKER, Buildings.ENERGY_CONVERTER_VERDANT);
         return null;
     }
 

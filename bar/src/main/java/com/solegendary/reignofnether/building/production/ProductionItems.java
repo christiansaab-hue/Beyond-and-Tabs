@@ -41,6 +41,7 @@ public class ProductionItems {
     public static final WindcallerProd WINDCALLER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "windcaller"), new WindcallerProd());
     public static final SlimeProd SLIME = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "slime"), new SlimeProd());
     public static final WardenProd WARDEN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "warden"), new WardenProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerProd WORLD_TREE_WALKER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "world_tree_walker"), new com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerProd());   // Verdant T3
     public static final com.solegendary.reignofnether.unit.units.villagers.SunColossusProd SUN_COLOSSUS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_colossus"), new com.solegendary.reignofnether.unit.units.villagers.SunColossusProd());
     // Verdant Court
     public static final com.solegendary.reignofnether.unit.units.verdant.SeedshaperProd SEEDSHAPER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seedshaper"), new com.solegendary.reignofnether.unit.units.verdant.SeedshaperProd());
@@ -193,6 +194,7 @@ public class ProductionItems {
         ELDER_TREANT,
         WAR_MAMMOTH,
         SUN_COLOSSUS,
+        WORLD_TREE_WALKER,
         SEEDSHAPER,
         FOX_COURIER,
         MOONWELL_BEARER,

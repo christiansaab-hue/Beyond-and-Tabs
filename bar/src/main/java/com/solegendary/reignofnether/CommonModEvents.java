@@ -66,6 +66,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.WINDCALLER_UNIT.get(), WindcallerUnit.createAttributes().build());
         evt.put(EntityRegistrar.IRON_GOLEM_UNIT.get(), IronGolemUnit.createAttributes().build());
         evt.put(EntityRegistrar.SUN_COLOSSUS_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit.createAttributes().build());
+        evt.put(EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.createAttributes().build());
         // Verdant Court
         evt.put(EntityRegistrar.SEEDSHAPER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SeedshaperUnit.createAttributes().build());
         evt.put(EntityRegistrar.FOX_COURIER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.FoxCourierUnit.createAttributes().build());
@@ -173,6 +174,7 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.STAG_LANCER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SHADE_RANGER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.ELDER_TREANT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.WORLD_TREE_WALKER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEEDSHAPER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.MOONWELL_BEARER_UNIT_SPAWN_EGG);

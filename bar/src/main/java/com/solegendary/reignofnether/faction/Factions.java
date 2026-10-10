@@ -178,6 +178,7 @@ public class Factions {
 		registerEntity(VERDANT_COURT, EntityRegistrar.STAG_LANCER_UNIT.get(), ProductionItems.STAG_LANCER);
 		registerEntity(VERDANT_COURT, EntityRegistrar.SHADE_RANGER_UNIT.get(), ProductionItems.SHADE_RANGER);
 		registerEntity(VERDANT_COURT, EntityRegistrar.ELDER_TREANT_UNIT.get(), ProductionItems.ELDER_TREANT);
+		registerEntity(VERDANT_COURT, EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), ProductionItems.WORLD_TREE_WALKER);   // T3 (Heart of the Wild)
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -262,6 +263,7 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.ENERGY_CONVERTER_VERDANT, Keybindings.hotkey7);
 		registerBuildings(VERDANT_COURT, Buildings.GROVE, Keybindings.abilitySlot6);
 		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
+		registerBuildings(VERDANT_COURT, Buildings.HEART_OF_THE_WILD, Keybindings.hotkey2);   // T3 lab: the Castle's and Stronghold's slot
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

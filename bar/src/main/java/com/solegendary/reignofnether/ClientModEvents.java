@@ -133,6 +133,7 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.WINDCALLER_UNIT.get(), WindcallerRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.IRON_GOLEM_UNIT.get(), IronGolemRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SUN_COLOSSUS_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SunColossusRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.WORLD_TREE_WALKER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.WorldTreeWalkerRenderer::new);
         // Verdant Court: vanilla bodies with the Court's own skins (the fox keeps its vanilla look)
         evt.registerEntityRenderer(EntityRegistrar.SEEDSHAPER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.SeedshaperRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.FOX_COURIER_UNIT.get(), net.minecraft.client.renderer.entity.FoxRenderer::new);

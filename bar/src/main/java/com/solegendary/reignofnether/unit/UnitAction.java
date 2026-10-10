@@ -162,6 +162,7 @@ public enum UnitAction {
     COMMANDER_RAISE_DEAD, // Beyond and Tabs: Gravebound commander raises wrecks as Ghouls
     TRAMPLE,              // Beyond and Tabs: War Mammoth charge
     SOLAR_LANCE,          // Beyond and Tabs: Sun Colossus beam
+    ROOTQUAKE,            // Beyond and Tabs: Verdant Court World Tree Walker root eruption (T3)
     CRYPT_TIDE,           // Beyond and Tabs: Gravebound Wraith bone-hand root
     WAR_DRUMS,            // Beyond and Tabs: Horde Warlord speed rally
     BASTION_AEGIS,        // Beyond and Tabs: Sunforged Evoker projectile dome

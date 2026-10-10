@@ -2673,7 +2673,7 @@ public class SkirmishGameTests {
     /**
      * Verdant Court T2 (slice 4): the Circle of Elders trains the Elder Druid and the three T2 units, and refuses all of
      * them until its owner has Tier 2 - checked on the server when production starts, not only by the build button. The
-     * Court's bot kit points at it, and the Heartwood Hall offers no Tier 3 (the Court has no T3 lab yet).
+     * Court's bot kit points at it. (Tier 3 at the Heartwood Hall is checked by verdant_t3_lab_and_tier_3.)
      */
     @GameTest(template = ARENA)
     public static void verdant_t2_lab_trains_only_after_tier_2(GameTestHelper helper) {
@@ -2691,8 +2691,6 @@ public class SkirmishGameTests {
         var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.VERDANT_COURT);
         if (kit == null || kit.t2Lab() != lab || kit.t2Worker() != com.solegendary.reignofnether.building.production.ProductionItems.ELDER_DRUID)
             helper.fail("the Verdant bot kit does not use the Circle of Elders and the Elder Druid");
-        if (Buildings.HEARTWOOD_HALL.productions.get().contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
-            helper.fail("the Heartwood Hall offers Tier 3, which unlocks nothing for the Court yet");
         // a placement that is never put in the world: enough for the produce gate, and invisible to parallel tests
         var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
             helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
@@ -3063,6 +3061,236 @@ public class SkirmishGameTests {
                 helper.fail("no bee from the swarm stung the enemy");
             else
                 helper.succeed();
+        });
+    }
+
+    // ------------------------------------------------------------------ Verdant Court T3
+
+    /**
+     * Verdant Court T3: the Heartwood Hall offers Tier 3; the Heart of the Wild is a T3 lab that the server refuses
+     * from a Seedshaper alone and accepts from an Elder Druid; it grows the World Tree Walker only once its owner has
+     * Tier 3; the bot kit techs to it; and the walker obeys T3 rule (a) (4-6x the Elder Treant), dies with the T3 death
+     * blast and carries Rootquake, which the Elder Treant must not get.
+     */
+    @GameTest(template = ARENA)
+    public static void verdant_t3_lab_and_tier_3(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_verdant_t3";
+        var lab = Buildings.HEART_OF_THE_WILD;
+        var walkerItem = com.solegendary.reignofnether.building.production.ProductionItems.WORLD_TREE_WALKER;
+        if (!Buildings.HEARTWOOD_HALL.productions.get().contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Heartwood Hall does not offer Tier 3");
+        if (!com.solegendary.reignofnether.unit.T2Workers.isT3Lab(lab))
+            helper.fail("the Heart of the Wild is not registered as a T3 lab");
+        if (!lab.productions.get().contains(walkerItem))
+            helper.fail("the Heart of the Wild does not grow the World Tree Walker");
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.VERDANT_COURT);
+        if (kit == null || kit.t3Building() != lab || kit.t3Unit() != walkerItem)
+            helper.fail("the Verdant bot kit does not tech to the Heart of the Wild and the World Tree Walker");
+        float ratio = (float) com.solegendary.reignofnether.resources.ResourceCosts.WORLD_TREE_WALKER.metal()
+            / com.solegendary.reignofnether.resources.ResourceCosts.ELDER_TREANT.metal();
+        if (ratio < 4f || ratio > 6f)
+            helper.fail("T3 rule (a): the World Tree Walker should cost 4-6x the Elder Treant, is " + ratio + "x");
+        if (com.solegendary.reignofnether.barfx.BarFx.tierOf(com.solegendary.reignofnether.resources.ResourceCosts.WORLD_TREE_WALKER.metal()) != 3)
+            helper.fail("the World Tree Walker would not die with the T3 death blast");
+
+        BlockPos base = helper.absolutePos(new BlockPos(10, 2, 10));
+        var seed = com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get().create(level);
+        var druid = com.solegendary.reignofnether.registrars.EntityRegistrar.ELDER_DRUID_UNIT.get().create(level);
+        var walker = com.solegendary.reignofnether.registrars.EntityRegistrar.WORLD_TREE_WALKER_UNIT.get().create(level);
+        var treant = com.solegendary.reignofnether.registrars.EntityRegistrar.ELDER_TREANT_UNIT.get().create(level);
+        if (seed == null || druid == null || walker == null || treant == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        seed.moveTo(base.getX() + 0.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        druid.moveTo(base.getX() + 2.5, base.getY(), base.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(seed);
+        level.addFreshEntity(druid);
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            if (!Factions.VERDANT_COURT.equals(Factions.getFaction(walker)))
+                helper.fail("the World Tree Walker is not Verdant Court");
+            if (walker.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.Rootquake))
+                helper.fail("the World Tree Walker has no Rootquake");
+            if (treant.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.Rootquake))
+                helper.fail("Rootquake leaked onto the Elder Treant");
+            if (walker.getMaxHealth() < 1000)
+                helper.fail("World Tree Walker health " + walker.getMaxHealth());
+            if (com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, new int[] { seed.getId() }))
+                helper.fail("the Heart of the Wild may be placed by a Seedshaper alone");
+            if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, lab, new int[] { seed.getId(), druid.getId() }))
+                helper.fail("the Heart of the Wild refused an Elder Druid among the builders");
+            // the real placement path: a Seedshaper-only Heart of the Wild is refused before the terrain checks
+            var placed = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(lab, base.offset(-80, 0, 80),
+                Rotation.NONE, owner, new int[] { seed.getId() }, false, false, false, true);
+            if (placed != null) {
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(placed);
+                helper.fail("placeBuilding accepted a Heart of the Wild from a Seedshaper");
+            }
+            // the produce gate on a placement that is never put in the world (invisible to parallel tests)
+            var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
+                helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+            if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+                helper.fail("the Heart of the Wild is not a production placement: " + bp);
+                return;
+            }
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            if (walkerItem.canProduce(pp))
+                helper.fail("the World Tree Walker can be grown with only Tier 2");
+            if (pp.startProductionItem(walkerItem) || !pp.productionQueue.isEmpty())
+                helper.fail("the server queued a World Tree Walker without Tier 3");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3);
+            if (!walkerItem.canProduce(pp))
+                helper.fail("the World Tree Walker still refused after Tier 3: " + walkerItem.getProduceErrorMsg(pp));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+            seed.discard();
+            druid.discard();
+            walker.discard();
+            treant.discard();
+        }
+    }
+
+    /**
+     * The World Tree Walker's shade heals a hurt friendly Verdant unit within 6 blocks by 2 HP, never a hurt enemy
+     * just as close nor a friend out of the shade; and its arrival is announced (the once-only flag is set).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void world_tree_walker_heals_friend_in_shade_not_foe(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_wtw_shade", foeOwner = "gametest_wtw_shade_foe";
+        var walker = com.solegendary.reignofnether.registrars.EntityRegistrar.WORLD_TREE_WALKER_UNIT.get().create(level);
+        var lb = com.solegendary.reignofnether.registrars.EntityRegistrar.LEAFBLADE_UNIT.get();
+        var friend = lb.create(level);
+        var far = lb.create(level);
+        var foe = lb.create(level);
+        if (walker == null || friend == null || far == null || foe == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        walker.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        far.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 10.5, 0, 0);
+        walker.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        far.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(walker, friend, far, foe);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(10, () -> {
+            try {
+                // set and measure within one tick, so the walker's own once-a-second shade can't muddle the numbers
+                friend.setHealth(friend.getMaxHealth() * 0.4f);
+                far.setHealth(far.getMaxHealth() * 0.4f);
+                foe.setHealth(foe.getMaxHealth() * 0.4f);
+                float friendHp = friend.getHealth(), farHp = far.getHealth(), foeHp = foe.getHealth();
+                int healed = walker.shade(level);
+                if (healed != 1)
+                    helper.fail("the shade should heal exactly the one friend in it, healed " + healed);
+                if (Math.abs(friend.getHealth() - friendHp - com.solegendary.reignofnether.unit.units.verdant.WorldTreeWalkerUnit.SHADE_HEAL) > 0.01f)
+                    helper.fail("the friend in the shade healed " + (friend.getHealth() - friendHp));
+                if (far.getHealth() > farHp)
+                    helper.fail("a friend 10 blocks away was healed by the shade");
+                if (foe.getHealth() > foeHp)
+                    helper.fail("the World Tree Walker's shade healed an enemy");
+                if (!walker.getPersistentData().getBoolean("bt_t3_announced"))
+                    helper.fail("the World Tree Walker's arrival was not announced");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
+    }
+
+    /** The World Tree Walker's weakness: fire hurts it twice as much as the same plain damage. */
+    @GameTest(template = ARENA)
+    public static void world_tree_walker_takes_double_fire_damage(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var walker = com.solegendary.reignofnether.registrars.EntityRegistrar.WORLD_TREE_WALKER_UNIT.get().create(level);
+        if (walker == null) {
+            helper.fail("could not create the World Tree Walker");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(14, 2, 14));
+        walker.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        walker.setOwnerName("gametest_wtw_fire");
+        level.addFreshEntity(walker);
+        try {
+            float hp0 = walker.getHealth();
+            walker.invulnerableTime = 0;
+            walker.hurt(level.damageSources().generic(), 10f);
+            float plain = hp0 - walker.getHealth();
+            float hp1 = walker.getHealth();
+            walker.invulnerableTime = 0;
+            walker.hurt(level.damageSources().inFire(), 10f);
+            float fire = hp1 - walker.getHealth();
+            if (plain <= 0)
+                helper.fail("plain damage did not land: " + plain);
+            else if (Math.abs(fire - 2 * plain) > 0.01f)
+                helper.fail("fire dealt " + fire + ", plain damage " + plain + " - fire should deal double");
+            else
+                helper.succeed();
+        } finally {
+            walker.discard();
+        }
+    }
+
+    /**
+     * Rootquake erupts on the enemies within 8 blocks - 20 damage and rooted (Slowness VII) - and leaves friends in the
+     * circle and enemies outside it alone.
+     */
+    @GameTest(template = ARENA)
+    public static void rootquake_hits_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_rootquake", foeOwner = "gametest_rootquake_foe";
+        var walker = com.solegendary.reignofnether.registrars.EntityRegistrar.WORLD_TREE_WALKER_UNIT.get().create(level);
+        var vind = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get();
+        var friend = vind.create(level);
+        var foe = vind.create(level);
+        var farFoe = vind.create(level);
+        if (walker == null || friend == null || foe == null || farFoe == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 3));
+        walker.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 5.5, 0, 0);
+        farFoe.moveTo(at.getX() + 12.5, at.getY(), at.getZ() + 12.5, 0, 0);
+        walker.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        farFoe.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(walker, friend, foe, farFoe);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(2, () -> {
+            try {
+                float friendHp = friend.getHealth(), foeHp = foe.getHealth(), farHp = farFoe.getHealth();
+                var hit = com.solegendary.reignofnether.ability.abilities.Rootquake.quake(level, walker, owner, walker.position());
+                var slow = net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN;
+                if (!hit.contains(foe) || (foe.isAlive() && foe.getHealth() >= foeHp))
+                    helper.fail("Rootquake did not hurt the enemy in its circle");
+                if (foe.getEffect(slow) == null || foe.getEffect(slow).getAmplifier()
+                        < com.solegendary.reignofnether.ability.abilities.Rootquake.ROOT_AMPLIFIER)
+                    helper.fail("Rootquake did not root the enemy in its circle");
+                if (hit.contains(friend) || friend.getHealth() < friendHp || friend.getEffect(slow) != null)
+                    helper.fail("Rootquake touched a friendly unit");
+                if (hit.contains(farFoe) || farFoe.getHealth() < farHp)
+                    helper.fail("Rootquake reached an enemy 17 blocks away");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
         });
     }
 

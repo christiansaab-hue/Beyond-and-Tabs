@@ -57,6 +57,7 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.SHADE_RANGER.define(BUILDER);
         UnitCosts.ELDER_TREANT.define(BUILDER);
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
+        UnitCosts.WORLD_TREE_WALKER.define(BUILDER);
         UnitCosts.SEEDSHAPER.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
         UnitCosts.MOONWELL_BEARER.define(BUILDER);
@@ -136,6 +137,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.LIBRARY.define(BUILDER);
         BuildingCosts.WATCHTOWER.define(BUILDER);
         BuildingCosts.CASTLE.define(BUILDER);
+        BuildingCosts.HEART_OF_THE_WILD.define(BUILDER);
         BuildingCosts.IRON_GOLEM_BUILDING.define(BUILDER);
         BuildingCosts.SHRINE_OF_PROSPERITY.define(BUILDER);
         BuildingCosts.VILLAGER_MARKET.define(BUILDER);
@@ -261,6 +263,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry RAVAGER = ResourceCostConfigEntry.Unit(400,50,150,60,7, ResourceCosts.RAVAGER, "Ravager Config");
         // Horde T3: ~4.5x the Siege Ox (T3 rule a); slow and melee-only (rule b)
         public static final ResourceCostConfigEntry SUN_COLOSSUS = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.SUN_COLOSSUS, "Sun Colossus Config");
+        public static final ResourceCostConfigEntry WORLD_TREE_WALKER = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.WORLD_TREE_WALKER, "World Tree Walker Config");
         // Verdant Court (T1, balanced against the other factions' T1 - see ResourceCosts)
         public static final ResourceCostConfigEntry SEEDSHAPER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.SEEDSHAPER, "Seedshaper Config");
         public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
@@ -356,6 +359,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry LIBRARY = ResourceCostConfigEntry.Building(0,300,100, 0, ResourceCosts.LIBRARY, "Library Config");
         public static final ResourceCostConfigEntry WATCHTOWER = ResourceCostConfigEntry.Building(0,100,75, 0, ResourceCosts.WATCHTOWER, "Watchtower Config");
         public static final ResourceCostConfigEntry CASTLE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.CASTLE, "Castle Config");
+        public static final ResourceCostConfigEntry HEART_OF_THE_WILD = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.HEART_OF_THE_WILD, "Heart of the Wild Config");
         public static final ResourceCostConfigEntry IRON_GOLEM_BUILDING = ResourceCostConfigEntry.Building(0,50,250, 0, ResourceCosts.IRON_GOLEM_BUILDING, "Iron Golem Building Config");
         public static final ResourceCostConfigEntry SHRINE_OF_PROSPERITY = ResourceCostConfigEntry.Building(0,125,50, 0, ResourceCosts.SHRINE_OF_PROSPERITY, "Shrine of Prosperity Config");
         public static final ResourceCostConfigEntry VILLAGER_MARKET = ResourceCostConfigEntry.Building(0,75,75, 0, ResourceCosts.VILLAGER_MARKET, "Villager Market Config");

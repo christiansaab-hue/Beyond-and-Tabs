@@ -58,6 +58,7 @@ public final class UnitInfoCard {
     private static final Map<String, Role> ROLE_TABLE = Map.ofEntries(
         Map.entry("WardenUnit", Role.EXPERIMENTAL), Map.entry("BoneDragonUnit", Role.EXPERIMENTAL),
         Map.entry("WarMammothUnit", Role.EXPERIMENTAL), Map.entry("SunColossusUnit", Role.EXPERIMENTAL),
+        Map.entry("WorldTreeWalkerUnit", Role.EXPERIMENTAL),
         Map.entry("GhastUnit", Role.ARTILLERY), Map.entry("WildfireUnit", Role.ARTILLERY),
         Map.entry("WitchUnit", Role.SUPPORT), Map.entry("EvokerUnit", Role.SUPPORT),
         Map.entry("EnchanterUnit", Role.SUPPORT), Map.entry("NecromancerUnit", Role.SUPPORT),

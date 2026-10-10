@@ -22,8 +22,8 @@ import java.util.List;
 /**
  * Verdant Court capitol - the <b>Heartwood Hall</b> (design/verdant_court_plan.md, slice 1): a living-wood pavilion
  * round a great oak (heartwood_hall.nbt, tools/gen_structures.py). Trains Seedshapers and Fox Couriers and researches
- * Tier 2 (which unlocks the extractor refit; the Court's T2 lab is a later slice). Tier 3 is not offered: the Court has
- * nothing to unlock with it yet, and a button that only drains the economy would be a trap.
+ * Tier 2 (the Circle of Elders and the extractor refit) and Tier 3 (the Heart of the Wild, the Court's T3 lab), in the
+ * same slots as the other capitols.
  */
 public class HeartwoodHall extends ProductionBuilding {
 
@@ -47,6 +47,7 @@ public class HeartwoodHall extends ProductionBuilding {
         this.productions.add(ProductionItems.SEEDSHAPER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.FOX_COURIER, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.RESEARCH_TIER_2, Keybindings.abilitySlot9);
+        this.productions.add(ProductionItems.RESEARCH_TIER_3, Keybindings.abilitySlot10);
     }
 
     public BuildingPlaceButton getBuildButton(Keybinding hotkey) {

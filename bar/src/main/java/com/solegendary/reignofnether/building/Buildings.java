@@ -78,6 +78,8 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.EnergyConverter ENERGY_CONVERTER_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "energy_converter_verdant"), new com.solegendary.reignofnether.building.buildings.shared.EnergyConverter("_verdant"));
     // Verdant Court T2 lab (slice 4)
     public static final com.solegendary.reignofnether.building.buildings.verdant.CircleOfElders CIRCLE_OF_ELDERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "circle_of_elders"), new com.solegendary.reignofnether.building.buildings.verdant.CircleOfElders());
+    // Verdant Court T3 lab
+    public static final com.solegendary.reignofnether.building.buildings.verdant.HeartOfTheWild HEART_OF_THE_WILD = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "heart_of_the_wild"), new com.solegendary.reignofnether.building.buildings.verdant.HeartOfTheWild());
 
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);

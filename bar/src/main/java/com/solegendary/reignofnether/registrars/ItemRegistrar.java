@@ -258,6 +258,10 @@ public class ItemRegistrar {
             ITEMS.register("elder_treant_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.ELDER_TREANT_UNIT,
                     0x3F2C1A, 0x4A7A2C, new Item.Properties()));
 
+    public static final RegistryObject<ForgeSpawnEggItem> WORLD_TREE_WALKER_UNIT_SPAWN_EGG =
+            ITEMS.register("world_tree_walker_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.WORLD_TREE_WALKER_UNIT,
+                    0x8A7A62, 0x5E9A3C, new Item.Properties()));
+
     public static final RegistryObject<Item> THROWABLE_TNT =
             ITEMS.register("throwable_tnt", () -> new ThrowableTnt(new Item.Properties()));
 
