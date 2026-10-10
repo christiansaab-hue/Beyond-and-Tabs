@@ -26,6 +26,7 @@ import java.util.Map;
 @OnlyIn(Dist.CLIENT)
 public class PiglinUnitRenderer extends HumanoidMobRenderer<Mob, PiglinUnitModel<Mob>> {
     private static final Map<EntityType<?>, ResourceLocation> TEXTURES;
+    private static final ResourceLocation FALLBACK = ResourceLocation.parse("textures/entity/piglin/piglin.png");
     private static final float PIGLIN_CUSTOM_HEAD_SCALE = 1.0019531F;
 
     // See class EntityRenderers for the original code
@@ -47,11 +48,8 @@ public class PiglinUnitRenderer extends HumanoidMobRenderer<Mob, PiglinUnitModel
 
     public ResourceLocation getTextureLocation(Mob pEntity) {
         ResourceLocation $$1 = TEXTURES.get(pEntity.getType());
-        if ($$1 == null) {
-            throw new IllegalArgumentException("I don't know what texture to use for " + pEntity.getType());
-        } else {
-            return $$1;
-        }
+        // never crash the client over a missing entry (a bot's Bonewright did, Oct 10 playtest): fall back to the grunt skin
+        return $$1 != null ? $$1 : FALLBACK;
     }
 
     static {
@@ -59,6 +57,7 @@ public class PiglinUnitRenderer extends HumanoidMobRenderer<Mob, PiglinUnitModel
             EntityRegistrar.GRUNT_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin.png"),
             EntityRegistrar.BRUTE_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin_brute.png"),
             EntityRegistrar.HEADHUNTER_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin_brute.png"),
+            EntityRegistrar.BONEWRIGHT_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/piglin_brute.png"),
             EntityRegistrar.ZOMBIE_PIGLIN_UNIT.get(), ResourceLocation.parse("textures/entity/piglin/zombified_piglin.png")
         );
     }
