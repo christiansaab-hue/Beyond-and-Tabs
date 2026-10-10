@@ -28,8 +28,11 @@ public class WindmillRenderClientEvents {
     static final Minecraft MC = Minecraft.getInstance();
 
     private static final float SPIN_RADS_PER_TICK = 0.045f;  // a lazy ~8s per turn
-    private static final float BLADE_LENGTH = 2.9f;
-    private static final float BLADE_WIDTH = 0.52f;
+    private static final float BLADE_LENGTH = 3.2f;
+    private static final float BLADE_WIDTH = 0.85f;   // wider sails: at 0.52 they read as thin sticks from the RTS camera
+    // playtest (Oct 10): seen from the RTS camera a vertical rotor is nearly edge-on and the sails looked like
+    // broken sticks that didn't turn. Tilt the rotor back so its face points up towards the camera.
+    private static final float ROTOR_TILT_DEG = 40f;
     private static final float BLADE_THICKNESS = 0.14f;
     private static final double MAX_RENDER_DIST_SQR = 220 * 220;
 
@@ -83,7 +86,7 @@ public class WindmillRenderClientEvents {
                 bladeCloth = Blocks.RED_WOOL.defaultBlockState();
                 bladeArm = Blocks.DARK_OAK_PLANKS.defaultBlockState();
             } else if (hubBlock.getBlockState().is(Blocks.STRIPPED_DARK_OAK_LOG)) {
-                bladeCloth = Blocks.GRAY_WOOL.defaultBlockState();
+                bladeCloth = Blocks.LIGHT_GRAY_WOOL.defaultBlockState();   // grey rags, but readable on dark ground
                 bladeArm = Blocks.DARK_OAK_PLANKS.defaultBlockState();
             } else if (hubBlock.getBlockState().is(Blocks.STRIPPED_CRIMSON_STEM)) {
                 bladeCloth = Blocks.YELLOW_WOOL.defaultBlockState();
@@ -97,9 +100,9 @@ public class WindmillRenderClientEvents {
             BlockPos centre = BuildingUtils.getCentrePos(placement.getBlocks());
             double outward;
             if (axis == Direction.Axis.Z)
-                outward = hub.getZ() + 0.5 >= centre.getZ() + 0.5 ? 0.68 : -0.68;
+                outward = hub.getZ() + 0.5 >= centre.getZ() + 0.5 ? 0.95 : -0.95;
             else
-                outward = hub.getX() + 0.5 >= centre.getX() + 0.5 ? 0.68 : -0.68;
+                outward = hub.getX() + 0.5 >= centre.getX() + 0.5 ? 0.95 : -0.95;
 
             float phase = (hub.hashCode() & 255) / 255f * Mth.TWO_PI;
             float angle = time * SPIN_RADS_PER_TICK + phase;
@@ -110,6 +113,11 @@ public class WindmillRenderClientEvents {
                 hub.getX() + 0.5 + (axis == Direction.Axis.X ? outward : 0) - cam.getX(),
                 hub.getY() + 0.5 - cam.getY(),
                 hub.getZ() + 0.5 + (axis == Direction.Axis.Z ? outward : 0) - cam.getZ());
+            // lean the rotor back (top towards the tower) so the sails' face points up at the sky and the camera
+            if (axis == Direction.Axis.Z)
+                matrix.mulPose(com.mojang.math.Axis.XP.rotationDegrees(outward > 0 ? -ROTOR_TILT_DEG : ROTOR_TILT_DEG));   // +X turns +Y toward +Z
+            else
+                matrix.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(outward > 0 ? ROTOR_TILT_DEG : -ROTOR_TILT_DEG));   // +Z turns +Y toward -X
 
             for (int i = 0; i < 4; i++) {
                 matrix.pushPose();
