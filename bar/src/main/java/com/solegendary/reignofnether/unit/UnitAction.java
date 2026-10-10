@@ -159,5 +159,6 @@ public enum UnitAction {
 
     COMMANDER_ABILITY, // Beyond and Tabs: each faction's commander signature ability (kept last: enums travel by ordinal)
     COMMANDER_DGUN,    // Beyond and Tabs: the commander's D-gun line shot
-    COMMANDER_RAISE_DEAD // Beyond and Tabs: Gravebound commander raises wrecks as Ghouls
+    COMMANDER_RAISE_DEAD, // Beyond and Tabs: Gravebound commander raises wrecks as Ghouls
+    TRAMPLE               // Beyond and Tabs: War Mammoth charge
 }

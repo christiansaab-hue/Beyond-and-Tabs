@@ -524,6 +524,13 @@ public class SkirmishGameTests {
             helper.fail("T3 rule (a): War Mammoth should cost 4-6x the Siege Ox, is " + ratio + "x");
         if (mammoth.getMaxHealth() < 1000)
             helper.fail("War Mammoth health " + mammoth.getMaxHealth());
+        if (mammoth.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.Trample))
+            helper.fail("War Mammoth has no Trample");
+        var ox = com.solegendary.reignofnether.registrars.EntityRegistrar.RAVAGER_UNIT.get().create(level);
+        if (ox != null && ox.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.Trample))
+            helper.fail("Trample leaked onto the ordinary Siege Ox");
+        if (ox != null)
+            ox.discard();
         mammoth.discard();
         helper.succeed();
     }

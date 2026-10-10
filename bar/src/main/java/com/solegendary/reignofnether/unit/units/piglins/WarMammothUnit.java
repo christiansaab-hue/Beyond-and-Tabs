@@ -38,6 +38,18 @@ public class WarMammothUnit extends RavagerUnit {
         super(entityType, level);
     }
 
+    /** RavagerUnit rebuilds its ability list from the shared static set here; add the Mammoth's own on top. */
+    @Override
+    public void updateAbilityButtons() {
+        super.updateAbilityButtons();
+        if (getAbilities() == null)
+            return;
+        for (var a : getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.Trample)
+                return;
+        getAbilities().add(new com.solegendary.reignofnether.ability.abilities.Trample());
+    }
+
     @Nullable
     @Override
     public ResourceCost getCost() { return ResourceCosts.WAR_MAMMOTH; }
