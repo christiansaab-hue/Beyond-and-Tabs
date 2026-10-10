@@ -2731,9 +2731,20 @@ public class SkirmishGameTests {
     public static void verdant_vine_snare_roots_first_enemy_and_is_spent(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_snare", foeOwner = "gametest_snare_foe";
-        BlockPos spot = helper.absolutePos(new BlockPos(5, 2, 12));
+        BlockPos spot = helper.absolutePos(new BlockPos(7, 2, 7));   // mid-arena, away from neighbours' stamps
+        // a clean, open spot on solid ground whatever a neighbouring test stamped here (CI once found it occupied)
+        level.setBlock(spot.below(), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+        for (int dy = 0; dy < 3; dy++)
+            level.setBlock(spot.above(dy), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
         if (!com.solegendary.reignofnether.ability.abilities.PlantVineSnare.plant(level, owner, spot, false)) {
-            helper.fail("the Vine Snare could not be planted at " + spot);
+            helper.fail("the Vine Snare could not be planted at " + spot + " (found " + level.getBlockState(spot)
+                    + ", " + com.solegendary.reignofnether.blocks.VineSnareBlockEntity.countOwned(level, owner) + " owned)");
+            return;
+        }
+        if (!(level.getBlockEntity(spot) instanceof com.solegendary.reignofnether.blocks.VineSnareBlockEntity be)
+                || !owner.equals(be.getOwner())) {
+            helper.fail("the planted Vine Snare has no owner: " + level.getBlockEntity(spot));
+            level.removeBlock(spot, false);
             return;
         }
         var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
