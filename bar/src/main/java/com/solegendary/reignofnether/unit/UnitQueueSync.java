@@ -63,6 +63,30 @@ public class UnitQueueSync {
         if (players.isEmpty())
             return;
 
+        Map<String, IntArrayList> byOwner = buildPayloads();
+
+        for (ServerPlayer player : players) {
+            IntArrayList data = byOwner.get(player.getName().getString());
+            long hash = 1;
+            if (data != null)
+                for (int i = 0; i < data.size(); i++)
+                    hash = hash * 31 + data.getInt(i);
+            Long last = lastHash.get(player.getUUID());
+            if (last != null && last == hash)
+                continue;
+            if (last == null && data == null)
+                continue;   // nothing queued and nothing shown on that client yet
+            lastHash.put(player.getUUID(), hash);
+            int[] payload = data == null ? new int[0] : data.toIntArray();
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), UnitQueueClientboundPacket.of(payload));
+        }
+    }
+
+    /**
+     * The queue-line payload of every owner with at least one ordered unit: [unitId, n, entries...] blocks. One pass
+     * over the slow queue and one over all units, so it stays linear at 8v8. Public for the stress benchmark.
+     */
+    public static Map<String, IntArrayList> buildPayloads() {
         // one pass over the slow queue: unit id -> its queued items, oldest first
         Int2ObjectOpenHashMap<List<UnitActionItem>> queued = new Int2ObjectOpenHashMap<>();
         List<UnitActionItem> slow = UnitServerEvents.getUnitActionSlowQueue();
@@ -102,21 +126,7 @@ public class UnitQueueSync {
             out.addAll(scratch);
         }
 
-        for (ServerPlayer player : players) {
-            IntArrayList data = byOwner.get(player.getName().getString());
-            long hash = 1;
-            if (data != null)
-                for (int i = 0; i < data.size(); i++)
-                    hash = hash * 31 + data.getInt(i);
-            Long last = lastHash.get(player.getUUID());
-            if (last != null && last == hash)
-                continue;
-            if (last == null && data == null)
-                continue;   // nothing queued and nothing shown on that client yet
-            lastHash.put(player.getUUID(), hash);
-            int[] payload = data == null ? new int[0] : data.toIntArray();
-            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), UnitQueueClientboundPacket.of(payload));
-        }
+        return byOwner;
     }
 
     /** The unit's current order (if it has a fixed target) followed by its shift-queued orders. */
