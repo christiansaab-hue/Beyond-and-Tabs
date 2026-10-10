@@ -440,7 +440,10 @@ public class SkirmishGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int y = 230;
-        int cx = base.getX() - 40, cz = base.getZ() + 40;   // away from the other platform tests
+        // straight above this test's own arena (y=230 is no other test's height): an offset column (it was -40/+40)
+        // lands over whichever arena the grid puts there, and once that was extractor_and_windmill_fit_on_a_stamped_patch
+        // (its heightmap read this platform as the ground)
+        int cx = base.getX(), cz = base.getZ();
         for (int dx = -8; dx <= 8; dx++)
             for (int dz = -8; dz <= 8; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);

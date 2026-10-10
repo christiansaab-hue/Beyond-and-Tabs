@@ -120,27 +120,29 @@ public class PlantThicket extends Ability {
     }
 
     /**
-     * The open spot a thicket would take in column (x, z): the first block above the ground (from the heightmap),
-     * if it is air or a replaceable plant, dry, on a sturdy top face, within {@code maxDy} of {@code refY} and not
-     * inside a building. Null otherwise. Never takes a Vine Snare's or another thicket's spot.
+     * The open spot a thicket would take in column (x, z): the highest block within {@code maxDy} of {@code refY}
+     * that is air or a replaceable plant, dry, on a sturdy top face and not inside a building. Null otherwise. Never
+     * takes a Vine Snare's or another thicket's spot, and never grows at a water's edge.
      */
     public static BlockPos openSpot(ServerLevel level, int x, int z, int refY, int maxDy) {
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-        if (Math.abs(y - refY) > maxDy)
-            return null;
-        BlockPos p = new BlockPos(x, y, z);
-        BlockState here = level.getBlockState(p);
-        if (here.getBlock() instanceof ThicketBlock || here.getBlock() instanceof VineSnareBlock)
-            return null;
-        if (!here.isAir() && !here.canBeReplaced())
-            return null;
-        if (!here.getFluidState().isEmpty() || !level.getFluidState(p.below()).isEmpty())
-            return null;
-        if (!level.getBlockState(p.below()).isFaceSturdy(level, p.below(), Direction.UP))
-            return null;
-        if (BuildingUtils.findBuilding(false, p) != null)
-            return null;
-        return p;
+        // scanned down from the top of the window, not read off the heightmap: a ceiling, a canopy or a structure far
+        // above (game-test arenas sit under one) must not hide the ground the player actually clicked
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(x, refY + maxDy, z);
+        for (; p.getY() >= refY - maxDy; p.move(Direction.DOWN)) {
+            BlockState here = level.getBlockState(p);
+            if (here.getBlock() instanceof ThicketBlock || here.getBlock() instanceof VineSnareBlock)
+                return null;   // already planted
+            if ((!here.isAir() && !here.canBeReplaced()) || !here.getFluidState().isEmpty())
+                continue;
+            BlockPos below = p.below();
+            if (!level.getFluidState(below).isEmpty())
+                return null;   // water's edge: no bushes on the surface of a lake
+            if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP))
+                continue;
+            BlockPos spot = p.immutable();
+            return BuildingUtils.findBuilding(false, spot) != null ? null : spot;
+        }
+        return null;
     }
 
     /**
