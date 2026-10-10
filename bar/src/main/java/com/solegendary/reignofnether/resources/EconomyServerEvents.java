@@ -59,6 +59,9 @@ public class EconomyServerEvents {
         public float stall = 1f;
         // energy/s the player's completed converters can turn into metal
         public float conversionCapacity = 0;
+        // metal per second the converters made, measured over the last second (shown as income, like BAR)
+        public float metalConverted = 0;
+        private float metalConvertedWindow = 0;
 
         // demand registered during the current tick
         private float metalDemand = 0;
@@ -113,6 +116,8 @@ public class EconomyServerEvents {
         float energy = Math.min(spare, Math.min(eco.conversionCapacity / TICKS_PER_SECOND, metalRoom * CONVERSION_RATIO));
         res.addEnergy(-energy);
         res.addMetal(energy / CONVERSION_RATIO);
+        eco.energySpentWindow += energy;           // converters show up as energy expense ...
+        eco.metalConvertedWindow += energy / CONVERSION_RATIO;   // ... and as metal income
     }
 
     public static float getStall(String ownerName) {
@@ -245,8 +250,10 @@ public class EconomyServerEvents {
             if (eco.windowTicks >= TICKS_PER_SECOND) {
                 eco.metalExpense = eco.metalSpentWindow * TICKS_PER_SECOND / eco.windowTicks;
                 eco.energyExpense = eco.energySpentWindow * TICKS_PER_SECOND / eco.windowTicks;
+                eco.metalConverted = eco.metalConvertedWindow * TICKS_PER_SECOND / eco.windowTicks;
                 eco.metalSpentWindow = 0;
                 eco.energySpentWindow = 0;
+                eco.metalConvertedWindow = 0;
                 eco.windowTicks = 0;
             }
         }

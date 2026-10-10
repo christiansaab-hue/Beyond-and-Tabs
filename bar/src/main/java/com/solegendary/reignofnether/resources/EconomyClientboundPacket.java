@@ -34,7 +34,7 @@ public class EconomyClientboundPacket {
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new EconomyClientboundPacket(EconomyAction.SYNC,
             res.ownerName, res.ore, res.wood,
             eco.metalStorage, eco.energyStorage,
-            eco.metalIncome, eco.energyIncome,
+            eco.metalIncome + eco.metalConverted, eco.energyIncome,
             eco.metalExpense, eco.energyExpense,
             eco.stall
         ));

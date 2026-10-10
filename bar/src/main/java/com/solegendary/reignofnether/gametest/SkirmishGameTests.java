@@ -462,6 +462,40 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** Veterancy: killing an equal-cost enemy is one rank (+10% max health); ranks cap at 3. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void veterans_rank_up_on_kills(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var vet = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (vet == null || foe == null) {
+            helper.fail("could not create vindicator units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 14));
+        vet.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 1.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        vet.setOwnerName("gametest_veteran");
+        foe.setOwnerName("gametest_victim");
+        level.addFreshEntity(vet);
+        level.addFreshEntity(foe);
+        helper.runAfterDelay(3, () -> {
+            double baseHp = vet.getMaxHealth();
+            foe.hurt(level.damageSources().mobAttack(vet), 10000f);
+            if (com.solegendary.reignofnether.unit.VeterancyServerEvents.getRank(vet) != 1)
+                helper.fail("one equal-cost kill should be rank 1, got xp "
+                    + com.solegendary.reignofnether.unit.VeterancyServerEvents.getXp(vet));
+            if (vet.getMaxHealth() < baseHp * 1.09)
+                helper.fail("rank 1 gave no health: " + baseHp + " -> " + vet.getMaxHealth());
+            com.solegendary.reignofnether.unit.VeterancyServerEvents.award(vet, 10f);
+            if (com.solegendary.reignofnether.unit.VeterancyServerEvents.getRank(vet) != 3)
+                helper.fail("rank should cap at 3");
+            vet.discard();
+            foe.discard();
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
