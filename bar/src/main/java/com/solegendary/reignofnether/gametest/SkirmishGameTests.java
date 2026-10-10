@@ -1168,6 +1168,180 @@ public class SkirmishGameTests {
         });
     }
 
+    /** Totem of the Pack: a friend dying by the totem calls up a spectral wolf for the owner; an enemy dying there doesn't. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void totem_of_the_pack_answers_friends_not_foes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_pack_totem";
+        var bonewright = com.solegendary.reignofnether.registrars.EntityRegistrar.BONEWRIGHT_UNIT.get().create(level);
+        var grunt = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.BRUTE_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (bonewright == null || grunt == null || friend == null || foe == null) {
+            helper.fail("could not create totem units");
+            return;
+        }
+        // the totem lives on the Bonewright's own ability set, not on the shared Grunt one
+        if (bonewright.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack))
+            helper.fail("the Bonewright has no Totem of the Pack");
+        if (grunt.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack))
+            helper.fail("a plain Grunt got the Bonewright's totem");
+        grunt.discard();
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 12));
+        bonewright.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() - 2.5, 0, 0);
+        bonewright.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName("gametest_pack_totem_foe");
+        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(bonewright, friend, foe))
+            level.addFreshEntity(e);
+        helper.runAfterDelay(3, () -> {
+            var totem = com.solegendary.reignofnether.ability.abilities.TotemOfThePack.plant(level, bonewright, owner, bonewright.position());
+            var wolf = com.solegendary.reignofnether.ability.abilities.TotemOfThePack.answerDeath(level, friend);
+            var none = com.solegendary.reignofnether.ability.abilities.TotemOfThePack.answerDeath(level, foe);
+            if (wolf == null)
+                helper.fail("no spectral wolf rose for a friend dying by the totem");
+            else if (!(wolf instanceof com.solegendary.reignofnether.unit.interfaces.Unit wu) || !owner.equals(wu.getOwnerName())
+                    || !com.solegendary.reignofnether.ability.abilities.TotemOfThePack.isSpectral(wolf))
+                helper.fail("the wolf is not a spectral wolf of the totem's owner");
+            if (none != null) {
+                none.discard();
+                helper.fail("an enemy dying by the totem called up a wolf");
+            }
+            if (wolf != null)
+                wolf.discard();
+            com.solegendary.reignofnether.ability.abilities.TotemOfThePack.dispel(totem);
+            for (var e : List.<net.minecraft.world.entity.LivingEntity>of(bonewright, friend, foe))
+                e.discard();
+            helper.succeed();
+        });
+    }
+
+    /** Magma Rupture: the eruption burns and hurts an enemy on the crack, and leaves a friend on it alone. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void magma_rupture_burns_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_magma_rupture";
+        var blaze = com.solegendary.reignofnether.registrars.EntityRegistrar.BLAZE_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get().create(level);
+        if (blaze == null || foe == null || friend == null) {
+            helper.fail("could not create magma rupture units");
+            return;
+        }
+        if (blaze.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.MagmaRupture))
+            helper.fail("the Blaze has no Magma Rupture");
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 6));
+        blaze.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 8.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        blaze.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName("gametest_magma_rupture_foe");
+        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(blaze, foe, friend))
+            level.addFreshEntity(e);
+        helper.runAfterDelay(3, () -> {
+            float foeHp = foe.getHealth(), friendHp = friend.getHealth();
+            var from = new net.minecraft.world.phys.Vec3(at.getX() + 0.5, foe.getY(), at.getZ() + 0.5);
+            var to = from.add(com.solegendary.reignofnether.ability.abilities.MagmaRupture.LENGTH, 0, 0);
+            int hit = com.solegendary.reignofnether.ability.abilities.MagmaRupture.erupt(level, blaze, owner, from, to);
+            if (hit < 1)
+                helper.fail("Magma Rupture caught no enemy");
+            if (foe.getRemainingFireTicks() <= 0)
+                helper.fail("Magma Rupture did not set the enemy on fire");
+            if (foe.isAlive() && foe.getHealth() >= foeHp)
+                helper.fail("Magma Rupture did not hurt the enemy");
+            if (friend.getRemainingFireTicks() > 0 || friend.getHealth() < friendHp)
+                helper.fail("Magma Rupture burned a friendly unit");
+            for (var e : List.<net.minecraft.world.entity.LivingEntity>of(blaze, foe, friend))
+                e.discard();
+            helper.succeed();
+        });
+    }
+
+    /** Holy Bell: enemies in range glow, friends in range don't. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void holy_bell_reveals_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_holy_bell";
+        var architect = com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (architect == null || foe == null || friend == null) {
+            helper.fail("could not create holy bell units");
+            return;
+        }
+        if (architect.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.HolyBell))
+            helper.fail("the Royal Architect has no Holy Bell");
+        BlockPos at = helper.absolutePos(new BlockPos(13, 2, 13));
+        architect.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() - 9.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 0.5, at.getY(), at.getZ() - 4.5, 0, 0);
+        architect.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName("gametest_holy_bell_foe");
+        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(architect, foe, friend))
+            level.addFreshEntity(e);
+        helper.runAfterDelay(3, () -> {
+            var revealed = com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, owner);
+            if (!revealed.contains(foe) || !foe.hasEffect(net.minecraft.world.effect.MobEffects.GLOWING))
+                helper.fail("Holy Bell did not reveal an enemy 10 blocks away");
+            if (revealed.contains(friend) || friend.hasEffect(net.minecraft.world.effect.MobEffects.GLOWING))
+                helper.fail("Holy Bell marked a friendly unit");
+            if (architect.hasEffect(net.minecraft.world.effect.MobEffects.GLOWING))
+                helper.fail("Holy Bell marked the ringer");
+            for (var e : List.<net.minecraft.world.entity.LivingEntity>of(architect, foe, friend))
+                e.discard();
+            helper.succeed();
+        });
+    }
+
+    /** Withering Fog: a second in the cloud hurts and weakens an enemy inside, and leaves a friend inside alone. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void withering_fog_withers_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_withering_fog";
+        var dragon = com.solegendary.reignofnether.registrars.EntityRegistrar.BONE_DRAGON_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        var friend = com.solegendary.reignofnether.registrars.EntityRegistrar.SKELETON_UNIT.get().create(level);
+        if (dragon == null || foe == null || friend == null) {
+            helper.fail("could not create withering fog units");
+            return;
+        }
+        if (dragon.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog))
+            helper.fail("the Bone Dragon has no Withering Fog");
+        BlockPos at = helper.absolutePos(new BlockPos(1, 2, 3));
+        dragon.moveTo(at.getX() + 0.5, at.getY() + 4, at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 6.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 10.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        dragon.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName("gametest_withering_fog_foe");
+        for (var e : List.<net.minecraft.world.entity.LivingEntity>of(dragon, foe, friend))
+            level.addFreshEntity(e);
+        helper.runAfterDelay(3, () -> {
+            float foeHp = foe.getHealth(), friendHp = friend.getHealth();
+            var from = new net.minecraft.world.phys.Vec3(at.getX() + 0.5, foe.getY() + 0.5, at.getZ() + 0.5);
+            var to = from.add(com.solegendary.reignofnether.ability.abilities.WitheringFog.LENGTH, 0, 0);
+            var cloud = com.solegendary.reignofnether.ability.abilities.WitheringFog.breathe(level, dragon, owner, from, to);
+            // one pulse by hand: the test must not depend on the server tick lining up with the cloud's second
+            int hit = com.solegendary.reignofnether.ability.abilities.WitheringFog.pulse(cloud);
+            com.solegendary.reignofnether.ability.abilities.WitheringFog.dispel(cloud);
+            if (hit < 1)
+                helper.fail("Withering Fog touched no enemy");
+            if (!foe.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS))
+                helper.fail("Withering Fog did not weaken the enemy");
+            if (foe.isAlive() && foe.getHealth() >= foeHp)
+                helper.fail("Withering Fog did not hurt the enemy");
+            if (friend.hasEffect(net.minecraft.world.effect.MobEffects.WEAKNESS) || friend.getHealth() < friendHp)
+                helper.fail("Withering Fog hurt a friendly unit");
+            for (var e : List.<net.minecraft.world.entity.LivingEntity>of(dragon, foe, friend))
+                e.discard();
+            helper.succeed();
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

@@ -103,6 +103,8 @@ public class WreckServerEvents {
             return;
         if (com.solegendary.reignofnether.unit.DragonRaiseServerEvents.isRisen(le))
             return;   // a Bone Dragon's risen skeleton was free - its death must not pay out metal
+        if (com.solegendary.reignofnether.ability.abilities.TotemOfThePack.isSpectral(le))
+            return;   // so was a Totem of the Pack's spectral wolf
         ResourceCost cost = unit.getCost();
         if (cost == null || cost.metal() < MIN_COST)
             return;

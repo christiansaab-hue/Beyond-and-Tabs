@@ -61,6 +61,8 @@ public class BlazeUnit extends Blaze implements Unit, AttackerUnit, RangedAttack
     public static final Abilities ABILITIES = new Abilities();
     static {
         ABILITIES.add(new FirewallShot(), Keybindings.abilitySlot1);
+        // Beyond and Tabs: the Horde's ground-crack power (appended so the firewall stays index 0)
+        ABILITIES.add(new com.solegendary.reignofnether.ability.abilities.MagmaRupture(), Keybindings.abilitySlot2);
     }
 
     //region
