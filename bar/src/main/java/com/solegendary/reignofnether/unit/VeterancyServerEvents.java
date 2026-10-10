@@ -30,7 +30,9 @@ public class VeterancyServerEvents {
     public static final double HP_PER_RANK = 0.10;
     public static final double DMG_PER_RANK = 0.10;
     static final String KEY_XP = "bt_veteran_xp";
-    static final UUID HP_MOD = UUID.fromString("c3d1f2e4-5a6b-4c7d-8e9f-0a1b2c3d4e01");
+    // public so the client HUD can read the rank back off the (synced) max-health modifier: the xp itself lives in
+    // persistent data, which never reaches the client
+    public static final UUID HP_MOD = UUID.fromString("c3d1f2e4-5a6b-4c7d-8e9f-0a1b2c3d4e01");
     static final UUID DMG_MOD = UUID.fromString("c3d1f2e4-5a6b-4c7d-8e9f-0a1b2c3d4e02");
 
     public static float getXp(LivingEntity le) {
@@ -39,6 +41,18 @@ public class VeterancyServerEvents {
 
     public static int getRank(LivingEntity le) {
         return Math.min(MAX_RANK, (int) Math.floor(getXp(le)));
+    }
+
+    /**
+     * Client-safe rank: MAX_HEALTH is a synced attribute, so the HP_MOD modifier {@link #award} adds reaches every
+     * tracking client and encodes the rank exactly (HP_PER_RANK * rank). No extra packet needed.
+     */
+    public static int getSyncedRank(LivingEntity le) {
+        AttributeInstance hp = le.getAttribute(Attributes.MAX_HEALTH);
+        AttributeModifier mod = hp == null ? null : hp.getModifier(HP_MOD);
+        if (mod == null)
+            return 0;
+        return Math.max(0, Math.min(MAX_RANK, (int) Math.round(mod.getAmount() / HP_PER_RANK)));
     }
 
     @SubscribeEvent

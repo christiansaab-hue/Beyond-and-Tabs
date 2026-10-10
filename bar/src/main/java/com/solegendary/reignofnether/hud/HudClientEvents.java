@@ -357,13 +357,14 @@ public class HudClientEvents {
         // BAR-style command panel: one dark backing behind the orders grid, portrait, stats and the selection
         // strip in the bottom-left, drawn first so every button sits on it
         int panelRight = screenWidth; // right edge of the command panel - also bounds the building title
+        int panelTop = screenHeight;
         if (!selUnits.isEmpty() || !selBuildings.isEmpty()) {
             panelRight = hudStartingXPos + portraitRendererUnit.frameWidth + portraitRendererUnit.statsWidth + 10;
             if (selUnits.size() > 1 || selBuildings.size() > 1)
                 panelRight = Math.max(panelRight, hudStartingXPos + portraitRendererUnit.frameWidth
                     + portraitRendererUnit.statsWidth + iconFrameSize * buttonsPerRow + 24);
             int panelH = Math.max(portraitRendererUnit.frameHeight, iconFrameSize * 4 + 6) + 8;
-            int panelTop = screenHeight - panelH;
+            panelTop = screenHeight - panelH;
             evt.getGuiGraphics().fill(0, panelTop, panelRight, screenHeight, EconomyBarRenderer.BG);
             evt.getGuiGraphics().fill(0, panelTop - 1, panelRight, panelTop, 0xFF3A3F46);
             evt.getGuiGraphics().fill(panelRight, panelTop - 1, panelRight + 1, screenHeight, 0xFF3A3F46);
@@ -796,6 +797,38 @@ public class HudClientEvents {
             } else {
                 blitX += 14;
             }
+
+            // BAR unit card: role, veterancy, cost and ability cooldowns beside the portrait - only for a single
+            // selected unit (a multi-selection keeps RoN's icon grid, which this spot is used for)
+            if (selUnits.size() == 1 && hudSelectedEntity instanceof Unit) {
+                int cardX = blitX - (renderedItemsOrResources ? 0 : 10);
+                int cardH = screenHeight - panelTop - 8;
+                int cardRight = cardX + UnitInfoCard.COMPACT_W;
+                if (cardRight + 4 > panelRight) {
+                    // widen the panel backing under the card so the card doesn't float past the panel edge
+                    evt.getGuiGraphics().fill(panelRight, panelTop, cardRight + 4, screenHeight, EconomyBarRenderer.BG);
+                    evt.getGuiGraphics().fill(panelRight, panelTop - 1, cardRight + 4, panelTop, 0xFF3A3F46);
+                    evt.getGuiGraphics().fill(cardRight + 4, panelTop - 1, cardRight + 5, screenHeight, 0xFF3A3F46);
+                    hudZones.add(RectZone.getZoneByLW(panelRight, panelTop - 1, cardRight + 5 - panelRight,
+                        screenHeight - panelTop + 1));
+                }
+                hudZones.add(UnitInfoCard.renderCompact(evt.getGuiGraphics(), cardX, panelTop + 4, cardH,
+                    hudSelectedEntity, mouseX, mouseY));
+                blitX = cardRight + 8;
+            }
+        }
+
+        // -------------------------------------------------------------------------
+        // Hovered unit card (BAR): nothing selected, cursor over exactly one unit
+        // -------------------------------------------------------------------------
+        // not added to hudZones on purpose: the card must never steal the hover that makes it appear
+        if (selUnits.isEmpty() && selBuildings.isEmpty() && unitPortraitZone == null && buildingPortraitZone == null
+                && UnitClientEvents.getPreselectedUnits().size() == 1
+                && UnitClientEvents.getPreselectedUnits().get(0) instanceof Unit
+                && UnitClientEvents.getPreselectedUnits().get(0).isAlive()) {
+            int cardH = Math.min(102, screenHeight / 3);
+            UnitInfoCard.renderFull(evt.getGuiGraphics(), hudStartingXPos, screenHeight - cardH - 4, cardH,
+                UnitClientEvents.getPreselectedUnits().get(0), mouseX, mouseY);
         }
 
         // ----------------------------------------------
@@ -858,6 +891,9 @@ public class HudClientEvents {
                 iconFrameSize * 2 + 20,
                 frameBgColour
             ));
+            // BAR keeps a totals line over the selection: unit count, summed HP and summed metal/energy cost
+            UnitInfoCard.renderGroupSummary(evt.getGuiGraphics(), blitX - 3, blitY - 21,
+                iconFrameSize * buttonsPerRow + 6, selUnits);
 
             int buttonsRendered = 0;
             for (Button unitButton : unitButtons) {
