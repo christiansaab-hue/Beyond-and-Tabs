@@ -34,9 +34,10 @@ public class ReignOfNetherConfigScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        this.buildColorSettings(50);
-        this.buildMinimapSettings(150);
-        this.buildAlertSettings(195);
+        // packed a little tighter than upstream so the extra announcer row clears the Back button at GUI scale 4
+        this.buildColorSettings(40);
+        this.buildMinimapSettings(135);
+        this.buildAlertSettings(178);
         this.addRenderableWidget(button(this.width / 2 - 75, this.height - 29, 150, 20, CommonComponents.GUI_BACK, button -> this.minecraft.setScreen(this.parent)));
     }
 
@@ -92,25 +93,39 @@ public class ReignOfNetherConfigScreen extends Screen {
                 .size(width, labelHeight));
     }
 
-    // BAR-style notifications: on/off plus a volume button that steps 0-25-50-75-100% (0 keeps the text lines)
+    // BAR-style notifications: on/off plus a volume button that steps 0-25-50-75-100% (0 keeps the text lines),
+    // and a second row for the spoken announcer (voice on/off + its own volume)
     private void buildAlertSettings(int y) {
         int width = 200;
         int labelHeight = 20;
         int left = this.width / 2 - width / 2;
+        int row1 = y + 18, row2 = row1 + labelHeight + 2;
 
         addRenderableOnly(new Label("Alerts").pos(left, y).size(width, labelHeight));
         addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.ALERTS_ENABLED, "Alerts on", "Alerts off")
-                .pos(left, y + labelHeight)
+                .pos(left, row1)
                 .size(120, labelHeight));
-        addRenderableWidget(button(left + 125, y + labelHeight, width - 125, labelHeight, volumeLabel(), b -> {
-            int vol = ReignOfNetherClientConfigs.ALERT_VOLUME.get();
-            vol = vol >= 100 ? 0 : (vol / 25 + 1) * 25;
-            ReignOfNetherClientConfigs.ALERT_VOLUME.set(vol);
-            b.setMessage(volumeLabel());
+        addRenderableWidget(button(left + 125, row1, width - 125, labelHeight,
+                volumeLabel("Volume ", ReignOfNetherClientConfigs.ALERT_VOLUME), b -> {
+            stepVolume(ReignOfNetherClientConfigs.ALERT_VOLUME);
+            b.setMessage(volumeLabel("Volume ", ReignOfNetherClientConfigs.ALERT_VOLUME));
+        }));
+        addRenderableWidget(new ConfigCheckbox(ReignOfNetherClientConfigs.ANNOUNCER_VOICE, "Voice on", "Voice off")
+                .pos(left, row2)
+                .size(120, labelHeight));
+        addRenderableWidget(button(left + 125, row2, width - 125, labelHeight,
+                volumeLabel("Voice ", ReignOfNetherClientConfigs.VOICE_VOLUME), b -> {
+            stepVolume(ReignOfNetherClientConfigs.VOICE_VOLUME);
+            b.setMessage(volumeLabel("Voice ", ReignOfNetherClientConfigs.VOICE_VOLUME));
         }));
     }
 
-    private static Component volumeLabel() {
-        return Component.literal("Volume " + ReignOfNetherClientConfigs.ALERT_VOLUME.get() + "%");
+    private static void stepVolume(ForgeConfigSpec.ConfigValue<Integer> cfg) {
+        int vol = cfg.get();
+        cfg.set(vol >= 100 ? 0 : (vol / 25 + 1) * 25);
+    }
+
+    private static Component volumeLabel(String prefix, ForgeConfigSpec.ConfigValue<Integer> cfg) {
+        return Component.literal(prefix + cfg.get() + "%");
     }
 }

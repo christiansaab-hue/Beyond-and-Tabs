@@ -221,6 +221,7 @@
   "attribute.reignofnether.lifesteal": "Lifesteal",
   "attribute.reignofnether.mana_on_hit": "Mana on hit",
   "sounds.reignofnether.under_attack": "Under attack!",
+  "sounds.reignofnether.announcer": "Announcer speaks",
   "sounds.reignofnether.victory": "Victory!",
   "sounds.reignofnether.defeat": "Defeat",
   "sounds.reignofnether.chat": "Chat",
@@ -2355,5 +2356,9 @@
   "notification.reignofnether.energy_stall": "Energy stalled - build speed reduced",
   "notification.reignofnether.experimental_detected": "Experimental unit detected: %s",
   "notification.reignofnether.capture_taken": "Site captured: %s",
-  "notification.reignofnether.capture_lost": "Site lost: %s"
+  "notification.reignofnether.capture_lost": "Site lost: %s",
+  "notification.reignofnether.base_attacked": "Base under attack",
+  "notification.reignofnether.units_attacked": "Units under attack",
+  "notification.reignofnether.experimental_ready": "Experimental ready: %s",
+  "notification.reignofnether.commander_killed": "Commander destroyed - brace for the blast"
 }

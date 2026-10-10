@@ -36,6 +36,8 @@ public class ResearchClient {
                     "research.reignofnether.upgrade_completed",
                     I18n.get("research." + researchItemName.getNamespace() + "." + researchItemName.getPath())
                 ));
+                // spoken "research complete" (no-op during the join warm-up, when research syncs in bulk)
+                com.solegendary.reignofnether.hud.NotificationClientEvents.onResearchComplete();
             }
         }
     }

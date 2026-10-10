@@ -1,0 +1,25 @@
+# Announcer voice lines, synthesised by .github/workflows/voice.yml (Kokoro-82M, Apache-2.0).
+# Format: key|text[|chime]
+#   key   -> file name: bar/src/main/resources/assets/reignofnether/sounds/announcer/<key>.ogg
+#   chime -> prepend the soft two-tone alert chime (urgent alerts only)
+# Keep lines short and calm: the voice is an onboard assistant, not a drill sergeant.
+commander_attacked|Warning: your commander is under attack.|chime
+base_attacked|Warning: your base is under attack.|chime
+units_attacked|Your units are under attack.
+ally_needs_help|An ally requires assistance.
+unit_lost|Unit lost.
+construction_complete|Construction complete.
+research_complete|Research complete.
+idle_constructor|A builder is awaiting orders.
+metal_full|Metal storage full.
+energy_full|Energy storage full.
+metal_stall|Insufficient metal.
+energy_stall|Insufficient energy.
+experimental_detected|Alert: enemy experimental unit detected.|chime
+experimental_ready|Experimental unit ready.
+capture_taken|Capture site secured.
+capture_lost|Capture site lost.
+commander_killed|Warning: commander destroyed. Brace for detonation.|chime
+victory|Victory. Well done, Commander.
+defeat|Defeat. All systems are failing.
+game_start|Systems online. Good luck, Commander.

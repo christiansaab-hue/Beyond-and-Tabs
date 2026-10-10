@@ -235,6 +235,7 @@ public class PlayerClientEvents {
             MC.gui.setTitle(Component.translatable("titles.reignofnether.defeated"));
             com.solegendary.reignofnether.matchstart.MatchEndClientEvents.onTitleShown();
             MC.player.playSound(SoundRegistrar.DEFEAT.get(), 0.5f, 1.0f);
+            com.solegendary.reignofnether.hud.NotificationClientEvents.onDefeat();
         }
         ResearchClient.removeAllResearch();
         ResearchClient.removeAllCheats();
@@ -248,6 +249,7 @@ public class PlayerClientEvents {
         MC.gui.setTitle(Component.translatable("titles.reignofnether.victorious"));
         com.solegendary.reignofnether.matchstart.MatchEndClientEvents.onTitleShown(); // hides chat/minimap off the title
         MC.player.playSound(SoundRegistrar.VICTORY.get(), 0.5f, 1.0f);
+        com.solegendary.reignofnether.hud.NotificationClientEvents.onVictory();
     }
 
     public static void addRTSPlayer(String playerName, Faction faction, Long id, int startPosColorId, boolean isDogPerson) {
@@ -259,6 +261,8 @@ public class PlayerClientEvents {
                 if (faction != Factions.NONE) {
                     MC.getMusicManager().stopPlaying();
                     ResearchClient.removeAllCheats();
+                    // "Systems online" - also on rejoining a running match, which reads fine for a ship's computer
+                    com.solegendary.reignofnether.hud.NotificationClientEvents.onGameStart();
                 }
                 PlayerServerboundPacket.requestMarketRates();
             }

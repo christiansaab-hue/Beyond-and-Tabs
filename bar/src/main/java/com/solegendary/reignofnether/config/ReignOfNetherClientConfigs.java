@@ -19,6 +19,8 @@ public class ReignOfNetherClientConfigs {
     public static final ForgeConfigSpec.ConfigValue<Boolean> SQUARE_MINIMAP;
     public static final ForgeConfigSpec.ConfigValue<Boolean> ALERTS_ENABLED;
     public static final ForgeConfigSpec.ConfigValue<Integer> ALERT_VOLUME;
+    public static final ForgeConfigSpec.ConfigValue<Boolean> ANNOUNCER_VOICE;
+    public static final ForgeConfigSpec.ConfigValue<Integer> VOICE_VOLUME;
 
     static {
         BUILDER.push("Configuration File");
@@ -38,6 +40,10 @@ public class ReignOfNetherClientConfigs {
         ALERTS_ENABLED = BUILDER.define("alerts_enabled", true);
         BUILDER.comment("Notification sound volume, 0-100 (0 = text only)");
         ALERT_VOLUME = BUILDER.defineInRange("alert_volume", 100, 0, 100);
+        BUILDER.comment("Spoken announcer for alerts (replaces the alert chord while on; needs alerts_enabled)");
+        ANNOUNCER_VOICE = BUILDER.define("announcer_voice", true);
+        BUILDER.comment("Announcer voice volume, 0-100");
+        VOICE_VOLUME = BUILDER.defineInRange("voice_volume", 100, 0, 100);
         SPEC = BUILDER.build();
     }
 

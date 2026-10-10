@@ -326,15 +326,85 @@
             "reignofnether:potion_pop_02",
             "reignofnether:potion_pop_03"
         ]
+    },
+    "announcer.commander_attacked": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/commander_attacked", "stream": false } ]
+    },
+    "announcer.base_attacked": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/base_attacked", "stream": false } ]
+    },
+    "announcer.units_attacked": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/units_attacked", "stream": false } ]
+    },
+    "announcer.ally_needs_help": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/ally_needs_help", "stream": false } ]
+    },
+    "announcer.unit_lost": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/unit_lost", "stream": false } ]
+    },
+    "announcer.construction_complete": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/construction_complete", "stream": false } ]
+    },
+    "announcer.research_complete": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/research_complete", "stream": false } ]
+    },
+    "announcer.idle_constructor": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/idle_constructor", "stream": false } ]
+    },
+    "announcer.metal_full": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/metal_full", "stream": false } ]
+    },
+    "announcer.energy_full": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/energy_full", "stream": false } ]
+    },
+    "announcer.metal_stall": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/metal_stall", "stream": false } ]
+    },
+    "announcer.energy_stall": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/energy_stall", "stream": false } ]
+    },
+    "announcer.experimental_detected": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/experimental_detected", "stream": false } ]
+    },
+    "announcer.experimental_ready": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/experimental_ready", "stream": false } ]
+    },
+    "announcer.capture_taken": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/capture_taken", "stream": false } ]
+    },
+    "announcer.capture_lost": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/capture_lost", "stream": false } ]
+    },
+    "announcer.commander_killed": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/commander_killed", "stream": false } ]
+    },
+    "announcer.victory": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/victory", "stream": false } ]
+    },
+    "announcer.defeat": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/defeat", "stream": false } ]
+    },
+    "announcer.game_start": {
+        "subtitle": "sounds.reignofnether.announcer",
+        "sounds": [ { "name": "reignofnether:announcer/game_start", "stream": false } ]
     }
 }
-
-
-
-
-
-
-
-
-
-
