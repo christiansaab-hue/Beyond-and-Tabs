@@ -69,6 +69,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.TotemOfThePack.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.WitheringFog.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SunriseSortie.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.LeafDash.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SoulWisps.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);
         vanillaEventBus.register(UnitServerEvents.class);

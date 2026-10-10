@@ -140,6 +140,18 @@ Wiring checklist for slice 1 (every item from section 1):
     commander signature test, livery test, extractor stamping test; a new "every live faction's kit builds"
     test that iterates `PLAYABLE_FACTIONS` filtered by `isLive` instead of hard-coded lists.
 
+### Slice 1 status (branch `verdant-slice-1`)
+
+Implemented: Seedshaper (worker; first one = Grove Warden), Fox Courier (scout, weak bite), Leafblade (raider,
+extends VindicatorUnit, Leaf Dash), Thornbow (skirmisher, skeleton archer frame, rooting arrows), Sentinel Treant
+(tank, extends IronGolemUnit); Heartwood Hall (capitol), Grove (T1 lab), `_verdant` extractor/T2 extractor/wind/
+converter (gen_structures.py, both trees); Thornburst (cone D-gun, `CommanderDGun.Kind.THORNBURST`) and Wildstride
+(`CommanderAbility.Kind.WILDSTRIDE`) via FactionTraits; quick-build extractor; bot kit (T1 only, null-guarded T2/T3);
+lobby tile live, skirmish code 4, "Random" = any live faction (`Factions.randomLive`); lang, icons, skins.
+Bodies are vanilla (Alex's Mobs renderers were not needed for slice 1). Still stubbed: stockpile/bridge variants,
+calm theme (reuses the Kingdom's), cube map (so not in CLASSIC_FACTIONS), survival wave, death debris (wire field
+full), T2/T3 (Heartwood Hall offers Tier 2 only, for the extractor refit), Hive Keeper.
+
 ## 4. Later slices
 
 | Slice | Content | Notes |

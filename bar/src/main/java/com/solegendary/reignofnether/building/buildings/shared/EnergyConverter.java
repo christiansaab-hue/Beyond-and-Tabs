@@ -34,7 +34,7 @@ public class EnergyConverter extends Building {
         this("");
     }
 
-    /** variant: "" (Sunforged crucible), "_dark" (Gravebound soul furnace) or "_nether" (Horde smelter). */
+    /** variant: "" (Sunforged crucible), "_dark" (Gravebound soul furnace), "_nether" (Horde smelter) or "_verdant" (Court campfire). */
     public EnergyConverter(String variant) {
         super(structureName + variant, cost, false);
         this.name = buildingName;

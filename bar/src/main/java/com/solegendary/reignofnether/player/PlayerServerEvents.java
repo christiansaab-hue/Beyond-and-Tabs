@@ -425,8 +425,8 @@ public class PlayerServerEvents {
     }
 
     public static void startRTS(int playerId, Vec3 pos, Faction faction, int startPosColorId) {
-        if (faction == Factions.RANDOM) 
-            faction = MiscUtil.getRandomItem(List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS));
+        if (faction == Factions.RANDOM)   // any live faction, so each new one joins the pool when it goes live
+            faction = Factions.randomLive(random);
         // a preview faction has no capitol, worker or units yet: starting one would spawn a player with nothing
         if (faction.preview) {
             ReignOfNether.LOGGER.warn("[Player] startRTS refused: {} is a preview faction", faction.key);

@@ -29,11 +29,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Each faction's Commander signature ability (design doc: claude/design-factions.md). One class, three faces:
+ * Each faction's Commander signature ability (design doc: claude/design-factions.md). One class, one face per faction:
  * <ul>
  *   <li><b>Sunforged Kingdom - Rally Standard</b>: allies within 12 blocks gain Resistance I and Speed I for 20 s.</li>
  *   <li><b>Ironhide Horde - War Horn</b>: allies within 16 blocks gain Speed II and Strength I for 10 s.</li>
  *   <li><b>Gravebound - Dread</b>: enemies within 12 blocks are Weakened and Slowed for 8 s.</li>
+ *   <li><b>Verdant Court - Wildstride</b>: allies within 14 blocks gain Speed II and Jump Boost for 12 s - the
+ *       Court wins by being somewhere else first.</li>
  * </ul>
  * Instant cast, no resource cost, 45 s cooldown. Commanders get it in {@code CommanderAbilities}.
  */
@@ -49,7 +51,7 @@ public class CommanderAbility extends Ability {
      * NONE: the faction has no signature designed yet (FactionTraits) - CommanderServerEvents does not grant the
      * ability, and should one exist anyway its button is hidden and it does nothing (it used to be Rally Standard).
      */
-    public enum Kind { RALLY, WAR_HORN, DREAD, NONE }
+    public enum Kind { RALLY, WAR_HORN, DREAD, WILDSTRIDE, NONE }
 
     public static Kind kindFor(Unit unit) {
         return FactionTraits.of(Factions.getFaction(unit)).commanderAbility;
@@ -66,6 +68,12 @@ public class CommanderAbility extends Ability {
                 line1 = "Allies within 16 blocks: Speed II and Strength I for 10 s.";
                 line2 = "The Horde's charge starts here.";
                 icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/goat_horn.png");
+            }
+            case WILDSTRIDE -> {
+                title = "Wildstride";
+                line1 = "Allies within 14 blocks: Speed II and Jump Boost for 12 s.";
+                line2 = "The forest moves, and the Court moves with it.";
+                icon = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/azalea_top.png");
             }
             case DREAD -> {
                 title = "Dread";
@@ -103,7 +111,7 @@ public class CommanderAbility extends Ability {
         Kind kind = kindFor(unitUsing);
         if (kind == Kind.NONE)
             return;
-        double radius = kind == Kind.WAR_HORN ? 16 : 12;
+        double radius = kind == Kind.WAR_HORN ? 16 : kind == Kind.WILDSTRIDE ? 14 : 12;
         List<LivingEntity> targets = new ArrayList<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (!(le instanceof Unit u) || !le.isAlive() || le.distanceToSqr(self) > radius * radius)
@@ -117,6 +125,10 @@ public class CommanderAbility extends Ability {
                 case WAR_HORN -> {
                     le.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 200, 1));
                     le.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 200, 0));
+                }
+                case WILDSTRIDE -> {
+                    le.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 240, 1));
+                    le.addEffect(new MobEffectInstance(MobEffects.JUMP, 240, 0));   // I, not II: higher hops upset pathing
                 }
                 case DREAD -> {
                     le.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 160, 0));
@@ -132,11 +144,13 @@ public class CommanderAbility extends Ability {
         switch (kind) {
             case WAR_HORN -> sl.playSound(null, self.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 4f, 1f);
             case DREAD -> sl.playSound(null, self.blockPosition(), SoundEvents.WARDEN_ROAR, SoundSource.HOSTILE, 2f, 0.8f);
+            case WILDSTRIDE -> sl.playSound(null, self.blockPosition(), SoundEvents.AZALEA_LEAVES_BREAK, SoundSource.NEUTRAL, 3f, 0.7f);
             default -> sl.playSound(null, self.blockPosition(), SoundEvents.BELL_BLOCK, SoundSource.NEUTRAL, 2f, 0.9f);
         }
         var particle = switch (kind) {
             case WAR_HORN -> ParticleTypes.ANGRY_VILLAGER;
             case DREAD -> ParticleTypes.SOUL;
+            case WILDSTRIDE -> ParticleTypes.HAPPY_VILLAGER;
             default -> ParticleTypes.END_ROD;
         };
         for (int i = 0; i < 48; i++) {

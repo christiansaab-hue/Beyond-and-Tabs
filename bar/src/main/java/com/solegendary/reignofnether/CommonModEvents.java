@@ -61,6 +61,12 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.WINDCALLER_UNIT.get(), WindcallerUnit.createAttributes().build());
         evt.put(EntityRegistrar.IRON_GOLEM_UNIT.get(), IronGolemUnit.createAttributes().build());
         evt.put(EntityRegistrar.SUN_COLOSSUS_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit.createAttributes().build());
+        // Verdant Court
+        evt.put(EntityRegistrar.SEEDSHAPER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SeedshaperUnit.createAttributes().build());
+        evt.put(EntityRegistrar.FOX_COURIER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.FoxCourierUnit.createAttributes().build());
+        evt.put(EntityRegistrar.LEAFBLADE_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.LeafbladeUnit.createAttributes().build());
+        evt.put(EntityRegistrar.THORNBOW_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ThornbowUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SENTINEL_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit.createAttributes().build());
         evt.put(EntityRegistrar.WITCH_UNIT.get(), WitchUnit.createAttributes().build());
         evt.put(EntityRegistrar.EVOKER_UNIT.get(), EvokerUnit.createAttributes().build());
         evt.put(EntityRegistrar.ENDERMAN_UNIT.get(), EndermanUnit.createAttributes().build());
@@ -155,6 +161,11 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.SCOUT_CAT_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.STRIDER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.BAT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SEEDSHAPER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.LEAFBLADE_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.THORNBOW_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SENTINEL_TREANT_UNIT_SPAWN_EGG);
         }
         if (BuiltInRegistries.CREATIVE_MODE_TAB.getKey(event.getTab())==CreativeModeTabs.TOOLS_AND_UTILITIES.location()){
             event.accept(ItemRegistrar.THROWABLE_TNT);

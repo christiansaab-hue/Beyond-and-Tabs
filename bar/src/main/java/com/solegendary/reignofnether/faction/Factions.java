@@ -39,7 +39,7 @@ public class Factions {
 	public static Faction NEUTRAL;
 	public static Faction RANDOM;
 	public static Faction NONE;
-	// factions 4-7 of claude/design-factions.md, announced in the lobby before they are built (design/verdant_court_plan.md)
+	// faction 4 of claude/design-factions.md (design/verdant_court_plan.md): playable from slice 1 (T1 only)
 	public static Faction VERDANT_COURT;
 
 	public static void register() {
@@ -88,12 +88,16 @@ public class Factions {
 			.noCubeMap()
 		);
 
-		// Registered last so the registry ids of the six above don't move (getFaction(int) reads them). Preview only:
-		// no cube map (title screen / survival skip it), no spawn wave (not a survival faction), not playable.
+		// Registered last so the registry ids of the six above don't move (getFaction(int) reads them). Playable (lobby,
+		// skirmish, sandbox, random, bots) but still no cube map (so the title screen and survival's random pick skip it)
+		// and no spawn wave (not a survival faction) until those exist. No calm theme of its own yet: the Kingdom's
+		// pastoral one fits a forest court best. Custom (sandbox) buildings follow the Kingdom's "buildable" flag until
+		// CustomBuilding grows a Court one.
 		VERDANT_COURT = register("verdant_court", new Faction()
-			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/flowering_azalea_leaves.png"))
+			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "textures/mobheads/seedshaper.png"))
 			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/flowering_azalea_leaves.png"))
-			.setPreview()
+			.setSound(SoundRegistrar.VILLAGER_CALM_THEME_SONG.get())
+			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
 			.noCubeMap()
 			.setTraits(FactionTraits.VERDANT)
 		);
@@ -159,6 +163,13 @@ public class Factions {
 		registerEntity(PIGLINS, EntityRegistrar.PIGLIN_MERCHANT_UNIT.get(), ProductionItems.PIGLIN_MERCHANT);
 		registerEntity(PIGLINS, EntityRegistrar.WILDFIRE_UNIT.get(), ProductionItems.WILDFIRE);
 		registerEntity(PIGLINS, EntityRegistrar.ARMOURED_HOGLIN_UNIT.get());
+
+		// Verdant Court (slice 1: T1 only)
+		registerWorkerEntity(VERDANT_COURT, EntityRegistrar.SEEDSHAPER_UNIT.get(), ProductionItems.SEEDSHAPER);
+		registerScoutEntity(VERDANT_COURT, EntityRegistrar.FOX_COURIER_UNIT.get(), ProductionItems.FOX_COURIER);
+		registerEntity(VERDANT_COURT, EntityRegistrar.LEAFBLADE_UNIT.get(), ProductionItems.LEAFBLADE);
+		registerEntity(VERDANT_COURT, EntityRegistrar.THORNBOW_UNIT.get(), ProductionItems.THORNBOW);
+		registerEntity(VERDANT_COURT, EntityRegistrar.SENTINEL_TREANT_UNIT.get(), ProductionItems.SENTINEL_TREANT);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -236,6 +247,13 @@ public class Factions {
 		registerBuildings(VILLAGERS, Buildings.VILLAGER_MARKET, Keybindings.hotkey10);
 		registerBuildings(VILLAGERS, Buildings.BEACON);
 		
+		// Verdant Court: the same hotkey slots as the others (capitol slot 1, army lab slot 6, economy 5/6/7)
+		registerStartBuilding(VERDANT_COURT, Buildings.HEARTWOOD_HALL, Keybindings.abilitySlot1);
+		registerBuildings(VERDANT_COURT, Buildings.METAL_EXTRACTOR_VERDANT, Keybindings.hotkey5);
+		registerBuildings(VERDANT_COURT, Buildings.WIND_GENERATOR_VERDANT, Keybindings.hotkey6);
+		registerBuildings(VERDANT_COURT, Buildings.ENERGY_CONVERTER_VERDANT, Keybindings.hotkey7);
+		registerBuildings(VERDANT_COURT, Buildings.GROVE, Keybindings.abilitySlot6);
+
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);
 		registerBuildings(NEUTRAL, Buildings.HEALING_FOUNTAIN, Keybindings.abilitySlot2);
@@ -328,6 +346,18 @@ public class Factions {
 	public static boolean isLive(Faction faction) {
 		return faction != null && faction.playable && !faction.preview
 			&& faction.capitolBuilding != null && faction.workerEntityType != null;
+	}
+
+	/**
+	 * A random faction a player can actually start as (isLive over PLAYABLE_FACTIONS): what "Random" means in the lobby,
+	 * the skirmish screen and startRTS, so each new faction joins the pool the moment it goes live.
+	 */
+	public static Faction randomLive(java.util.Random rng) {
+		java.util.List<Faction> live = new java.util.ArrayList<>();
+		for (ResourceLocation rl : PLAYABLE_FACTIONS)
+			if (isLive(getFaction(rl)))
+				live.add(getFaction(rl));
+		return live.isEmpty() ? VILLAGERS : live.get(rng.nextInt(live.size()));
 	}
 
 	public static ResourceLocation getKey(Faction faction) {

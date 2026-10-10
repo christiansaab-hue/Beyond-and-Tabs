@@ -42,6 +42,12 @@ public class ProductionItems {
     public static final SlimeProd SLIME = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "slime"), new SlimeProd());
     public static final WardenProd WARDEN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "warden"), new WardenProd());
     public static final com.solegendary.reignofnether.unit.units.villagers.SunColossusProd SUN_COLOSSUS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_colossus"), new com.solegendary.reignofnether.unit.units.villagers.SunColossusProd());
+    // Verdant Court
+    public static final com.solegendary.reignofnether.unit.units.verdant.SeedshaperProd SEEDSHAPER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seedshaper"), new com.solegendary.reignofnether.unit.units.verdant.SeedshaperProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.FoxCourierProd FOX_COURIER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "fox_courier"), new com.solegendary.reignofnether.unit.units.verdant.FoxCourierProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.LeafbladeProd LEAFBLADE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "leafblade"), new com.solegendary.reignofnether.unit.units.verdant.LeafbladeProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.ThornbowProd THORNBOW = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornbow"), new com.solegendary.reignofnether.unit.units.verdant.ThornbowProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.SentinelTreantProd SENTINEL_TREANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sentinel_treant"), new com.solegendary.reignofnether.unit.units.verdant.SentinelTreantProd());
     public static final com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectProd ROYAL_ARCHITECT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "royal_architect"), new com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectProd());
     public static final com.solegendary.reignofnether.unit.units.monsters.EmbalmerProd EMBALMER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "embalmer"), new com.solegendary.reignofnether.unit.units.monsters.EmbalmerProd());
     public static final com.solegendary.reignofnether.unit.units.piglins.BonewrightProd BONEWRIGHT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bonewright"), new com.solegendary.reignofnether.unit.units.piglins.BonewrightProd());
@@ -175,6 +181,11 @@ public class ProductionItems {
         BONEWRIGHT,
         WAR_MAMMOTH,
         SUN_COLOSSUS,
+        SEEDSHAPER,
+        FOX_COURIER,
+        LEAFBLADE,
+        THORNBOW,
+        SENTINEL_TREANT,
         BONE_DRAGON,
         GRUNT,
         STRIDER,

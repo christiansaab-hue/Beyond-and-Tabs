@@ -68,7 +68,11 @@ public final class UnitInfoCard {
         Map.entry("PolarBearUnit", Role.TANK), Map.entry("GrizzlyBearUnit", Role.TANK),
         Map.entry("ScoutDogUnit", Role.RAIDER), Map.entry("ScoutCatUnit", Role.RAIDER), Map.entry("SpiderUnit", Role.RAIDER),
         Map.entry("WolfUnit", Role.RAIDER), Map.entry("HoglinUnit", Role.RAIDER), Map.entry("ZoglinUnit", Role.RAIDER),
-        Map.entry("BatUnit", Role.RAIDER)
+        Map.entry("BatUnit", Role.RAIDER),
+        // Verdant Court: the Treant is a 140 HP tank by design, the Leafblade (50 HP) and the Fox Courier raiders;
+        // the Thornbow is a skirmisher by the ranged rule and the Seedshaper a worker
+        Map.entry("SentinelTreantUnit", Role.TANK), Map.entry("LeafbladeUnit", Role.RAIDER),
+        Map.entry("FoxCourierUnit", Role.RAIDER)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

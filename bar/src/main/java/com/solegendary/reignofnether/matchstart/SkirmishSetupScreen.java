@@ -22,7 +22,10 @@ import java.util.stream.IntStream;
  * session so a rematch is one click. Teams are alliances: everyone on your team is your ally in the match.
  */
 public class SkirmishSetupScreen extends Screen {
-    static final List<String> FACTIONS = List.of("Sunforged", "Gravebound", "Ironhide", "Random");
+    // indexed by the packet's faction code (SkirmishServerboundPacket): 3 stays "Random", the Court took 4.
+    // FACTION_ORDER is the order the cycler walks them, with Random last as before
+    static final List<String> FACTIONS = List.of("Sunforged", "Gravebound", "Ironhide", "Random", "Verdant");
+    static final List<Integer> FACTION_ORDER = List.of(0, 1, 2, 4, 3);
     static final List<String> DIFFICULTIES = List.of("Easy", "Medium", "Hard");
     static final List<String> ARENAS = List.of("Small", "Medium", "Large", "Huge", "Random");
     static final List<String> METALS = List.of("Lean", "Normal", "Rich", "Random");
@@ -37,7 +40,7 @@ public class SkirmishSetupScreen extends Screen {
 
     /** Everything the lobby decides; codes match SkirmishServerboundPacket. */
     public static class Settings {
-        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random
+        public int faction = 0;          // 0 Sunforged (villagers), 1 Gravebound (monsters), 2 Ironhide (piglins), 3 random, 4 Verdant
         public int colour = 1;           // index into PlayerColors.colors (0..PLAYER_COLOR_COUNT-1), or -1 random
         public int team = 0;             // 0 = Team 1, 1 = Team 2
         public final List<Bot> bots = new ArrayList<>();
@@ -179,7 +182,7 @@ public class SkirmishSetupScreen extends Screen {
         if (settings.team == team) {
             swatches.add(new Object[]{ x + 4, y + 5, PLAYER });
             addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(FACTIONS.get(i)))
-                .withValues(range(4)).withInitialValue(settings.faction)
+                .withValues(FACTION_ORDER).withInitialValue(settings.faction)
                 .create(x + w - 150, y, 80, ROW_H - 2, Component.literal(""), (b, v) -> settings.faction = v));
             y += ROW_H;
         }
@@ -187,7 +190,7 @@ public class SkirmishSetupScreen extends Screen {
         for (Bot bot : teamBots) {
             swatches.add(new Object[]{ x + 4, y + 5, bot });
             addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(FACTIONS.get(i)))
-                .withValues(range(4)).withInitialValue(bot.faction)
+                .withValues(FACTION_ORDER).withInitialValue(bot.faction)
                 .create(x + w - 150, y, 80, ROW_H - 2, Component.literal(""), (b, v) -> bot.faction = v));
             addRenderableWidget(CycleButton.<Integer>builder(i -> Component.literal(DIFFICULTIES.get(i)))
                 .withValues(range(3)).withInitialValue(bot.difficulty)

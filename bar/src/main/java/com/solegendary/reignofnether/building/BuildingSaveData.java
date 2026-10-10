@@ -199,6 +199,9 @@ public class BuildingSaveData extends SavedData {
             case EndPortal.buildingName -> building = Buildings.END_PORTAL;
             case HealingFountain.buildingName -> building = Buildings.HEALING_FOUNTAIN;
             case NeutralTransportPortal.buildingName -> building = Buildings.NEUTRAL_TRANSPORT_PORTAL;
+            // new saves carry the registry key (buildingKey above); listed so a name-only save never drops them
+            case com.solegendary.reignofnether.building.buildings.verdant.HeartwoodHall.buildingName -> building = Buildings.HEARTWOOD_HALL;
+            case com.solegendary.reignofnether.building.buildings.verdant.Grove.buildingName -> building = Buildings.GROVE;
         }
         return building;
     }
