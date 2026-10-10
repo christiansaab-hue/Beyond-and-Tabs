@@ -860,7 +860,9 @@ public class SkirmishGameTests {
     public static void capture_point_is_taken_and_pays(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        int cx = base.getX() - 60, cz = base.getZ() + 60, y = 220;
+        // straight above this test's own arena: an offset column (it was -60/+60) can land over another test's arena,
+        // and a stone pad at y=220 there broke extractor_and_windmill_fit_on_a_stamped_patch's heightmap (solidTop)
+        int cx = base.getX(), cz = base.getZ(), y = 220;
         for (int dx = -6; dx <= 6; dx++)
             for (int dz = -6; dz <= 6; dz++)
                 level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.STONE.defaultBlockState(), 3);
