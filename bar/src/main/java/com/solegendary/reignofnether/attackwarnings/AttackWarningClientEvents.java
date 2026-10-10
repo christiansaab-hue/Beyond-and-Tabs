@@ -64,8 +64,10 @@ public class AttackWarningClientEvents {
             return;
         String me = MC.player.getName().getString();
         // spoken-style "commander under attack" / "ally needs help" (own cooldowns, independent of the danger banner)
-        if (isCommander)
-            com.solegendary.reignofnether.hud.NotificationClientEvents.onCommanderAttacked(attackedPlayerName);
+        // true when the new alert system announced this commander hit itself (alerts_enabled on): the banner text
+        // still shows below, only the old danger sound is dropped so the two alarms don't stack
+        boolean alertCovered = isCommander
+            && com.solegendary.reignofnether.hud.NotificationClientEvents.onCommanderAttacked(attackedPlayerName);
         if (!me.equals(attackedPlayerName)) {
             // BAR-style: an ally's commander under fire shows up on your minimap too (orange, not the red own-unit ping)
             if (isCommander && AlliancesClient.isAllied(me, attackedPlayerName))
@@ -87,7 +89,7 @@ public class AttackWarningClientEvents {
         if (dist2dSqr > Math.pow(OrthoviewClientEvents.getZoom() * 2, 2) && attackWarningCd <= 0) {
             HudClientEvents.showTemporaryMessage(I18n.get("attack_warning.reignofnether.danger"), 200);
             lastAttackPos = attackPos;
-            if (MC.player != null)
+            if (MC.player != null && !alertCovered)
                 MC.player.playSound(SoundRegistrar.UNDER_ATTACK.get(), 0.5f, 1.0f);
             attackWarningCd = ATTACK_WARNING_CD_MAX;
             warnDuration = WARN_DURATION_MAX;

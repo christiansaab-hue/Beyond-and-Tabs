@@ -28,11 +28,12 @@ import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Sunforged Kingdom (Royal Architect): <b>Holy Bell</b>. The architect rings a consecrated bell: every enemy unit
  * within {@link #RADIUS} blocks glows for {@link #REVEAL_TICKS} ticks, and the fog of war lifts around each of
- * them for the caster for the same time (the same server-side reveal RoN uses for archers firing out of the fog).
+ * them for the caster and the caster's allies for the same time (the same server-side reveal RoN uses for archers firing out of the fog).
  * BAR's radar pulse, fantasy-first: it answers stealth and flanks around the base, it deals no damage.
  * {@link #CD_SECONDS} s cooldown.
  */
@@ -80,6 +81,7 @@ public class HolyBell extends Ability {
     public static List<LivingEntity> ring(ServerLevel sl, LivingEntity self, String owner) {
         List<LivingEntity> out = new ArrayList<>();
         double r2 = RADIUS * RADIUS;
+        Set<String> allies = AlliancesServerEvents.getAllAllies(owner);
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
             if (le == self || !le.isAlive() || !(le instanceof Unit u) || le.level() != sl || le.distanceToSqr(self) > r2)
                 continue;
@@ -89,6 +91,10 @@ public class HolyBell extends Ability {
             le.addEffect(new MobEffectInstance(MobEffects.GLOWING, REVEAL_TICKS, 0, false, false));
             // lifts the caster's fog around the enemy (capped sight radius, expires by itself)
             FogOfWarServerEvents.revealRangedUnit(le.getId(), owner, REVEAL_TICKS);
+            // ...and every ally's: the bell is a team radar pulse. Registered per ally (not left to the fog
+            // tick's ally-mask merge) so an ally who has no units of their own on the field yet still sees it.
+            for (String ally : allies)
+                FogOfWarServerEvents.revealRangedUnit(le.getId(), ally, REVEAL_TICKS);
             sl.sendParticles(ParticleTypes.END_ROD, le.getX(), le.getY() + le.getBbHeight() + 0.3, le.getZ(), 3, 0.2, 0.2, 0.2, 0.01);
             out.add(le);
         }

@@ -143,6 +143,7 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.building.WindmillRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BuildingAmbienceClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.BannerRenderClientEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.building.ScaffoldRenderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.resources.MetalPatchMarkerClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.matchstart.QuickBattle.class);
         vanillaEventBus.register(ConfigVanillaServerEvents.class);

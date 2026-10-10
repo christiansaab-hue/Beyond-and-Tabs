@@ -1386,6 +1386,44 @@ public class SkirmishGameTests {
         });
     }
 
+    /** Holy Bell: the fog lifts around a rung-out enemy for the caster AND the caster's ally, never for the foe. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void holy_bell_reveals_to_allies(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_bell_ally_me", ally = "gametest_bell_ally_ally", foeOwner = "gametest_bell_ally_foe";
+        var architect = com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_UNIT.get().create(level);
+        if (architect == null || foe == null) {
+            helper.fail("could not create holy bell units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(13, 2, 13));
+        architect.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() - 7.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        architect.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        level.addFreshEntity(architect);
+        level.addFreshEntity(foe);
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(owner, ally);
+        helper.runAfterDelay(3, () -> {
+            try {
+                com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, owner);
+                if (!com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isUnitRevealedTo(foe.getId(), owner))
+                    helper.fail("Holy Bell did not lift the caster's fog around the enemy");
+                else if (!com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isUnitRevealedTo(foe.getId(), ally))
+                    helper.fail("Holy Bell did not lift the ally's fog around the enemy");
+                else if (com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isUnitRevealedTo(foe.getId(), foeOwner))
+                    helper.fail("Holy Bell revealed the enemy to its own owner");
+                else
+                    helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(owner, ally);
+                architect.discard();
+                foe.discard();
+            }
+        });
+    }
+
     /** Withering Fog: a second in the cloud hurts and weakens an enemy inside, and leaves a friend inside alone. */
     @GameTest(template = ARENA, timeoutTicks = 100)
     public static void withering_fog_withers_foes_not_friends(GameTestHelper helper) {

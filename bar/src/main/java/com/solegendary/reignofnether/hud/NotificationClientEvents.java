@@ -105,14 +105,23 @@ public class NotificationClientEvents {
     // public entry points (hooks)
     // ------------------------------------------------------------------------------------------------------------
 
-    /** From AttackWarningClientEvents: a commander was hit. */
-    public static void onCommanderAttacked(String ownerName) {
+    /**
+     * From AttackWarningClientEvents: a commander was hit. Returns true when this hit is (or was just) announced by
+     * our own "commander under attack" alert: it fired now, or fired within its cooldown for the same ongoing
+     * assault. The caller then skips the old RoN danger sound so the player doesn't hear two alarms for one event.
+     * False whenever alerts are disabled, so the old sound stays the only cue in that case.
+     */
+    public static boolean onCommanderAttacked(String ownerName) {
         if (!canAlert() || ownerName == null)
-            return;
-        if (myName.equals(ownerName))
+            return false;
+        if (myName.equals(ownerName)) {
             fire(Alert.COMMANDER_ATTACKED, null);
-        else if (AlliancesClient.isAllied(myName, ownerName))
+            long last = lastFiredMs[Alert.COMMANDER_ATTACKED.ordinal()];
+            return last != 0 && System.currentTimeMillis() - last < Alert.COMMANDER_ATTACKED.cooldownMs;
+        }
+        if (AlliancesClient.isAllied(myName, ownerName))
             fire(Alert.ALLY_NEEDS_HELP, ownerName);
+        return false;
     }
 
     /** From BuildingPlacement.onBuilt (client side). */

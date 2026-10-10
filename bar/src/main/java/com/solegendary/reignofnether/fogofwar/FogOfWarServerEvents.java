@@ -95,6 +95,12 @@ public class FogOfWarServerEvents {
                 .merge(targetOwnerName, expireAt, Math::max);
     }
 
+    /** True while unitId is revealed (out of the fog) to targetOwnerName. Read-only view for game tests. */
+    public static boolean isUnitRevealedTo(int unitId, String targetOwnerName) {
+        Map<String, Long> targets = revealedUnitExpiryTick.get(unitId);
+        return targets != null && targets.containsKey(targetOwnerName);
+    }
+
     public static final int PLAYER_SIGHT_BLOCKS = 16;
     public static final int REVEALED_ATTACKER_SIGHT_BLOCKS = 8;
     public static final int MAX_SIGHT_BLOCKS = 64;
