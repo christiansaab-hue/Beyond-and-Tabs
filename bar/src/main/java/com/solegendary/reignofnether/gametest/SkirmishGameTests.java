@@ -3114,6 +3114,180 @@ public class SkirmishGameTests {
     }
 
 
+    // ------------------------------------------------------------------ Verdant Living Terrain (slice 3)
+
+    /** Clears a box of the arena to open ground: stone at y=1 (template coords), air above up to y=4. */
+    static void openGround(GameTestHelper helper, int x0, int z0, int x1, int z1) {
+        ServerLevel level = helper.getLevel();
+        for (int x = x0; x <= x1; x++)
+            for (int z = z0; z <= z1; z++) {
+                level.setBlock(helper.absolutePos(new BlockPos(x, 1, z)), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                for (int y = 2; y <= 4; y++)
+                    level.setBlock(helper.absolutePos(new BlockPos(x, y, z)), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+    }
+
+    /**
+     * A unit standing in its own side's grown thicket is hidden: an enemy 8 blocks away can't pick it as a target.
+     * Once an enemy unit comes within 4 blocks it is revealed and targetable again. The targeting enemy is never
+     * added to the level (so it can't act); a second enemy, added, walks up close.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_thicket_hides_until_an_enemy_is_close(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_thicket_hide", foeOwner = "gametest_thicket_hide_foe";
+        openGround(helper, 2, 2, 13, 6);
+        BlockPos spot = helper.absolutePos(new BlockPos(3, 2, 4));
+        if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
+            helper.fail("could not place a thicket at " + spot);
+            return;
+        }
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var friend = vill.create(level);
+        var scout = vill.create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (friend == null || scout == null || foe == null) {
+            helper.fail("could not create the thicket test units");
+            com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+            return;
+        }
+        friend.setOwnerName(owner);
+        scout.setOwnerName(foeOwner);
+        foe.setOwnerName(foeOwner);
+        friend.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        foe.moveTo(spot.getX() + 8.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(friend);
+        List<net.minecraft.world.entity.Mob> all = List.of(friend, scout, foe);
+        Runnable cleanup = () -> {
+            for (var e : all)
+                e.discard();
+            com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+        };
+        boolean[] seenVisible = { false };
+        helper.runAfterDelay(3, () -> {
+            // control, before any cover pass could hide it: the 8-block enemy can target the friend at all
+            seenVisible[0] = !com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend)
+                    && com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level) == friend;
+        });
+        helper.runAfterDelay(10, () -> {
+            com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+            if (!com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || !friend.isInvisible()) {
+                helper.fail("a unit in its own grown thicket with no enemy near is not hidden");
+                cleanup.run();
+                return;
+            }
+            if (com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level) == friend) {
+                helper.fail("an enemy 8 blocks away can still target the unit hidden in the thicket");
+                cleanup.run();
+                return;
+            }
+            scout.moveTo(spot.getX() + 3.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+            level.addFreshEntity(scout);
+        });
+        helper.runAfterDelay(15, () -> {
+            try {
+                com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
+                if (com.solegendary.reignofnether.blocks.ThicketCover.isHidden(friend) || friend.isInvisible())
+                    helper.fail("the unit stayed hidden with an enemy 3 blocks away");
+                else if (seenVisible[0] && com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 10, level) != friend)
+                    helper.fail("the revealed unit still can't be targeted");
+                else
+                    helper.succeed();
+            } finally {
+                cleanup.run();
+            }
+        });
+    }
+
+    /** Fire set beside a thicket burns it away within a second or two (and it does not come back). */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_thicket_burns(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_thicket_fire";
+        openGround(helper, 5, 5, 10, 10);
+        BlockPos spot = helper.absolutePos(new BlockPos(7, 2, 7));
+        if (!com.solegendary.reignofnether.blocks.ThicketBlock.place(level, spot, owner, true)) {
+            helper.fail("could not place a thicket at " + spot);
+            return;
+        }
+        var thicket = com.solegendary.reignofnether.registrars.BlockRegistrar.THICKET.get();
+        level.setBlock(spot.east(), net.minecraft.world.level.block.Blocks.FIRE.defaultBlockState(), 3);
+        helper.runAfterDelay(40, () -> {
+            boolean gone = !level.getBlockState(spot).is(thicket);
+            for (BlockPos p : new BlockPos[] { spot, spot.east() })
+                level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+            if (!gone)
+                helper.fail("the thicket did not burn with fire right beside it");
+            else
+                helper.succeed();
+        });
+    }
+
+    /** Seedshaper planting stops at the per-player cap: six 3x3 patches leave exactly MAX_PLANTED thickets. */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void verdant_thicket_cap_enforced(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_thicket_cap";
+        openGround(helper, 1, 1, 14, 8);
+        int[][] centres = { { 2, 2 }, { 6, 2 }, { 10, 2 }, { 2, 6 }, { 6, 6 }, { 10, 6 } };
+        int planted = 0;
+        try {
+            for (int[] c : centres)
+                planted += com.solegendary.reignofnether.ability.abilities.PlantThicket.plantPatch(level, owner,
+                        helper.absolutePos(new BlockPos(c[0], 2, c[1])), false);
+            int owned = com.solegendary.reignofnether.blocks.ThicketBlockEntity.countOwned(level, owner);
+            int max = com.solegendary.reignofnether.blocks.ThicketBlockEntity.MAX_PLANTED;
+            if (owned != max || planted != max)
+                helper.fail("planted " + planted + " / owned " + owned + " thickets over 6 patches, expected the cap " + max);
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+        }
+    }
+
+    /** The Grove Warden's Overgrowth grows thickets around the spot and roots the enemy inside, not the friend. */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void verdant_overgrowth_roots_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_overgrowth", foeOwner = "gametest_overgrowth_foe";
+        openGround(helper, 5, 5, 11, 11);
+        BlockPos centre = helper.absolutePos(new BlockPos(8, 1, 8));   // the clicked ground block
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var friend = vill.create(level);
+        var foe = vill.create(level);
+        if (friend == null || foe == null) {
+            helper.fail("could not create the Overgrowth test units");
+            return;
+        }
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        friend.moveTo(centre.getX() - 1.5, centre.getY() + 1, centre.getZ() + 0.5, 0, 0);
+        foe.moveTo(centre.getX() + 2.5, centre.getY() + 1, centre.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(friend);
+        level.addFreshEntity(foe);
+        helper.runAfterDelay(5, () -> {
+            try {
+                int rooted = com.solegendary.reignofnether.ability.abilities.Overgrowth.cast(level, owner, centre);
+                var root = foe.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+                int grown = com.solegendary.reignofnether.blocks.ThicketBlockEntity.countOwned(level, owner);
+                if (root == null || root.getAmplifier() < com.solegendary.reignofnether.ability.abilities.Overgrowth.ROOT_AMPLIFIER)
+                    helper.fail("Overgrowth did not root the enemy (rooted " + rooted + ")");
+                else if (friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                    helper.fail("Overgrowth rooted a friendly unit");
+                else if (grown < 20)
+                    helper.fail("Overgrowth grew only " + grown + " thickets on open ground");
+                else
+                    helper.succeed();
+            } finally {
+                friend.discard();
+                foe.discard();
+                com.solegendary.reignofnether.blocks.ThicketBlockEntity.removeAllOwned(level, owner);
+            }
+        });
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

@@ -58,7 +58,7 @@ public class CommanderServerEvents {
     public static void ensureAbility(Entity entity) {
         if (!(entity instanceof Unit unit) || unit.getAbilities() == null)
             return;
-        boolean hasSignature = false, hasDGun = false, hasRaise = false, hasDrums = false, hasSortie = false;
+        boolean hasSignature = false, hasDGun = false, hasRaise = false, hasDrums = false, hasSortie = false, hasOvergrowth = false;
         for (com.solegendary.reignofnether.ability.Ability a : unit.getAbilities().get()) {
             if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility)
                 hasSignature = true;
@@ -70,6 +70,8 @@ public class CommanderServerEvents {
                 hasDrums = true;
             if (a instanceof com.solegendary.reignofnether.ability.abilities.SunriseSortie)
                 hasSortie = true;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.Overgrowth)
+                hasOvergrowth = true;
         }
         // factions without a designed signature (FactionTraits: Kind.NONE) get none rather than the Kingdom's Rally
         if (!hasSignature && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(unit)
@@ -86,6 +88,9 @@ public class CommanderServerEvents {
         // and the Kingdom's on the Lord Marshal: the sortie is led by the commander at its head
         if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.VILLAGERS) && !hasSortie)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.SunriseSortie());
+        // and the Court's Grove Warden grows the battlefield itself: Overgrowth, alongside Wildstride and Thornburst
+        if (faction != null && faction.equals(com.solegendary.reignofnether.faction.Factions.VERDANT_COURT) && !hasOvergrowth)
+            unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.Overgrowth());
     }
 
     /** Client side: tags don't sync, but the commander's translated name does - that's how the client knows. */

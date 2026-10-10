@@ -106,7 +106,8 @@ public class ShadeRangerUnit extends ThornbowUnit {
         else if (stillTicks < CLOAK_DELAY_TICKS)
             stillTicks++;
         // re-asserted every tick: vanilla resets the invisible flag whenever a potion effect changes
-        boolean want = stillTicks >= CLOAK_DELAY_TICKS;
+        boolean want = stillTicks >= CLOAK_DELAY_TICKS
+                || com.solegendary.reignofnether.blocks.ThicketCover.isHidden(this);   // thicket cover wins too
         if (want != isInvisible()) {
             setInvisible(want);
             if (want)
@@ -117,6 +118,7 @@ public class ShadeRangerUnit extends ThornbowUnit {
     /** Drops its cover now (it moved, took a target or fired). Public for the game test. */
     public void reveal() {
         stillTicks = 0;
+        com.solegendary.reignofnether.blocks.ThicketCover.reveal(this);   // a shot from a thicket gives it away too
         if (isInvisible()) {
             setInvisible(false);
             if (level() instanceof ServerLevel sl)

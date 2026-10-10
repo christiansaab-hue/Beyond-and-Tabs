@@ -46,6 +46,12 @@ public class BlockEntityRegistrar {
                             BlockRegistrar.VINE_SNARE.get()).build(null)
             );
 
+    public static final RegistryObject<BlockEntityType<com.solegendary.reignofnether.blocks.ThicketBlockEntity>> THICKET_BLOCK_ENTITY =
+            register("thicket_block_entity",
+                    () -> BlockEntityType.Builder.of(com.solegendary.reignofnether.blocks.ThicketBlockEntity::new,
+                            BlockRegistrar.THICKET.get()).build(null)
+            );
+
     private static <T extends BlockEntity> RegistryObject<BlockEntityType<T>> register(String name, Supplier<BlockEntityType<T>> blockEntity) {
         return BLOCK_ENTITIES.register(name, blockEntity);
     }

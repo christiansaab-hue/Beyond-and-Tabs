@@ -508,7 +508,8 @@ public class StrategicViewClientEvents {
             return;
         if (!FogOfWarClientEvents.isInBrightChunk(entity))
             return;
-        if (entity.isInvisible() && UnitClientEvents.getPlayerToEntityRelationship(entity) != Relationship.OWNED)
+        // cloaked / thicket-hidden: no icon for enemies (owner and allies still see it, EntityMixin.isInvisibleTo)
+        if (entity.isInvisible() && (MC.player == null || entity.isInvisibleTo(MC.player)))
             return;
 
         double x = Mth.lerp(partialTick, entity.xo, entity.getX());

@@ -204,6 +204,7 @@ public class ResourceCosts {
 
     public static final ResourceCost ENCHANT_MAIMING = new ResourceCost(ID, "ENCHANT_MAIMING");
     public static final ResourceCost VINE_SNARE = new ResourceCost(ID, "VINE_SNARE");   // Verdant Seedshaper trap
+    public static final ResourceCost THICKET = new ResourceCost(ID, "THICKET");         // Verdant Seedshaper 3x3 thicket
     public static final ResourceCost ENCHANT_QUICK_CHARGE = new ResourceCost(ID, "ENCHANT_QUICK_CHARGE");
     public static final ResourceCost ENCHANT_SHARPNESS = new ResourceCost(ID, "ENCHANT_SHARPNESS");
     public static final ResourceCost ENCHANT_MULTISHOT = new ResourceCost(ID, "ENCHANT_MULTISHOT");
@@ -446,6 +447,7 @@ public class ResourceCosts {
         // ******************* ABILITIES ******************* //
         ENCHANT_MAIMING.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_MAIMING);
         VINE_SNARE.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.VINE_SNARE);
+        THICKET.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.THICKET);
         ENCHANT_QUICK_CHARGE.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_QUICK_CHARGE);
         ENCHANT_SHARPNESS.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_SHARPNESS);
         ENCHANT_MULTISHOT.bakeValues(ReignOfNetherCommonConfigs.AbilityCosts.ENCHANT_MULTISHOT);

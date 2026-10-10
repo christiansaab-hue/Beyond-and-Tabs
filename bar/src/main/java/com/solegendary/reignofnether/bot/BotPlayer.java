@@ -271,6 +271,7 @@ public class BotPlayer {
 
         // 5') the Verdant Court's slice-2 habits: snares at the home choke, an owl over it, healers with the army
         verdantHabits(level, mine, army, workers, buildings, gameTime, minutes);
+        verdantThickets(level, army, workers, gameTime, minutes);
 
         // 5a) the T2 lab: T2 constructors first (1, hard 2), then keeps T2 units coming. No repeat queue here, or
         // it would loop the constructor too
@@ -457,6 +458,7 @@ public class BotPlayer {
                 if (enemies >= 3)
                     a.use(level, u, le.blockPosition());
             }
+            useOvergrowth(level, le, u);
             fireDGun(level, le, u);
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get())
                 if (a instanceof com.solegendary.reignofnether.ability.abilities.RaiseDead && a.isOffCooldown(u))
@@ -691,6 +693,85 @@ public class BotPlayer {
                 lastSnareAt = gameTime;
                 return;
             }
+        }
+    }
+
+    /** Game time of the last Plant Thicket errand this bot sent, and how many it has sent (alternates the spot). */
+    long lastThicketAt = -1;
+    int thicketErrands = 0;
+
+    /**
+     * Living Terrain (slice 3), for any bot whose Seedshapers carry Plant Thicket: from minute 3 an idle Seedshaper
+     * grows a 3x3 patch every 40 s, alternating between the home choke (just on the home side of it, left then right
+     * of the line) and the army's resting spot (its centre, when the army is idle near home) - cover where the army
+     * waits and where the enemy walks in. Stops at 1 patch + 1 per 4 min, never past the planting cap.
+     */
+    void verdantThickets(ServerLevel level, List<LivingEntity> army, List<LivingEntity> workers, long gameTime, long minutes) {
+        if (minutes < 3 || home == null || (lastThicketAt >= 0 && gameTime - lastThicketAt < 20 * 40))
+            return;
+        int want = (int) Math.min(com.solegendary.reignofnether.blocks.ThicketBlockEntity.MAX_PLANTED, 9 * (1 + minutes / 4));
+        if (com.solegendary.reignofnether.blocks.ThicketBlockEntity.countOwned(level, name) + 5 > want)
+            return;
+        BlockPos at = null;
+        if (thicketErrands % 2 == 1 && !army.isEmpty()) {
+            // the army's resting spot: only while it idles near home (a marching army has no resting spot)
+            double cx = 0, cz = 0;
+            boolean idle = true;
+            for (LivingEntity le : army) {
+                cx += le.getX();
+                cz += le.getZ();
+                if (le instanceof Unit u && !u.isIdle())
+                    idle = false;
+            }
+            BlockPos centre = ground(level, (int) Math.floor(cx / army.size()), (int) Math.floor(cz / army.size()));
+            if (idle && centre.distSqr(home) < 40 * 40)
+                at = centre;
+        }
+        if (at == null && choke != null) {
+            // a step back from the choke toward home, alternating sides of the line
+            double dx = home.getX() - choke.getX(), dz = home.getZ() - choke.getZ();
+            double len = Math.max(1, Math.hypot(dx, dz));
+            int side = (thicketErrands / 2) % 2 == 0 ? 3 : -3;
+            at = ground(level, (int) Math.round(choke.getX() + dx / len * 3 + chokeAcrossX * side),
+                    (int) Math.round(choke.getZ() + dz / len * 3 + chokeAcrossZ * side));
+        }
+        if (at == null)
+            return;
+        for (LivingEntity w : workers) {
+            if (!(w instanceof Unit u) || !u.isIdle() || com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(w))
+                continue;
+            for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+                if (!(a instanceof com.solegendary.reignofnether.ability.abilities.PlantThicket) || !a.isOffCooldown(u))
+                    continue;
+                a.use(level, u, at);
+                lastThicketAt = gameTime;
+                thicketErrands++;
+                return;
+            }
+        }
+    }
+
+    /**
+     * The Grove Warden's Overgrowth once three or more enemy units are within 14 blocks: aimed at their centre, so
+     * the root catches the pack and the thickets give the Court's units cover right in the fight.
+     */
+    void useOvergrowth(ServerLevel level, LivingEntity commander, Unit u) {
+        for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
+            if (!(a instanceof com.solegendary.reignofnether.ability.abilities.Overgrowth) || !a.isOffCooldown(u))
+                continue;
+            int enemies = 0;
+            double cx = 0, cz = 0, cy = 0;
+            for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, commander.getX(), commander.getZ(), 14, scan)) {
+                if (!isEnemyUnit(other) || other.distanceToSqr(commander) > 14 * 14)
+                    continue;
+                enemies++;
+                cx += other.getX();
+                cy += other.getY();
+                cz += other.getZ();
+            }
+            if (enemies >= 3)
+                a.use(level, u, BlockPos.containing(cx / enemies, cy / enemies - 1, cz / enemies));
+            return;
         }
     }
 

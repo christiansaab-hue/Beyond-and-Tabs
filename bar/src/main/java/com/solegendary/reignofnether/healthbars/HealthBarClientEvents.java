@@ -66,6 +66,9 @@ public class HealthBarClientEvents {
     }
 
     private static boolean shouldShowHealthBar(Entity entity, Minecraft client) {
+        // a unit hidden from this viewer (Shade Ranger cloak, Verdant thicket cover) shows no bar, gear or not
+        if (entity instanceof Unit && entity.isInvisible() && client.player != null && entity.isInvisibleTo(client.player))
+            return false;
         return entity instanceof LivingEntity && !(entity instanceof ArmorStand) &&
                    (!entity.isInvisibleTo(client.player) || entity.isCurrentlyGlowing() || entity.isOnFire() ||
                    entity instanceof Creeper && ((Creeper) entity).isPowered() ||

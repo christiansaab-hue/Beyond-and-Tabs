@@ -146,4 +146,27 @@ public abstract class EntityMixin {
         }
     }
 
+
+    // Beyond and Tabs: a cloaked unit (Shade Ranger, or any unit hidden in a Verdant thicket - ThicketCover) is
+    // invisible only to its enemies. Its owner and allies get vanilla's translucent ghost, so they can still see and
+    // command it; everyone else sees nothing (FogOfWarClientEvents also drops its armour and held items).
+    @Inject(
+            method = "isInvisibleTo",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void isInvisibleTo(Player player, CallbackInfoReturnable<Boolean> cir) {
+        if (player == null || !((Object) this instanceof com.solegendary.reignofnether.unit.interfaces.Unit unit))
+            return;
+        String owner = unit.getOwnerName();
+        if (owner == null || owner.isBlank())
+            return;
+        String viewer = player.getName().getString();
+        boolean friendly = owner.equals(viewer) || (level.isClientSide()
+                ? com.solegendary.reignofnether.alliance.AlliancesClient.isAllied(owner, viewer)
+                : com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(owner, viewer));
+        if (friendly)
+            cir.setReturnValue(false);
+    }
+
 }

@@ -296,6 +296,13 @@ public class FogOfWarClientEvents {
             evt.setCanceled(true);
             return;
         }
+        // a unit hidden from this viewer (Shade Ranger cloak, Verdant thicket cover) draws nothing at all: vanilla
+        // would still draw the armour and held items of an invisible body
+        LivingEntity le = evt.getEntity();
+        if (le instanceof Unit && le.isInvisible() && MC.player != null && le.isInvisibleTo(MC.player)) {
+            evt.setCanceled(true);
+            return;
+        }
         // don't render entities in non-bright chunks or outside of world border
         if (isInBrightChunk(evt.getEntity()))
             return;
