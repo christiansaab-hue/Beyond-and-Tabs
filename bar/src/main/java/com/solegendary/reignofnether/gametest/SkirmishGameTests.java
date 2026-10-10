@@ -862,7 +862,9 @@ public class SkirmishGameTests {
     public static void capture_point_is_taken_and_pays(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        int cx = base.getX() - 60, cz = base.getZ() + 60, y = 220;
+        // straight above this test's own arena: an offset column (it was -60/+60) can land over another test's arena,
+        // and a stone pad at y=220 there broke extractor_and_windmill_fit_on_a_stamped_patch's heightmap (solidTop)
+        int cx = base.getX(), cz = base.getZ(), y = 220;
         for (int dx = -6; dx <= 6; dx++)
             for (int dz = -6; dz <= 6; dz++)
                 level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.STONE.defaultBlockState(), 3);
@@ -2085,6 +2087,161 @@ public class SkirmishGameTests {
                 != types.getValue(com.solegendary.reignofnether.compat.AlexsMobsCompat.id("grizzly_bear")))
             helper.fail("AMEntityRegistry.GRIZZLY_BEAR differs from the registry entry");
         helper.succeed();
+    }
+
+    /**
+     * Ability-leak audit: for EVERY unit type the mod registers, an ability added at runtime to one instance (what
+     * CommanderServerEvents.ensureAbility and the T3 faction powers do) must not show up on a sibling made before or
+     * after it - i.e. getAbilities() must never hand out the type's shared static set.
+     */
+    @GameTest(template = ARENA)
+    public static void runtime_abilities_never_leak_between_siblings_of_any_unit_type(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<String> leaks = new ArrayList<>();
+        int checked = 0;
+        for (var type : net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES) {
+            ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(type);
+            if (key == null || !ReignOfNether.MOD_ID.equals(key.getNamespace()))
+                continue;
+            net.minecraft.world.entity.Entity a = null, b = null, c = null;
+            try {
+                a = type.create(level);
+                b = type.create(level);
+                if (!(a instanceof com.solegendary.reignofnether.unit.interfaces.Unit ua)
+                        || !(b instanceof com.solegendary.reignofnether.unit.interfaces.Unit ub)
+                        || ua.getAbilities() == null || ub.getAbilities() == null)
+                    continue;
+                var marker = new com.solegendary.reignofnether.ability.abilities.CommanderDGun();
+                ua.getAbilities().add(marker);
+                c = type.create(level);
+                checked++;
+                if (ub.getAbilities().get().contains(marker))
+                    leaks.add(key.getPath() + " (existing sibling)");
+                if (c instanceof com.solegendary.reignofnether.unit.interfaces.Unit uc && uc.getAbilities() != null
+                        && uc.getAbilities().get().contains(marker))
+                    leaks.add(key.getPath() + " (new sibling)");
+                if (!ua.getAbilities().get().contains(marker))
+                    leaks.add(key.getPath() + " (getAbilities() returns a fresh copy each call: runtime adds are lost)");
+            } catch (Exception e) {
+                // a type that cannot be built off-world is not what this test is about; it shows up elsewhere
+            } finally {
+                for (var e : new net.minecraft.world.entity.Entity[] {a, b, c})
+                    if (e != null)
+                        e.discard();
+            }
+        }
+        if (checked < 20)
+            helper.fail("only " + checked + " unit types were checked - the registry scan is broken");
+        if (!leaks.isEmpty())
+            helper.fail("runtime abilities leak between unit instances: " + leaks);
+        helper.succeed();
+    }
+
+    /**
+     * Every worker type that can be (or carry) a commander keeps the commander's runtime abilities - same instances,
+     * so their cooldowns too - when updateAbilityButtons() re-clones from the static set (the client does that after
+     * every cooldown sync), and its siblings never get them.
+     */
+    @GameTest(template = ARENA)
+    public static void commander_abilities_survive_ability_button_refresh(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<net.minecraft.world.entity.EntityType<?>> types = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.EMBALMER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.BONEWRIGHT_UNIT.get());
+        List<String> problems = new ArrayList<>();
+        for (var type : types) {
+            var commander = type.create(level);
+            var sibling = type.create(level);
+            if (!(commander instanceof com.solegendary.reignofnether.unit.interfaces.Unit cu)
+                    || !(sibling instanceof com.solegendary.reignofnether.unit.interfaces.Unit su)) {
+                problems.add(type.getDescriptionId() + " could not be created");
+                continue;
+            }
+            com.solegendary.reignofnether.player.CommanderServerEvents.ensureAbility(commander);
+            com.solegendary.reignofnether.ability.Ability dgun = null;
+            for (var a : cu.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun)
+                    dgun = a;
+            int before = cu.getAbilities().get().size();
+            cu.updateAbilityButtons();
+            cu.updateAbilityButtons();
+            if (dgun == null)
+                problems.add(type.getDescriptionId() + ": no D-gun after ensureAbility");
+            else if (!cu.getAbilities().get().contains(dgun))
+                problems.add(type.getDescriptionId() + ": updateAbilityButtons() wiped the commander's D-gun");
+            if (cu.getAbilities().get().size() != before)
+                problems.add(type.getDescriptionId() + ": ability count changed on refresh " + before + " -> "
+                    + cu.getAbilities().get().size());
+            for (var a : su.getAbilities().get())
+                if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun)
+                    problems.add(type.getDescriptionId() + ": a plain sibling got the commander's D-gun");
+            commander.discard();
+            sibling.discard();
+        }
+        if (!problems.isEmpty())
+            helper.fail(String.join("; ", problems));
+        helper.succeed();
+    }
+
+    /**
+     * BAR's commander blast: when a commander dies, nothing happens for the 1 s telegraph, then friend and foe within
+     * 8 blocks take the blast, and a unit outside it does not.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void commander_death_blast_hits_friend_and_foe_after_the_telegraph(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var reg = com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get();
+        var commander = reg.create(level);
+        var friend = reg.create(level);
+        var foe = reg.create(level);
+        var outside = reg.create(level);
+        if (commander == null || friend == null || foe == null || outside == null) {
+            helper.fail("could not create grunt units");
+            return;
+        }
+        // the commander stands in the middle of the 16x16 arena so the 8-block blast stays inside it (tests run in
+        // parallel next to each other); the outsider sits in a corner, ~9.9 blocks away
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        commander.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 0.5, at.getY(), at.getZ() - 3.5, 0, 0);
+        outside.moveTo(at.getX() + 7.5, at.getY(), at.getZ() + 7.5, 0, 0);
+        commander.setOwnerName("gametest_comblast");
+        friend.setOwnerName("gametest_comblast");
+        foe.setOwnerName("gametest_comblast_foe");
+        outside.setOwnerName("gametest_comblast_foe");
+        for (var e : List.of(commander, friend, foe, outside))
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(commander);
+        final float[] hp = new float[3];
+        final int delay = com.solegendary.reignofnether.player.CommanderServerEvents.COM_BLAST_DELAY_TICKS;
+        helper.runAfterDelay(5, () -> {
+            hp[0] = friend.getHealth();
+            hp[1] = foe.getHealth();
+            hp[2] = outside.getHealth();
+            commander.kill();
+        });
+        // half-way through the telegraph: nobody hurt yet
+        helper.runAfterDelay(5 + delay / 2, () -> {
+            if (friend.getHealth() < hp[0] || foe.getHealth() < hp[1])
+                helper.fail("the commander blast went off before its telegraph finished");
+        });
+        helper.runAfterDelay(5 + delay + 5, () -> {
+            // 60 damage: either dead or well hurt (worker scuffles do a few points at most)
+            if (friend.isAlive() && hp[0] - friend.getHealth() < 30)
+                helper.fail("the commander blast did not hurt the friendly unit: " + friend.getHealth() + " (was " + hp[0] + ")");
+            if (foe.isAlive() && hp[1] - foe.getHealth() < 30)
+                helper.fail("the commander blast did not hurt the enemy unit: " + foe.getHealth() + " (was " + hp[1] + ")");
+            if (!outside.isAlive() || outside.getHealth() < hp[2])
+                helper.fail("the commander blast hurt a unit outside its radius");
+            for (var e : List.of(commander, friend, foe, outside))
+                e.discard();
+            helper.succeed();
+        });
     }
 
     static ResourceLocation rl(String path) {

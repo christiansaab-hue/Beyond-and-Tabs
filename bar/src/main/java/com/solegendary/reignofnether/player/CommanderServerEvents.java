@@ -12,6 +12,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -102,11 +103,103 @@ public class CommanderServerEvents {
             ensureAbility(e);
     }
 
-    @SubscribeEvent
+    // BAR's commander blast: a 1 s telegraph, then a big blast that hurts everything around, friend and foe
+    public static final float COM_BLAST_RADIUS = 8f;
+    public static final float COM_BLAST_DAMAGE = 60f;
+    /** Hit points taken off each building the blast reaches (moderate: a dent, not a demolition). */
+    public static final float COM_BLAST_BUILDING_DAMAGE = 100f;
+    public static final int COM_BLAST_DELAY_TICKS = 20;
+    static final int COM_BLAST_PULSE_TICKS = 5;
+
+    /**
+     * Arms the commander blast where the commander fell: a rising column of particles pulses while it charges (with a
+     * charge-up sound), then the blast hits every unit within {@link #COM_BLAST_RADIUS}. Positions are captured now -
+     * the corpse is gone by the time it goes off. The work is a handful of scheduled tasks per commander death, so
+     * there is nothing per-tick to pay for at 8v8 scale.
+     */
+    public static void armComBlast(net.minecraft.server.level.ServerLevel level, LivingEntity commander) {
+        final double x = commander.getX(), y = commander.getY(), z = commander.getZ();
+        level.playSound(null, x, y, z, net.minecraft.sounds.SoundEvents.BEACON_DEACTIVATE,
+            net.minecraft.sounds.SoundSource.HOSTILE, 4f, 0.5f);
+        for (int t = 0; t < COM_BLAST_DELAY_TICKS; t += COM_BLAST_PULSE_TICKS) {
+            final int pulse = t / COM_BLAST_PULSE_TICKS;
+            com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(t, () -> telegraphPulse(level, x, y, z, pulse));
+        }
+        com.solegendary.reignofnether.taskscheduler.TaskSchedulerServerEvents.schedule(COM_BLAST_DELAY_TICKS,
+            () -> comBlast(level, x, y, z));
+    }
+
+    /** One pulse of the charge-up: the column climbs higher each pulse, and the pitch rises with it. */
+    static void telegraphPulse(net.minecraft.server.level.ServerLevel level, double x, double y, double z, int pulse) {
+        int height = 3 + pulse * 2;
+        for (int h = 0; h < height; h++) {
+            double py = y + 0.3 + h * 0.6;
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD, x, py, z, 2, 0.12, 0.1, 0.12, 0.02);
+            if (h % 2 == 0)
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, x, py, z, 1, 0.2, 0.1, 0.2, 0.01);
+        }
+        level.playSound(null, x, y, z, net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BASS.value(),
+            net.minecraft.sounds.SoundSource.HOSTILE, 3f, 0.5f + pulse * 0.25f);
+    }
+
+    /**
+     * The blast itself. Every living unit within the radius takes {@link #COM_BLAST_DAMAGE} - its own side's included,
+     * as in BAR, so a commander walked into the enemy base is a weapon and one left in your own is a liability.
+     * An explosion damage source (not a mob attack, which RoN would rewrite into the attacker's melee damage) with no
+     * attacker; there is no level.explode, so no terrain is broken and no extra camera shake is added.
+     */
+    public static void comBlast(net.minecraft.server.level.ServerLevel level, double x, double y, double z) {
+        final float r = COM_BLAST_RADIUS;
+        List<LivingEntity> candidates = com.solegendary.reignofnether.unit.UnitGrid.inBox(level, x - r, z - r, x + r, z + r,
+            new java.util.ArrayList<>());
+        // collected first: the hurt calls can kill units and change the unit lists under us
+        List<LivingEntity> hit = new java.util.ArrayList<>();
+        for (LivingEntity le : candidates) {
+            if (!le.isAlive() || !(le instanceof Unit) || le.level() != level)
+                continue;
+            double dx = le.getX() - x, dz = le.getZ() - z;
+            // measured flat to the unit's centre, with a height window (hills, fliers low over the blast)
+            if (dx * dx + dz * dz > r * r || Math.abs(le.getY() + le.getBbHeight() / 2 - (y + 1)) > r)
+                continue;
+            hit.add(le);
+        }
+        var src = level.damageSources().explosion(null, null);
+        for (LivingEntity le : hit)
+            le.hurt(src, COM_BLAST_DAMAGE);
+
+        // buildings in reach take a moderate dent through RoN's own block-by-block building damage (building blocks
+        // only - the ground around is left alone)
+        List<com.solegendary.reignofnether.building.BuildingPlacement> dented = new java.util.ArrayList<>();
+        for (var b : com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings()) {
+            if (b.getLevel() != level || !b.isAttackable())
+                continue;
+            // closest point of the building's footprint to the blast centre
+            double cx = Math.max(b.minCorner.getX(), Math.min(x, b.maxCorner.getX() + 1));
+            double cz = Math.max(b.minCorner.getZ(), Math.min(z, b.maxCorner.getZ() + 1));
+            if ((cx - x) * (cx - x) + (cz - z) * (cz - z) <= r * r
+                    && y + r >= b.minCorner.getY() && y - r <= b.maxCorner.getY() + 1)
+                dented.add(b);
+        }
+        for (var b : dented)
+            b.destroyRandomBlocks(COM_BLAST_BUILDING_DAMAGE);
+
+        net.minecraft.world.phys.Vec3 at = new net.minecraft.world.phys.Vec3(x, y, z);
+        com.solegendary.reignofnether.barfx.BarFx.heavyImpact(level, at, r);
+        // a building collapse's worth of fire, rubble and dust with its big white flash, minus the collapse's shake
+        com.solegendary.reignofnether.barfx.BarFx.collapse(level, at, r / 2, 6, false);
+        level.sendParticles(net.minecraft.core.particles.ParticleTypes.EXPLOSION_EMITTER, x, y + 1, z, 1, 0, 0, 0, 0);
+        level.playSound(null, x, y, z, net.minecraft.sounds.SoundEvents.GENERIC_EXPLODE,
+            net.minecraft.sounds.SoundSource.HOSTILE, 6f, 0.6f);
+    }
+
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
     public static void onLivingDeath(LivingDeathEvent evt) {
         Entity entity = evt.getEntity();
         if (!isCommander(entity) || entity.level().isClientSide())
             return;
+        // every commander goes out in the blast (BAR), whether or not losing it also loses its owner the match
+        if (entity.level() instanceof net.minecraft.server.level.ServerLevel sl && entity instanceof LivingEntity le)
+            armComBlast(sl, le);
         if (!entity.level().getGameRules().getBoolean(GameRuleRegistrar.COMMANDER_DEFEAT))
             return;
         if (!(entity instanceof Unit unit))
@@ -116,11 +209,7 @@ public class CommanderServerEvents {
             return;
         PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.commander_fallen", true, owner);
         if (hasLivingAlly(owner)) {
-            // team game: BAR's commander blast - a big explosion that wrecks whatever stood next to it - and the
-            // player fights on with the army and buildings they have left
-            if (entity.level() instanceof net.minecraft.server.level.ServerLevel level)
-                level.explode(entity, entity.getX(), entity.getY() + 0.5, entity.getZ(), 5.0f,
-                    net.minecraft.world.level.Level.ExplosionInteraction.NONE);
+            // team game: the commander blast (armed above) and the player fights on with what they have left
             PlayerServerEvents.sendMessageToAllPlayers("server.reignofnether.commander_fallen_team", false, owner);
             return;
         }

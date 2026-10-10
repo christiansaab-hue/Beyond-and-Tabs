@@ -175,8 +175,13 @@ public final class BarFx {
 
     /** A whole building is destroyed: centre of its base, horizontal half size and height. */
     public static void collapse(Level level, Vec3 centre, float halfSize, float height) {
+        collapse(level, centre, halfSize, height, true);
+    }
+
+    /** Same; shake = false skips the collapse's gentle camera shake (flags bit 0; the commander blast uses it). */
+    public static void collapse(Level level, Vec3 centre, float halfSize, float height, boolean shake) {
         if (level == null || level.isClientSide() || centre == null) return;
-        emit(level, new Event(COLLAPSE, (byte) 0, (byte) 0, (float) centre.x, (float) centre.y, (float) centre.z,
+        emit(level, new Event(COLLAPSE, (byte) 0, (byte) (shake ? 0 : 1), (float) centre.x, (float) centre.y, (float) centre.z,
                 Math.max(1, halfSize), Math.max(1, height), 0));
     }
 

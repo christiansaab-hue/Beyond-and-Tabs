@@ -61,7 +61,7 @@ public class ZombieVillagerUnit extends Vindicator implements Unit, WorkerUnit, 
     //region
     @Override
     public void updateAbilityButtons() {
-        abilities = ABILITIES.clone();
+        abilities = Abilities.cloneKeepingExtras(ABILITIES, abilities);   // keeps a commander's runtime abilities
     }
     Object2ObjectArrayMap<Ability, Float> cooldowns = Unit.createCooldownMap();
     Object2ObjectArrayMap<Ability, Integer> charges = new Object2ObjectArrayMap<>();

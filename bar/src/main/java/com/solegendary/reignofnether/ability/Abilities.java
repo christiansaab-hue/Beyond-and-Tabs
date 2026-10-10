@@ -86,6 +86,30 @@ public class Abilities {
         return new Abilities(new ArrayList<>(abilities));
     }
 
+    /**
+     * A fresh per-unit copy of a unit type's shared static set, plus whatever was added to this unit's previous set at
+     * runtime (a commander's D-gun / signature / faction power from CommanderServerEvents.ensureAbility). Used by
+     * the workers' updateAbilityButtons(): it runs again on the client after every ability-cooldown sync and language
+     * reload, and a plain re-clone would wipe the commander's buttons (and, since cooldowns are keyed by the Ability
+     * instance, their cooldowns) until the next ensureAbility. The extras keep their instances for that reason.
+     */
+    public static Abilities cloneKeepingExtras(Abilities base, Abilities previous) {
+        Abilities out = base.clone();
+        if (previous == null || previous == base)
+            return out;
+        for (Pair<Ability, Keybinding> p : previous.abilities) {
+            boolean inBase = false;
+            for (Pair<Ability, Keybinding> b : base.abilities)
+                if (b.getA() == p.getA()) {
+                    inBase = true;
+                    break;
+                }
+            if (!inBase)
+                out.abilities.add(p);
+        }
+        return out;
+    }
+
     public boolean isEmpty() {
         return abilities.isEmpty();
     }
