@@ -223,6 +223,9 @@ public class BotPlayer {
                     pp.startProductionItem(kit.army().get(rng.nextInt(kit.army().size())));
             }
 
+        // 5b) late game: medium/hard bots raise their faction's T3 building and field experimentals
+        fieldExperimentals(level, buildings, workers, minutes);
+
         // 6) defend: an enemy near the base pulls the whole army home
         BlockPos intruder = nearestEnemyUnit(level, home, 45);
         if (intruder != null) {
@@ -417,6 +420,51 @@ public class BotPlayer {
             default -> { back = -12; side = (index % 3 - 1) * 11; }
         }
         return home.offset((int) Math.round(bx * back + px * side), 0, (int) Math.round(bz * back + pz * side));
+    }
+
+    /** The faction's T3 building and the experimental it makes. */
+    Building t3Building() {
+        if (faction.equals(Factions.PIGLINS))
+            return Buildings.FORTRESS;
+        if (faction.equals(Factions.MONSTERS))
+            return Buildings.STRONGHOLD;
+        return Buildings.CASTLE;
+    }
+
+    ProductionItem t3Unit() {
+        if (faction.equals(Factions.PIGLINS))
+            return com.solegendary.reignofnether.building.production.ProductionItems.WAR_MAMMOTH;
+        if (faction.equals(Factions.MONSTERS))
+            return com.solegendary.reignofnether.building.production.ProductionItems.BONE_DRAGON;
+        return com.solegendary.reignofnether.building.production.ProductionItems.SUN_COLOSSUS;
+    }
+
+    /**
+     * BAR bots go experimental late: from minute 14 (hard 12) a medium/hard bot builds its T3 building near home,
+     * then keeps one experimental in production whenever it has 20 population free. Easy bots never do.
+     */
+    void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
+        if (difficulty == Difficulty.EASY || minutes < (difficulty == Difficulty.HARD ? 12 : 14))
+            return;
+        BuildingPlacement t3 = null;
+        for (BuildingPlacement bp : buildings)
+            if (bp.getBuilding() == t3Building())
+                t3 = bp;
+        if (t3 == null) {
+            if (!workers.isEmpty())
+                placeNear(level, t3Building(), layoutSlot(Layout.ARMY, 3), workers, 3);
+            return;
+        }
+        if (!t3.isBuilt || !(t3 instanceof ProductionPlacement pp))
+            return;
+        int pop = UnitServerEvents.getCurrentPopulation(name);
+        int popCap = BuildingServerEvents.getTotalPopulationSupply(name);
+        boolean queued = false;
+        for (var item : pp.productionQueue)
+            if (item.item == t3Unit())
+                queued = true;
+        if (!queued && popCap - pop >= 20)
+            pp.startProductionItem(t3Unit());
     }
 
     Building converterFor() {
