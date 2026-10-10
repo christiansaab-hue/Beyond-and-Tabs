@@ -2,7 +2,7 @@ package com.solegendary.reignofnether.ability.abilities;
 
 import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
-import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -45,15 +45,14 @@ public class CommanderAbility extends Ability {
         super(UnitAction.COMMANDER_ABILITY, CD_SECONDS * ResourceCost.TICKS_PER_SECOND, 0, 0, false, false);
     }
 
-    enum Kind { RALLY, WAR_HORN, DREAD }
+    /**
+     * NONE: the faction has no signature designed yet (FactionTraits) - CommanderServerEvents does not grant the
+     * ability, and should one exist anyway its button is hidden and it does nothing (it used to be Rally Standard).
+     */
+    public enum Kind { RALLY, WAR_HORN, DREAD, NONE }
 
-    static Kind kindFor(Unit unit) {
-        Faction f = Factions.getFaction(unit);
-        if (f != null && f.equals(Factions.PIGLINS))
-            return Kind.WAR_HORN;
-        if (f != null && f.equals(Factions.MONSTERS))
-            return Kind.DREAD;
-        return Kind.RALLY;
+    public static Kind kindFor(Unit unit) {
+        return FactionTraits.of(Factions.getFaction(unit)).commanderAbility;
     }
 
     @Override
@@ -83,7 +82,7 @@ public class CommanderAbility extends Ability {
         }
         return new AbilityButton(title, icon, hotkey,
             () -> false,
-            () -> false,
+            () -> kind == Kind.NONE,
             () -> true,
             () -> UnitClientEvents.sendUnitCommand(UnitAction.COMMANDER_ABILITY),
             null,
@@ -102,6 +101,8 @@ public class CommanderAbility extends Ability {
             return;
         String owner = unitUsing.getOwnerName();
         Kind kind = kindFor(unitUsing);
+        if (kind == Kind.NONE)
+            return;
         double radius = kind == Kind.WAR_HORN ? 16 : 12;
         List<LivingEntity> targets = new ArrayList<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {

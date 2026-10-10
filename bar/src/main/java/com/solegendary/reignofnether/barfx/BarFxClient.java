@@ -502,6 +502,8 @@ public final class BarFxClient {
         int c = switch (tint) {
             case BarFx.N_GRAVEBOUND -> 0x5FE6F0;   // soul-cyan
             case BarFx.N_HORDE -> 0xFF8A2E;        // ember-orange
+            case BarFx.N_VERDANT -> 0x7CE07A;      // leaf-green
+            case BarFx.N_NEUTRAL -> 0xE0E0E0;      // plain white (no faction tint)
             default -> 0xFFCF4A;                   // golden
         };
         float life = Math.max(.1f, lifeTicks / 20f);

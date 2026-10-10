@@ -29,6 +29,8 @@ public class Faction {
 	// a faction that is announced in the lobby (greyed tile, "coming soon") but has no units or buildings yet;
 	// the server refuses to start or reserve it, so nothing downstream ever meets a faction without a capitol
 	public boolean preview = false;
+	// look and mechanics data (FactionTraits); null = no explicit entry, FactionTraits.of() then gives the neutral one
+	FactionTraits traits = null;
 	public ResourceLocation key;
 	public ResourceLocation workerEntityType;
 	public ResourceLocation scoutEntityType;
@@ -83,6 +85,11 @@ public class Faction {
 	public Faction setPreview() {
 		this.preview = true;
 		this.playable = false;
+		return this;
+	}
+
+	public Faction setTraits(FactionTraits traits) {
+		this.traits = traits;
 		return this;
 	}
 

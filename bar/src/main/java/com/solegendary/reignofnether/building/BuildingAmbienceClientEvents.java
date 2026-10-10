@@ -1,8 +1,7 @@
 package com.solegendary.reignofnether.building;
 
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
-import com.solegendary.reignofnether.faction.Faction;
-import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 
 import net.minecraft.client.Minecraft;
@@ -77,19 +76,27 @@ public class BuildingAmbienceClientEvents {
             double z = centre.getZ() + 0.5 + (random.nextDouble() - 0.5) * 1.5;
             double y = placement.originPos.getY() + shape.height() + 0.4;
 
-            Faction faction = placement.getBuilding().getFaction();
-            if (faction != null && faction.equals(Factions.MONSTERS)) {
-                // soul flames flicker around the eaves, a little lower than chimney height
-                MC.level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x, y - 0.6, z, 0, 0.02, 0);
-                if (random.nextInt(3) == 0)
-                    MC.level.addParticle(ParticleTypes.SOUL, x, y, z, 0, 0.03, 0);
-            } else if (faction != null && faction.equals(Factions.PIGLINS)) {
-                MC.level.addParticle(ParticleTypes.FLAME, x, y - 0.4, z, 0, 0.02, 0);
-                if (random.nextInt(2) == 0)
-                    MC.level.addParticle(ParticleTypes.LAVA, x, y, z, 0, 0, 0);
-            } else {
-                MC.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y, z,
+            switch (FactionTraits.of(placement.getBuilding().getFaction()).ambience) {
+                case SOUL_FLAMES -> {
+                    // soul flames flicker around the eaves, a little lower than chimney height
+                    MC.level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x, y - 0.6, z, 0, 0.02, 0);
+                    if (random.nextInt(3) == 0)
+                        MC.level.addParticle(ParticleTypes.SOUL, x, y, z, 0, 0.03, 0);
+                }
+                case FORGE_FIRE -> {
+                    MC.level.addParticle(ParticleTypes.FLAME, x, y - 0.4, z, 0, 0.02, 0);
+                    if (random.nextInt(2) == 0)
+                        MC.level.addParticle(ParticleTypes.LAVA, x, y, z, 0, 0, 0);
+                }
+                case CHIMNEY_SMOKE -> MC.level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y, z,
                     0, 0.06 + random.nextDouble() * 0.03, 0);
+                // Verdant: spores drifting off the living roof, the odd green glint
+                case SPORES -> {
+                    MC.level.addParticle(ParticleTypes.SPORE_BLOSSOM_AIR, x, y, z, 0, 0.01, 0);
+                    if (random.nextInt(3) == 0)
+                        MC.level.addParticle(ParticleTypes.HAPPY_VILLAGER, x, y - 0.3, z, 0, 0.02, 0);
+                }
+                default -> { }   // no faction entry: no faction-flavoured ambience
             }
 
             // working smithies throw sparks out of the doorway level

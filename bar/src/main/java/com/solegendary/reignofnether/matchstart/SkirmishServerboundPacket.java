@@ -94,10 +94,10 @@ public class SkirmishServerboundPacket {
         };
     }
 
+    // the registry path ("villagers", "monsters", "piglins") is what /bot add parses; an unknown faction is then
+    // refused there instead of silently becoming a villager bot
     static String factionName(Faction f) {
-        if (f.equals(Factions.MONSTERS)) return "monsters";
-        if (f.equals(Factions.PIGLINS)) return "piglins";
-        return "villagers";
+        return f.getName();
     }
 
     public boolean handle(Supplier<NetworkEvent.Context> ctx) {

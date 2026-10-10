@@ -3,8 +3,7 @@ package com.solegendary.reignofnether.building;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
-import com.solegendary.reignofnether.faction.Faction;
-import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.fogofwar.FogOfWarClientEvents;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 
@@ -215,22 +214,10 @@ public class ScaffoldRenderClientEvents {
         double z0 = p.minCorner.getZ() - GAP, z1 = p.maxCorner.getZ() + 1 + GAP;
         float lenX = (float) (x1 - x0), lenZ = (float) (z1 - z0);
 
-        Faction faction = p.getFaction();
-        BlockState pole, rail;
-        int decor;   // 0 = Sunforged banners, 1 = Gravebound bone + soul lanterns, 2 = Horde chains
-        if (faction != null && faction.equals(Factions.MONSTERS)) {
-            pole = Blocks.DARK_OAK_LOG.defaultBlockState();
-            rail = Blocks.DARK_OAK_PLANKS.defaultBlockState();
-            decor = 1;
-        } else if (faction != null && faction.equals(Factions.PIGLINS)) {
-            pole = Blocks.CRIMSON_STEM.defaultBlockState();
-            rail = Blocks.BLACKSTONE.defaultBlockState();
-            decor = 2;
-        } else {
-            pole = Blocks.STRIPPED_BIRCH_LOG.defaultBlockState();
-            rail = Blocks.OAK_PLANKS.defaultBlockState();
-            decor = 0;
-        }
+        // materials and corner dressing per faction (FactionTraits); unknown factions get a plain spruce frame
+        FactionTraits traits = FactionTraits.of(p.getFaction());
+        BlockState pole = traits.scaffoldPole, rail = traits.scaffoldRail;
+        FactionTraits.ScaffoldDecor decor = traits.scaffoldDecor;
 
         lightPos.set(p.centrePos.getX(), Math.min((int) top + 1, p.maxCorner.getY() + 1), p.centrePos.getZ());
         light = LevelRenderer.getLightColor(MC.level, lightPos);
@@ -257,7 +244,7 @@ public class ScaffoldRenderClientEvents {
             box(rail, x0 - RAIL / 2, y, z1 - RAIL / 2, lenX + RAIL, RAIL, RAIL);
             box(rail, x0 - RAIL / 2, y, z0 + RAIL / 2, RAIL, RAIL, lenZ - RAIL);
             box(rail, x1 - RAIL / 2, y, z0 + RAIL / 2, RAIL, RAIL, lenZ - RAIL);
-            if (decor == 1 && !far) {
+            if (decor == FactionTraits.ScaffoldDecor.BONE_LANTERNS && !far) {
                 // Gravebound: bone knuckles lash the rails to the corner poles
                 corner(Blocks.BONE_BLOCK.defaultBlockState(), x0, y, z0, 0.26f);
                 corner(Blocks.BONE_BLOCK.defaultBlockState(), x1, y, z0, 0.26f);
@@ -271,20 +258,25 @@ public class ScaffoldRenderClientEvents {
             boolean hiX = (c & 1) != 0, hiZ = (c & 2) != 0;
             double cx = hiX ? x1 : x0, cz = hiZ ? z1 : z0;
             float ox = hiX ? 1f : -1f, oz = hiZ ? 1f : -1f;
-            if (decor == 0) {
-                // Sunforged: a short white pennant off each corner pole's head, flying outward
-                box(pole, cx - POLE / 2, top, cz - POLE / 2, POLE, 0.7f, POLE);
-                double fx = hiX ? cx + POLE / 2 : cx - POLE / 2 - 0.55;
-                box(Blocks.WHITE_WOOL.defaultBlockState(), fx, top - 0.05, cz - 0.02, 0.55f, 0.7f, 0.04f);
-            } else if (decor == 1) {
+            switch (decor) {
+                case PENNANTS -> {
+                    // Sunforged: a short white pennant off each corner pole's head, flying outward
+                    box(pole, cx - POLE / 2, top, cz - POLE / 2, POLE, 0.7f, POLE);
+                    double fx = hiX ? cx + POLE / 2 : cx - POLE / 2 - 0.55;
+                    box(Blocks.WHITE_WOOL.defaultBlockState(), fx, top - 0.05, cz - 0.02, 0.55f, 0.7f, 0.04f);
+                }
                 // Gravebound: a soul lantern sits on each corner pole (the model is the lantern; the block is air round it)
-                box(Blocks.SOUL_LANTERN.defaultBlockState(), cx - 0.5, top, cz - 0.5, 1f, 1f, 1f);
-            } else {
-                // Horde: two links of chain hang just outside each corner, swinging from the top rail
-                double hx = cx + ox * 0.35 - 0.5, hz = cz + oz * 0.35 - 0.5;
-                box(Blocks.CHAIN.defaultBlockState(), hx, top - 1.1, hz, 1f, 1f, 1f);
-                if (railLevels > 1)
-                    box(Blocks.CHAIN.defaultBlockState(), hx, top - 2.1, hz, 1f, 1f, 1f);
+                case BONE_LANTERNS -> box(Blocks.SOUL_LANTERN.defaultBlockState(), cx - 0.5, top, cz - 0.5, 1f, 1f, 1f);
+                case CHAINS -> {
+                    // Horde: two links of chain hang just outside each corner, swinging from the top rail
+                    double hx = cx + ox * 0.35 - 0.5, hz = cz + oz * 0.35 - 0.5;
+                    box(Blocks.CHAIN.defaultBlockState(), hx, top - 1.1, hz, 1f, 1f, 1f);
+                    if (railLevels > 1)
+                        box(Blocks.CHAIN.defaultBlockState(), hx, top - 2.1, hz, 1f, 1f, 1f);
+                }
+                // Verdant: a plain lantern hangs on each corner pole of the living-wood frame
+                case LANTERNS -> box(Blocks.LANTERN.defaultBlockState(), cx - 0.5, top, cz - 0.5, 1f, 1f, 1f);
+                default -> { }
             }
         }
     }

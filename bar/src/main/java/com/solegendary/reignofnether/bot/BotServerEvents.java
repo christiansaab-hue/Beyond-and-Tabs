@@ -47,6 +47,7 @@ public class BotServerEvents {
                     BlockPos home = findHome(level, rtsPlayer.name);
                     if (home == null)
                         continue;
+                    // (a faction with no bot kit gets a brain whose think() does nothing, rather than a guessed kit)
                     brain = new BotPlayer(rtsPlayer.name, rtsPlayer.faction, BotPlayer.Difficulty.MEDIUM, home);
                     brains.put(rtsPlayer.name, brain);
                 }
@@ -114,7 +115,7 @@ public class BotServerEvents {
             case "piglins", "piglin" -> Factions.PIGLINS;
             default -> null;
         };
-        if (faction == null) {
+        if (faction == null || BotPlayer.kitFor(faction) == null) {   // (kitFor: never hand a bot a faction it has no kit for)
             caller.sendSystemMessage(Component.literal("Bots can play villagers, monsters or piglins."));
             return 0;
         }

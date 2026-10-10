@@ -4,7 +4,7 @@ import com.solegendary.reignofnether.ability.Ability;
 import com.solegendary.reignofnether.ability.AbilityClientboundPacket;
 import com.solegendary.reignofnether.alliance.AlliancesServerEvents;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
-import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.keybinds.Keybinding;
@@ -43,6 +43,7 @@ import java.util.List;
  *   <li>Sunforged Kingdom - <b>Sunfire Decree</b>: a lance of sunlight.</li>
  *   <li>Ironhide Horde - <b>Bloodstorm</b>: a hurled greataxe that cleaves the line.</li>
  *   <li>Gravebound - <b>Soulreaper</b>: a sweep of soul-fire.</li>
+ *   <li>Any faction without one designed (FactionTraits) - a plain <b>D-gun</b>, same rules.</li>
  * </ul>
  * Friendly units are never hit (BAR's D-gun does hit friends - kept off here until lovish says otherwise).
  */
@@ -62,21 +63,18 @@ public class CommanderDGun extends Ability {
         this.showRangeCircle = true;
     }
 
-    enum Kind { SUNFIRE, BLOODSTORM, SOULREAPER }
+    /** PLAIN: same rules, no faction flavour - factions whose D-gun is not designed yet (they used to get Sunfire). */
+    public enum Kind { SUNFIRE, BLOODSTORM, SOULREAPER, PLAIN }
 
     static Kind kindFor(Unit unit) {
-        Faction f = Factions.getFaction(unit);
-        if (f != null && f.equals(Factions.PIGLINS))
-            return Kind.BLOODSTORM;
-        if (f != null && f.equals(Factions.MONSTERS))
-            return Kind.SOULREAPER;
-        return Kind.SUNFIRE;
+        return FactionTraits.of(Factions.getFaction(unit)).dgunKind;
     }
 
     static String titleFor(Kind kind) {
         return switch (kind) {
             case BLOODSTORM -> "Bloodstorm";
             case SOULREAPER -> "Soulreaper";
+            case PLAIN -> "D-gun";
             default -> "Sunfire Decree";
         };
     }
@@ -88,11 +86,13 @@ public class CommanderDGun extends Ability {
         String flavour = switch (kind) {
             case BLOODSTORM -> "The Warlord's greataxe, thrown through the line.";
             case SOULREAPER -> "The Lich Regent's scythe of soul-fire.";
+            case PLAIN -> "The commander's own weapon.";
             default -> "The Lord Marshal's lance of sunlight.";
         };
         ResourceLocation icon = switch (kind) {
             case BLOODSTORM -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/iron_axe.png");
             case SOULREAPER -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/netherite_hoe.png");
+            case PLAIN -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/iron_sword.png");
             default -> ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/blaze_rod.png");
         };
         return new AbilityButton(title, icon, hotkey,
@@ -146,6 +146,7 @@ public class CommanderDGun extends Ability {
         ParticleOptions p = switch (kind) {
             case BLOODSTORM -> ParticleTypes.SWEEP_ATTACK;
             case SOULREAPER -> ParticleTypes.SOUL_FIRE_FLAME;
+            case PLAIN -> ParticleTypes.CRIT;
             default -> ParticleTypes.END_ROD;
         };
         for (int i = 1; i <= RANGE * 2; i++) {
@@ -157,6 +158,7 @@ public class CommanderDGun extends Ability {
         switch (kind) {
             case BLOODSTORM -> sl.playSound(null, self.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 2f, 0.6f);
             case SOULREAPER -> sl.playSound(null, self.blockPosition(), SoundEvents.SOUL_ESCAPE, SoundSource.HOSTILE, 3f, 0.7f);
+            case PLAIN -> sl.playSound(null, self.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.HOSTILE, 2f, 0.9f);
             default -> sl.playSound(null, self.blockPosition(), SoundEvents.BEACON_POWER_SELECT, SoundSource.HOSTILE, 2f, 1.4f);
         }
         this.setToMaxCooldown(unitUsing);

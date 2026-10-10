@@ -1,6 +1,6 @@
 package com.solegendary.reignofnether.unit;
 
-import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.unit.interfaces.AttackerUnit;
 import com.solegendary.reignofnether.unit.interfaces.RangedAttackerUnit;
@@ -42,9 +42,9 @@ public class FormationServerEvents {
         return inFormation.contains(le.getId());
     }
 
+    /** Formation is a Sunforged trait (FactionTraits.formation), not "anything that isn't monsters or piglins". */
     static boolean isKingdom(Unit u) {
-        Faction f = Factions.getFaction(u);
-        return f != null && f.equals(Factions.VILLAGERS);
+        return FactionTraits.of(Factions.getFaction(u)).formation;
     }
 
     static boolean isGuard(LivingEntity le) {

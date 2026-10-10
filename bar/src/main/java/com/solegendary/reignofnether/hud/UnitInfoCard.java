@@ -1,6 +1,6 @@
 package com.solegendary.reignofnether.hud;
 
-import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.hud.buttons.AbilityButton;
 import com.solegendary.reignofnether.hud.buttons.Button;
@@ -106,13 +106,9 @@ public final class UnitInfoCard {
     public static int getFactionColour(LivingEntity le) {
         Integer c = FACTION_COLOUR_CACHE.get(le.getClass());
         if (c == null) {
-            c = 0xFFC8C8C8;
-            if (le instanceof Unit unit) {
-                Faction f = Factions.getFaction(unit);
-                if (f == Factions.VILLAGERS) c = 0xFF6FB4FF;
-                else if (f == Factions.MONSTERS) c = 0xFF8ED866;
-                else if (f == Factions.PIGLINS) c = 0xFFFF9A40;
-            }
+            // FactionTraits.accentArgb; non-units and factions without an entry get the neutral grey
+            c = le instanceof Unit unit ? FactionTraits.of(Factions.getFaction(unit)).accentArgb
+                : FactionTraits.NEUTRAL.accentArgb;
             FACTION_COLOUR_CACHE.put(le.getClass(), c);
         }
         return c;
