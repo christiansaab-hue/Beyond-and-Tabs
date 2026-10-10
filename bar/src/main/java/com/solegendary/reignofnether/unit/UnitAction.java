@@ -172,5 +172,7 @@ public enum UnitAction {
     WITHERING_FOG,        // Beyond and Tabs: Gravebound Bone Dragon lingering fog line
     SUNRISE_SORTIE,       // Beyond and Tabs: Sunforged Lord Marshal line charge
     SOUL_WISPS,           // Beyond and Tabs: Gravebound Embalmer reclaim/harass wisps
-    LEAF_DASH             // Beyond and Tabs: Verdant Court Leafblade gap-closing dash
+    LEAF_DASH,            // Beyond and Tabs: Verdant Court Leafblade gap-closing dash
+    AWAKEN_THICKET,       // Beyond and Tabs: Verdant Court Elder Druid temporary treant
+    STAG_LEAP             // Beyond and Tabs: Verdant Court Stag Lancer leaping charge
 }

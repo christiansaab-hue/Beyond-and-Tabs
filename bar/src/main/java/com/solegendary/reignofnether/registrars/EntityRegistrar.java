@@ -248,6 +248,33 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "royal_architect_unit").toString()));
 
+    // Verdant Court T2 (design/verdant_court_plan.md, slice 4): trained at the Circle of Elders
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.ElderDruidUnit>> ELDER_DRUID_UNIT = ENTITIES.register("elder_druid_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.ElderDruidUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "elder_druid_unit").toString()));
+
+    // Alex's Mobs' moose body (RenderMoose); a little narrower than AM's wild moose so it fits through a gap in a line
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.StagLancerUnit>> STAG_LANCER_UNIT = ENTITIES.register("stag_lancer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.StagLancerUnit::new, MobCategory.CREATURE)
+                    .sized(1.4f, 2.2f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "stag_lancer_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit>> SHADE_RANGER_UNIT = ENTITIES.register("shade_ranger_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.SKELETON.getWidth(), EntityType.SKELETON.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shade_ranger_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.verdant.ElderTreantUnit>> ELDER_TREANT_UNIT = ENTITIES.register("elder_treant_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.verdant.ElderTreantUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.IRON_GOLEM.getWidth() * com.solegendary.reignofnether.unit.units.verdant.ElderTreantUnit.SCALE,
+                           EntityType.IRON_GOLEM.getHeight() * com.solegendary.reignofnether.unit.units.verdant.ElderTreantUnit.SCALE)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "elder_treant_unit").toString()));
+
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit>> EMBALMER_UNIT = ENTITIES.register("embalmer_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
@@ -566,6 +593,10 @@ public class EntityRegistrar {
             case com.solegendary.reignofnether.unit.units.piglins.BonewrightProd.itemName -> EntityRegistrar.BONEWRIGHT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.monsters.EmbalmerProd.itemName -> EntityRegistrar.EMBALMER_UNIT.get();
             case com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectProd.itemName -> EntityRegistrar.ROYAL_ARCHITECT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.ElderDruidProd.itemName -> EntityRegistrar.ELDER_DRUID_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.StagLancerProd.itemName -> EntityRegistrar.STAG_LANCER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.ShadeRangerProd.itemName -> EntityRegistrar.SHADE_RANGER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd.itemName -> EntityRegistrar.ELDER_TREANT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

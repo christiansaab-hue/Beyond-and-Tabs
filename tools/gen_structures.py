@@ -509,6 +509,82 @@ def grove():
     return s
 
 
+def circle_of_elders():
+    """The Court's T2 lab: five elder oaks standing in a ring round a moonlit well, their crowns knitted into a leafy
+    halo open to the sky in the middle. Moss floor in a mossy stone border, a calcite (silver) ring and path to the -z
+    entrance arch, the well a mossy rim round a water cauldron on a froglight, lanterns hung under every crown and
+    mangrove roots at each trunk foot. 11 x 9 x 11."""
+    W = 11
+    s = Structure(W, 9, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            d = ((x - c) ** 2 + (z - c) ** 2) ** 0.5
+            if edge:
+                s.set(x, 0, z, "mossy_stone_bricks")
+            elif 1.6 <= d <= 2.4:
+                s.set(x, 0, z, "calcite")              # the silver ring round the well
+            else:
+                s.set(x, 0, z, "moss_block")
+    for z in range(0, c - 1):
+        s.set(c, 0, z, "calcite")                      # silver path in from the entrance
+    # the well: a froglight under a water cauldron, ringed by a mossy rim
+    s.set(c, 0, c, "verdant_froglight", axis="y")
+    s.set(c, 1, c, "water_cauldron", level="3")
+    for dx in (-1, 0, 1):
+        for dz in (-1, 0, 1):
+            if dx and dz:
+                s.set(c + dx, 1, c + dz, "mossy_stone_brick_wall")
+            elif dx or dz:
+                s.set(c + dx, 1, c + dz, "mossy_stone_brick_slab", type="bottom", waterlogged="false")
+    # five elders on a ring of radius 4 (the -z point is left open for the entrance)
+    trees = [(c + 4, c - 1), (c + 3, c + 3), (c - 3, c + 3), (c - 4, c - 1), (c, c + 4)]
+    for (tx, tz) in trees:
+        for y in range(1, 7):
+            s.set(tx, y, tz, "oak_log", axis="y")
+        for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            x, z = tx + dx, tz + dz
+            if 0 < x < W - 1 and 0 < z < W - 1 and (x, 1, z) not in s.blocks:
+                s.set(x, 1, z, "mangrove_roots", waterlogged="false")
+        # the crown: a squat dome of azalea, flowering every few leaves
+        for y, r in [(5, 1.6), (6, 2.2), (7, 1.9), (8, 1.0)]:
+            for x in range(max(0, tx - 3), min(W, tx + 4)):
+                for z in range(max(0, tz - 3), min(W, tz + 4)):
+                    if ((x - tx) ** 2 + (z - tz) ** 2) ** 0.5 <= r and (x, y, z) not in s.blocks:
+                        leaf = "flowering_azalea_leaves" if (x * 5 + z * 3 + y) % 4 == 0 else "azalea_leaves"
+                        s.set(x, y, z, leaf, **LEAF)
+        # a lantern hung under the crown on the side facing the well
+        lx = tx + (1 if tx < c else -1 if tx > c else 0)
+        lz = tz + (1 if tz < c else -1 if tz > c else 0)
+        if (lx, 4, lz) not in s.blocks and (lx, 5, lz) in s.blocks:
+            s.set(lx, 4, lz, "lantern", hanging="true", waterlogged="false")
+    # the halo: leaves knitting the crowns together round the open middle
+    for x in range(W):
+        for z in range(W):
+            d = ((x - c) ** 2 + (z - c) ** 2) ** 0.5
+            if 3.4 <= d <= 4.6 and (x, 6, z) not in s.blocks and z >= 2:
+                s.set(x, 6, z, "azalea_leaves", **LEAF)
+    # entrance arch at -z: two stripped oak posts and a leafy lintel with a froglight keystone
+    for y in range(1, 5):
+        s.set(c - 2, y, 1, "stripped_oak_log", axis="y")
+        s.set(c + 2, y, 1, "stripped_oak_log", axis="y")
+    for x in range(c - 2, c + 3):
+        s.set(x, 5, 1, "stripped_oak_log", axis="x")
+        if (x, 6, 1) not in s.blocks:
+            s.set(x, 6, 1, "flowering_azalea_leaves" if x == c else "azalea_leaves", **LEAF)
+    s.set(c, 4, 1, "lantern", hanging="true", waterlogged="false")
+    # moss carpet and a few ferns on the lawn
+    for (x, z) in [(2, 3), (8, 3), (3, 7), (7, 7), (2, 6), (8, 6)]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "moss_carpet")
+    for (x, z) in [(1, 5), (9, 5), (5, 9)]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "fern")
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -522,3 +598,4 @@ if __name__ == "__main__":
         fallen_house().write(f"{out}/haunted_house.nbt")
         heartwood_hall().write(f"{out}/heartwood_hall.nbt")
         grove().write(f"{out}/grove.nbt")
+        circle_of_elders().write(f"{out}/circle_of_elders.nbt")

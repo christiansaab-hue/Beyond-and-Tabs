@@ -399,7 +399,8 @@ public class MiscUtil {
                 if (filter.test(entity) &&
                         isIdleOrMoveAttackable(unitMob, entity, neutralAggro) &&
                         hasLineOfSightForAttacks(unitMob, entity) &&
-                        !(entity instanceof Unit unit && unit.isGarrisoned())) {
+                        !(entity instanceof Unit unit && unit.isGarrisoned()) &&
+                        !com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.isCloaked(entity)) {
                     return entity;
                 }
             }

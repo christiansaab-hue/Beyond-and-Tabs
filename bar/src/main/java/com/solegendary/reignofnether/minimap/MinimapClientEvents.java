@@ -871,6 +871,9 @@ public class MinimapClientEvents {
         for (LivingEntity entity : UnitClientEvents.getAllUnits()) {
             if (!FogOfWarClientEvents.isInBrightChunk(entity))
                 continue;
+            // a cloaked unit (Shade Ranger) shows only on its owner's map
+            if (entity.isInvisible() && MC.player != null && entity.isInvisibleTo(MC.player))
+                continue;
             var colorHex = PlayerColors.getPlayerDisplayColorHex(entity instanceof Unit unit ? unit.getOwnerName() : null);
             drawUnitOnMap(entity.getOnPos().getX(),
                     entity.getOnPos().getZ(),

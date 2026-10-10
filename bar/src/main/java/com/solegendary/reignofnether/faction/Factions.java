@@ -170,6 +170,11 @@ public class Factions {
 		registerEntity(VERDANT_COURT, EntityRegistrar.LEAFBLADE_UNIT.get(), ProductionItems.LEAFBLADE);
 		registerEntity(VERDANT_COURT, EntityRegistrar.THORNBOW_UNIT.get(), ProductionItems.THORNBOW);
 		registerEntity(VERDANT_COURT, EntityRegistrar.SENTINEL_TREANT_UNIT.get(), ProductionItems.SENTINEL_TREANT);
+		// Verdant Court T2 (slice 4: the Circle of Elders)
+		registerEntity(VERDANT_COURT, EntityRegistrar.ELDER_DRUID_UNIT.get(), ProductionItems.ELDER_DRUID);
+		registerEntity(VERDANT_COURT, EntityRegistrar.STAG_LANCER_UNIT.get(), ProductionItems.STAG_LANCER);
+		registerEntity(VERDANT_COURT, EntityRegistrar.SHADE_RANGER_UNIT.get(), ProductionItems.SHADE_RANGER);
+		registerEntity(VERDANT_COURT, EntityRegistrar.ELDER_TREANT_UNIT.get(), ProductionItems.ELDER_TREANT);
 		
 		// Neutral
 		registerEntity(NEUTRAL, EntityRegistrar.ENDERMAN_UNIT.get(), ProductionItems.ENDERMAN);
@@ -253,6 +258,7 @@ public class Factions {
 		registerBuildings(VERDANT_COURT, Buildings.WIND_GENERATOR_VERDANT, Keybindings.hotkey6);
 		registerBuildings(VERDANT_COURT, Buildings.ENERGY_CONVERTER_VERDANT, Keybindings.hotkey7);
 		registerBuildings(VERDANT_COURT, Buildings.GROVE, Keybindings.abilitySlot6);
+		registerBuildings(VERDANT_COURT, Buildings.CIRCLE_OF_ELDERS, Keybindings.abilitySlot9);   // T2 lab: the Arcane Tower's slot
 
 		//Neutral
 		registerBuildings(NEUTRAL, Buildings.CAPTURABLE_BEACON, Keybindings.abilitySlot1);

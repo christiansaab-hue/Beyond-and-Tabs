@@ -229,6 +229,23 @@ public class ItemRegistrar {
             ITEMS.register("bee_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.BEE_UNIT,
                     0xdbb544, 0x2a1711, new Item.Properties()));
 
+    // Verdant Court T2
+    public static final RegistryObject<ForgeSpawnEggItem> ELDER_DRUID_UNIT_SPAWN_EGG =
+            ITEMS.register("elder_druid_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.ELDER_DRUID_UNIT,
+                    0xD8DCD2, 0x4E7A34, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> STAG_LANCER_UNIT_SPAWN_EGG =
+            ITEMS.register("stag_lancer_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.STAG_LANCER_UNIT,
+                    0x6B4A2E, 0xD9C7A0, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SHADE_RANGER_UNIT_SPAWN_EGG =
+            ITEMS.register("shade_ranger_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SHADE_RANGER_UNIT,
+                    0x3A4044, 0x5E8C6A, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> ELDER_TREANT_UNIT_SPAWN_EGG =
+            ITEMS.register("elder_treant_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.ELDER_TREANT_UNIT,
+                    0x3F2C1A, 0x4A7A2C, new Item.Properties()));
+
     public static final RegistryObject<Item> THROWABLE_TNT =
             ITEMS.register("throwable_tnt", () -> new ThrowableTnt(new Item.Properties()));
 

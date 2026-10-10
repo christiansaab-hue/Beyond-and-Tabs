@@ -49,6 +49,11 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.WRAITH_UNIT.get(), WraithUnit.createAttributes().build());
         evt.put(EntityRegistrar.VILLAGER_UNIT.get(), VillagerUnit.createAttributes().build());
         evt.put(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit.createAttributes().build());
+        // Verdant Court T2
+        evt.put(EntityRegistrar.ELDER_DRUID_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ElderDruidUnit.createAttributes().build());
+        evt.put(EntityRegistrar.STAG_LANCER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.StagLancerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.SHADE_RANGER_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ELDER_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.units.verdant.ElderTreantUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_DOG_UNIT.get(), ScoutDogUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_CAT_UNIT.get(), ScoutCatUnit.createAttributes().build());
         evt.put(EntityRegistrar.MILITIA_UNIT.get(), MilitiaUnit.createAttributes().build());
@@ -161,6 +166,10 @@ public class CommonModEvents {
             event.accept(ItemRegistrar.SCOUT_CAT_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.STRIDER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.BAT_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.ELDER_DRUID_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.STAG_LANCER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.SHADE_RANGER_UNIT_SPAWN_EGG);
+            event.accept(ItemRegistrar.ELDER_TREANT_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.SEEDSHAPER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.FOX_COURIER_UNIT_SPAWN_EGG);
             event.accept(ItemRegistrar.LEAFBLADE_UNIT_SPAWN_EGG);

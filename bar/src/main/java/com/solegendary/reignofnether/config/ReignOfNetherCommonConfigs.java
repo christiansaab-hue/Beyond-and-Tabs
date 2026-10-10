@@ -52,6 +52,10 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.BONEWRIGHT.define(BUILDER);
         UnitCosts.EMBALMER.define(BUILDER);
         UnitCosts.ROYAL_ARCHITECT.define(BUILDER);
+        UnitCosts.ELDER_DRUID.define(BUILDER);
+        UnitCosts.STAG_LANCER.define(BUILDER);
+        UnitCosts.SHADE_RANGER.define(BUILDER);
+        UnitCosts.ELDER_TREANT.define(BUILDER);
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
         UnitCosts.SEEDSHAPER.define(BUILDER);
         UnitCosts.FOX_COURIER.define(BUILDER);
@@ -124,6 +128,7 @@ public class ReignOfNetherCommonConfigs {
         BuildingCosts.BARRACKS.define(BUILDER);
         BuildingCosts.BLACKSMITH.define(BUILDER);
         BuildingCosts.ARCANE_TOWER.define(BUILDER);
+        BuildingCosts.CIRCLE_OF_ELDERS.define(BUILDER);
         BuildingCosts.WITCH_HUT.define(BUILDER);
         BuildingCosts.LIBRARY.define(BUILDER);
         BuildingCosts.WATCHTOWER.define(BUILDER);
@@ -260,6 +265,12 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry SENTINEL_TREANT = ResourceCostConfigEntry.Unit(0,60,240,45,4, ResourceCosts.SENTINEL_TREANT, "Sentinel Treant Config");
         public static final ResourceCostConfigEntry BONE_DRAGON = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.BONE_DRAGON, "Bone Dragon Config");
         public static final ResourceCostConfigEntry ROYAL_ARCHITECT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.ROYAL_ARCHITECT, "RoyalArchitect Config");
+        // Verdant Court T2, priced against the other factions' T2 (the T2 constructors are identical; the Lancer sits
+        // between a Windcaller and a Wither Skeleton, the Ranger by an Evoker, the Elder Treant by the Ravager)
+        public static final ResourceCostConfigEntry ELDER_DRUID = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.ELDER_DRUID, "Elder Druid Config");
+        public static final ResourceCostConfigEntry STAG_LANCER = ResourceCostConfigEntry.Unit(160,60,90,35,3, ResourceCosts.STAG_LANCER, "Stag Lancer Config");
+        public static final ResourceCostConfigEntry SHADE_RANGER = ResourceCostConfigEntry.Unit(120,80,120,40,3, ResourceCosts.SHADE_RANGER, "Shade Ranger Config");
+        public static final ResourceCostConfigEntry ELDER_TREANT = ResourceCostConfigEntry.Unit(360,60,170,60,7, ResourceCosts.ELDER_TREANT, "Elder Treant Config");
         public static final ResourceCostConfigEntry EMBALMER = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.EMBALMER, "Embalmer Config");
         public static final ResourceCostConfigEntry BONEWRIGHT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.BONEWRIGHT, "Bonewright Config");
         public static final ResourceCostConfigEntry WAR_MAMMOTH = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.WAR_MAMMOTH, "War Mammoth Config");
@@ -331,6 +342,7 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry BLACKSMITH = ResourceCostConfigEntry.Building(0,100,300, 0, ResourceCosts.BLACKSMITH, "Blacksmith Config");
         public static final ResourceCostConfigEntry WITCH_HUT = ResourceCostConfigEntry.Building(0,200,50, 0, ResourceCosts.WITCH_HUT, "Witch Hut Config");
         public static final ResourceCostConfigEntry ARCANE_TOWER = ResourceCostConfigEntry.Building(0,100,200, 0, ResourceCosts.ARCANE_TOWER, "Arcane Tower Config");
+        public static final ResourceCostConfigEntry CIRCLE_OF_ELDERS = ResourceCostConfigEntry.Building(0,150,200, 0, ResourceCosts.CIRCLE_OF_ELDERS, "Circle of Elders Config");
         public static final ResourceCostConfigEntry LIBRARY = ResourceCostConfigEntry.Building(0,300,100, 0, ResourceCosts.LIBRARY, "Library Config");
         public static final ResourceCostConfigEntry WATCHTOWER = ResourceCostConfigEntry.Building(0,100,75, 0, ResourceCosts.WATCHTOWER, "Watchtower Config");
         public static final ResourceCostConfigEntry CASTLE = ResourceCostConfigEntry.Building(0,400,300, 0, ResourceCosts.CASTLE, "Castle Config");

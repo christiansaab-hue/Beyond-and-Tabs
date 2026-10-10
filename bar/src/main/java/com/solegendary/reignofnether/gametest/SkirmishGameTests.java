@@ -835,9 +835,11 @@ public class SkirmishGameTests {
         ServerLevel level = helper.getLevel();
         var types = List.of(com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(),
             com.solegendary.reignofnether.registrars.EntityRegistrar.EMBALMER_UNIT.get(),
-            com.solegendary.reignofnether.registrars.EntityRegistrar.BONEWRIGHT_UNIT.get());
+            com.solegendary.reignofnether.registrars.EntityRegistrar.BONEWRIGHT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.ELDER_DRUID_UNIT.get());
         var factions = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
-            com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.PIGLINS);
+            com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.PIGLINS,
+            com.solegendary.reignofnether.faction.Factions.VERDANT_COURT);
         for (int i = 0; i < types.size(); i++) {
             var e = types.get(i).create(level);
             if (e == null) {
@@ -1120,7 +1122,8 @@ public class SkirmishGameTests {
     @GameTest(template = ARENA)
     public static void bot_kits_use_their_t2_lab(GameTestHelper helper) {
         for (var f : List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
-                com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.PIGLINS)) {
+                com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.PIGLINS,
+                com.solegendary.reignofnether.faction.Factions.VERDANT_COURT)) {
             var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(f);
             if (!(kit.t2Lab() instanceof com.solegendary.reignofnether.building.production.ProductionBuilding lab)) {
                 helper.fail(f.getName() + ": T2 lab " + kit.t2Lab() + " is not a production building");
@@ -2398,7 +2401,7 @@ public class SkirmishGameTests {
                 level.getServer().getResourceManager()) == null)
             helper.fail("the Verdant refit extractor (metal_extractor_t2_verdant) is missing from data/");
         var workerType = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getValue(verdant.workerEntityType);
-        var warden = workerType == null ? null : workerType.create(level);
+        net.minecraft.world.entity.Entity warden = workerType == null ? null : workerType.create(level);
         if (!(warden instanceof com.solegendary.reignofnether.unit.units.verdant.SeedshaperUnit seed)) {
             helper.fail("the Verdant worker type does not make a Seedshaper: " + verdant.workerEntityType);
             return;
@@ -2665,6 +2668,204 @@ public class SkirmishGameTests {
             helper.fail("an enemy unit could not target the commander");
         else
             helper.succeed();
+    }
+
+    /**
+     * Verdant Court T2 (slice 4): the Circle of Elders trains the Elder Druid and the three T2 units, and refuses all of
+     * them until its owner has Tier 2 - checked on the server when production starts, not only by the build button. The
+     * Court's bot kit points at it, and the Heartwood Hall offers no Tier 3 (the Court has no T3 lab yet).
+     */
+    @GameTest(template = ARENA)
+    public static void verdant_t2_lab_trains_only_after_tier_2(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_verdant_t2";
+        var items = List.<com.solegendary.reignofnether.building.production.ProductionItem>of(
+            com.solegendary.reignofnether.building.production.ProductionItems.ELDER_DRUID,
+            com.solegendary.reignofnether.building.production.ProductionItems.STAG_LANCER,
+            com.solegendary.reignofnether.building.production.ProductionItems.SHADE_RANGER,
+            com.solegendary.reignofnether.building.production.ProductionItems.ELDER_TREANT);
+        var lab = Buildings.CIRCLE_OF_ELDERS;
+        for (var item : items)
+            if (!lab.productions.get().contains(item))
+                helper.fail("the Circle of Elders does not train " + item.getItemName());
+        var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.VERDANT_COURT);
+        if (kit == null || kit.t2Lab() != lab || kit.t2Worker() != com.solegendary.reignofnether.building.production.ProductionItems.ELDER_DRUID)
+            helper.fail("the Verdant bot kit does not use the Circle of Elders and the Elder Druid");
+        if (Buildings.HEARTWOOD_HALL.productions.get().contains(com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_3))
+            helper.fail("the Heartwood Hall offers Tier 3, which unlocks nothing for the Court yet");
+        // a placement that is never put in the world: enough for the produce gate, and invisible to parallel tests
+        var bp = com.solegendary.reignofnether.building.BuildingUtils.getNewBuildingPlacement(lab, level,
+            helper.absolutePos(new BlockPos(2, 2, 2)), Rotation.NONE, owner, false);
+        if (!(bp instanceof com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement pp)) {
+            helper.fail("the Circle of Elders is not a production placement: " + bp);
+            return;
+        }
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        try {
+            for (var item : items)
+                if (item.canProduce(pp))
+                    helper.fail(item.getItemName() + " can be trained without Tier 2");
+            if (pp.startProductionItem(com.solegendary.reignofnether.building.production.ProductionItems.STAG_LANCER) || !pp.productionQueue.isEmpty())
+                helper.fail("the server queued a Stag Lancer without Tier 2");
+            com.solegendary.reignofnether.research.ResearchServerEvents.addResearch(owner,
+                com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);
+            for (var item : items)
+                if (!item.canProduce(pp))
+                    helper.fail(item.getItemName() + " still refused after Tier 2: " + item.getProduceErrorMsg(pp));
+            helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        }
+    }
+
+    /**
+     * The Elder Druid is the Court's T2 constructor: double build power and health, a T2 worker (so it may raise a T3
+     * lab), Verdant, with Awaken Thicket - which a plain Seedshaper must not get. Awaken Thicket wakes a tagged, owned
+     * Sentinel Treant that is dismissed again.
+     */
+    @GameTest(template = ARENA)
+    public static void elder_druid_is_a_t2_worker(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_elder_druid";
+        var druid = com.solegendary.reignofnether.registrars.EntityRegistrar.ELDER_DRUID_UNIT.get().create(level);
+        var seed = com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get().create(level);
+        if (druid == null || seed == null) {
+            helper.fail("could not create the workers");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(8, 2, 8));
+        druid.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        seed.moveTo(at.getX() + 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        druid.setOwnerName(owner);
+        seed.setOwnerName(owner);
+        level.addFreshEntity(druid);
+        level.addFreshEntity(seed);
+        net.minecraft.world.entity.LivingEntity treant = null;
+        try {
+            if (druid.getBuildPower() < 1.99f)
+                helper.fail("the Elder Druid builds at " + druid.getBuildPower());
+            if (!com.solegendary.reignofnether.unit.T2Workers.isT2Worker(druid))
+                helper.fail("the Elder Druid is not a T2 worker");
+            if (com.solegendary.reignofnether.unit.T2Workers.isT2Worker(seed))
+                helper.fail("a plain Seedshaper counts as a T2 worker");
+            if (!Factions.VERDANT_COURT.equals(Factions.getFaction(druid)))
+                helper.fail("the Elder Druid is not Verdant Court");
+            if (druid.getMaxHealth() < 2 * seed.getMaxHealth() - 0.01f)
+                helper.fail("the Elder Druid has " + druid.getMaxHealth() + " health, the Seedshaper " + seed.getMaxHealth());
+            if (druid.getAbilities().get().stream().noneMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket))
+                helper.fail("the Elder Druid lacks Awaken Thicket");
+            if (seed.getAbilities().get().stream().anyMatch(a -> a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket))
+                helper.fail("a plain Seedshaper got Awaken Thicket");
+            if (!com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(level, Buildings.CASTLE, new int[] { druid.getId() }))
+                helper.fail("a T3 lab refused an Elder Druid builder");
+            treant = com.solegendary.reignofnether.ability.abilities.AwakenThicket.awaken(level, owner, at.offset(4, -1, 0));
+            if (treant == null)
+                helper.fail("Awaken Thicket woke nothing");
+            else if (!(treant instanceof com.solegendary.reignofnether.unit.units.verdant.SentinelTreantUnit st) || !owner.equals(st.getOwnerName())
+                    || !com.solegendary.reignofnether.ability.abilities.AwakenThicket.isAwakened(treant))
+                helper.fail("the awakened treant is not an owned, tagged Sentinel Treant: " + treant);
+            else
+                helper.succeed();
+        } finally {
+            if (treant != null)
+                com.solegendary.reignofnether.ability.abilities.AwakenThicket.dismiss(treant);
+            druid.discard();
+            seed.discard();
+        }
+    }
+
+    /**
+     * The Shade Ranger cloaks after standing still for 3 s (invisible, and an enemy's target search skips it) and is
+     * revealed the moment it fires. The enemy is never added to the level, so the ranger can't see it and break cover.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void shade_ranger_cloaks_when_idle_and_reveals_on_fire(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var ranger = com.solegendary.reignofnether.registrars.EntityRegistrar.SHADE_RANGER_UNIT.get().create(level);
+        var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
+        if (ranger == null || foe == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
+        ranger.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        ranger.setOwnerName("gametest_shade_owner");
+        foe.setOwnerName("gametest_shade_foe");
+        level.addFreshEntity(ranger);
+        helper.runAfterDelay(5, () -> {
+            if (ranger.isInvisible()) {
+                ranger.discard();
+                helper.fail("the Shade Ranger cloaked straight away");
+                return;
+            }
+            // control: while visible, the enemy's target search finds it
+            boolean seenVisible = com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 8, level) == ranger;
+            helper.runAfterDelay(com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.CLOAK_DELAY_TICKS + 20, () -> {
+                try {
+                    if (!ranger.isInvisible() || !com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.isCloaked(ranger)) {
+                        helper.fail("the Shade Ranger did not cloak after standing still");
+                        return;
+                    }
+                    if (seenVisible && com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 8, level) == ranger)
+                        helper.fail("an enemy can still pick the cloaked Shade Ranger as a target");
+                    ranger.performUnitRangedAttack(foe, 1f);
+                    if (ranger.isInvisible())
+                        helper.fail("the Shade Ranger stayed cloaked after firing");
+                    else
+                        helper.succeed();
+                } finally {
+                    ranger.discard();
+                    foe.discard();
+                }
+            });
+        });
+    }
+
+    /**
+     * The Elder Treant's boulder hurts the enemies where it lands and spares friends; the treant aims at an enemy in
+     * range on its own (its target pick never returns a friend).
+     */
+    @GameTest(template = ARENA)
+    public static void elder_treant_boulder_damages_foes_not_friends(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_treant_owner", foeOwner = "gametest_treant_foe";
+        var reg = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get();
+        var treant = com.solegendary.reignofnether.registrars.EntityRegistrar.ELDER_TREANT_UNIT.get().create(level);
+        var friend = reg.create(level);
+        var foe = reg.create(level);
+        if (treant == null || friend == null || foe == null) {
+            helper.fail("could not create the units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 8));
+        treant.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        friend.moveTo(at.getX() + 8.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        foe.moveTo(at.getX() + 9.5, at.getY(), at.getZ() + 1.5, 0, 0);
+        treant.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        foe.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(treant, friend, foe);
+        for (var e : all)
+            level.addFreshEntity(e);
+        helper.runAfterDelay(2, () -> {
+            try {
+                var mark = treant.boulderTarget(level);
+                if (mark != foe)
+                    helper.fail("the Elder Treant aimed its boulder at " + mark + ", not the enemy in range");
+                float friendHp = friend.getHealth(), foeHp = foe.getHealth();
+                var hit = com.solegendary.reignofnether.ability.abilities.BoulderToss.impact(level, treant, owner,
+                    new net.minecraft.world.phys.Vec3(at.getX() + 9, at.getY(), at.getZ() + 1));
+                if (!hit.contains(foe) || (foe.isAlive() && foe.getHealth() >= foeHp))
+                    helper.fail("the boulder did not hurt the enemy where it landed");
+                if (hit.contains(friend) || friend.getHealth() < friendHp)
+                    helper.fail("the boulder hurt a friendly unit");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+            }
+        });
     }
 
 

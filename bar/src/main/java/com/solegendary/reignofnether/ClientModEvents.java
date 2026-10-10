@@ -116,6 +116,11 @@ public class ClientModEvents {
         evt.registerEntityRenderer(EntityRegistrar.WRAITH_UNIT.get(), WraithRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.VILLAGER_UNIT.get(), VillagerUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), VillagerUnitRenderer::new);
+        // Verdant Court T2: the Stag Lancer wears Alex's Mobs' own moose renderer (always antlered, StagLancerUnit)
+        evt.registerEntityRenderer(EntityRegistrar.ELDER_DRUID_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ElderDruidRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.STAG_LANCER_UNIT.get(), com.github.alexthe666.alexsmobs.client.render.RenderMoose::new);
+        evt.registerEntityRenderer(EntityRegistrar.SHADE_RANGER_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ShadeRangerRenderer::new);
+        evt.registerEntityRenderer(EntityRegistrar.ELDER_TREANT_UNIT.get(), com.solegendary.reignofnether.unit.modelling.renderers.ElderTreantRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_DOG_UNIT.get(), DogUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.SCOUT_CAT_UNIT.get(), CatUnitRenderer::new);
         evt.registerEntityRenderer(EntityRegistrar.MILITIA_UNIT.get(), VillagerUnitRenderer::new);

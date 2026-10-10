@@ -13,7 +13,8 @@ public final class T2Workers {
     public static boolean isT2Worker(Entity e) {
         return e instanceof com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit
             || e instanceof com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit
-            || e instanceof com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit;
+            || e instanceof com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit
+            || e instanceof com.solegendary.reignofnether.unit.units.verdant.ElderDruidUnit;
     }
 
     /** The T3 labs, which only a T2 constructor may place. */

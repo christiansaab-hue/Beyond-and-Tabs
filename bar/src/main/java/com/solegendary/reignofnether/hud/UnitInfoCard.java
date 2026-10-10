@@ -72,7 +72,11 @@ public final class UnitInfoCard {
         // Verdant Court: the Treant is a 140 HP tank by design, the Leafblade (50 HP) and the Fox Courier raiders;
         // the Thornbow is a skirmisher by the ranged rule and the Seedshaper a worker
         Map.entry("SentinelTreantUnit", Role.TANK), Map.entry("LeafbladeUnit", Role.RAIDER),
-        Map.entry("FoxCourierUnit", Role.RAIDER)
+        Map.entry("FoxCourierUnit", Role.RAIDER),
+        // Verdant Court T2: the Elder Treant is a 520 HP tank (not an experimental), the Stag Lancer a raider, the
+        // Shade Ranger a long-range single-target artillery piece; the Elder Druid falls to the worker rule
+        Map.entry("ElderTreantUnit", Role.TANK), Map.entry("StagLancerUnit", Role.RAIDER),
+        Map.entry("ShadeRangerUnit", Role.ARTILLERY)
     );
     // role and faction colour only depend on the unit's class, so work them out once per class
     private static final Map<Class<?>, Role> ROLE_CACHE = new HashMap<>();

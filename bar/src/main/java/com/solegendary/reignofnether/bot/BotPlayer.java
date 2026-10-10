@@ -76,14 +76,16 @@ public class BotPlayer {
                 Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,
                 List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER),
                 Buildings.CASTLE, ProductionItems.SUN_COLOSSUS, Buildings.ENERGY_CONVERTER_VILLAGERS);
-        // the Verdant Court has T1 only so far (slice 1): no farm, house, tower, T2 lab or T3 - every use of those
-        // below checks for null, so the bot plays a T1 economy and army and never researches a dead end
+        // the Verdant Court has T1 and T2 so far (slices 1 and 4): no farm, house, tower or T3 yet - every use of those
+        // below checks for null, so the bot techs to its Circle of Elders like the others but never researches Tier 3
+        // (fieldExperimentals stops at a null T3 building), a dead end with nothing to unlock
         if (faction.equals(Factions.VERDANT_COURT))
             return new Kit(Buildings.HEARTWOOD_HALL, null, null,
                 Buildings.METAL_EXTRACTOR_VERDANT, Buildings.WIND_GENERATOR_VERDANT, Buildings.GROVE,
                 null, ProductionItems.SEEDSHAPER,
                 List.of(ProductionItems.LEAFBLADE, ProductionItems.THORNBOW, ProductionItems.SENTINEL_TREANT),
-                null, null, List.of(),
+                Buildings.CIRCLE_OF_ELDERS, ProductionItems.ELDER_DRUID,
+                List.of(ProductionItems.STAG_LANCER, ProductionItems.SHADE_RANGER, ProductionItems.ELDER_TREANT),
                 null, null, Buildings.ENERGY_CONVERTER_VERDANT);
         return null;
     }
@@ -483,7 +485,9 @@ public class BotPlayer {
                 }
                 boolean aimed = a instanceof com.solegendary.reignofnether.ability.abilities.CryptTide
                         || a instanceof com.solegendary.reignofnether.ability.abilities.MagmaRupture
-                        || a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog;
+                        || a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog
+                        || a instanceof com.solegendary.reignofnether.ability.abilities.AwakenThicket
+                        || a instanceof com.solegendary.reignofnether.ability.abilities.StagLeap;
                 if (!aimed && !(a instanceof com.solegendary.reignofnether.ability.abilities.WarDrums)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.BastionAegis)
                         && !(a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack)

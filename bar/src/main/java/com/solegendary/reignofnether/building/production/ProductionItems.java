@@ -51,6 +51,11 @@ public class ProductionItems {
     public static final com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectProd ROYAL_ARCHITECT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "royal_architect"), new com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectProd());
     public static final com.solegendary.reignofnether.unit.units.monsters.EmbalmerProd EMBALMER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "embalmer"), new com.solegendary.reignofnether.unit.units.monsters.EmbalmerProd());
     public static final com.solegendary.reignofnether.unit.units.piglins.BonewrightProd BONEWRIGHT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bonewright"), new com.solegendary.reignofnether.unit.units.piglins.BonewrightProd());
+    // Verdant Court T2 (Circle of Elders)
+    public static final com.solegendary.reignofnether.unit.units.verdant.ElderDruidProd ELDER_DRUID = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "elder_druid"), new com.solegendary.reignofnether.unit.units.verdant.ElderDruidProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.StagLancerProd STAG_LANCER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "stag_lancer"), new com.solegendary.reignofnether.unit.units.verdant.StagLancerProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.ShadeRangerProd SHADE_RANGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "shade_ranger"), new com.solegendary.reignofnether.unit.units.verdant.ShadeRangerProd());
+    public static final com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd ELDER_TREANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "elder_treant"), new com.solegendary.reignofnether.unit.units.verdant.ElderTreantProd());
     public static final RavagerProd RAVAGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ravager"), new RavagerProd());
     public static final com.solegendary.reignofnether.unit.units.piglins.WarMammothProd WAR_MAMMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "war_mammoth"), new com.solegendary.reignofnether.unit.units.piglins.WarMammothProd());
 
@@ -179,6 +184,10 @@ public class ProductionItems {
         ROYAL_ARCHITECT,
         EMBALMER,
         BONEWRIGHT,
+        ELDER_DRUID,
+        STAG_LANCER,
+        SHADE_RANGER,
+        ELDER_TREANT,
         WAR_MAMMOTH,
         SUN_COLOSSUS,
         SEEDSHAPER,

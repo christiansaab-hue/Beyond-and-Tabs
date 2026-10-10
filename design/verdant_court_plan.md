@@ -152,6 +152,23 @@ Bodies are vanilla (Alex's Mobs renderers were not needed for slice 1). Still st
 calm theme (reuses the Kingdom's), cube map (so not in CLASSIC_FACTIONS), survival wave, death debris (wire field
 full), T2/T3 (Heartwood Hall offers Tier 2 only, for the extractor refit), Hive Keeper.
 
+### Slice 4 (T2) status (branch `verdant-t2`)
+
+Implemented: **Circle of Elders** T2 lab (`building/buildings/verdant/CircleOfElders.java`, `circle_of_elders.nbt` from
+`tools/gen_structures.py` in both trees, build slot `abilitySlot9` like the Arcane Tower; needs a Grove and Tier 2 on
+the button, and every Court T2 production item re-checks Tier 2 on the server via `VerdantT2Prod`). **Elder Druid**
+T2 constructor (2x build power, 2x Seedshaper HP, in `T2Workers.isT2Worker`) with **Awaken Thicket** (aimed, 12
+blocks: a tagged Sentinel Treant for 30 s, 45 s cooldown, no wreck, discarded if it reloads from a save). **Stag
+Lancer** on Alex's Mobs' moose body (`RenderMoose`, always antlered, antler drops off) with **Leaping Charge** (10-block
+arc, landing AoE 10 dmg + knockback, 14 s). **Shade Ranger** (Thornbow subclass, 24 range, 16 dmg plain shots): cloaks
+after 3 s still with no target - invisible flag, owner sees a ghost, skipped by `MiscUtil.findClosestAttackableEntity`,
+hidden on enemy minimaps, attackers lose it - and is revealed by moving, targeting or firing. **Elder Treant** (520 HP,
+0.16 speed) with a passive boulder every 8 s (`BoulderToss`: 14-block throw, r3 18 dmg to enemies only, particle arc,
+no projectile entity). Bot kit: t2Lab / Elder Druid / T2 army; Awaken Thicket and Leaping Charge join the bot's aimed
+powers. Tier 3 stays off the Heartwood Hall and the bot never researches it (null T3 building).
+Not done: Wisp Choir, Bloom Priestess, Storm Oak, Great Elk Herd; own portraits for the T2 units (recoloured
+slice-1 skins and a drawn stag icon for now).
+
 ## 4. Later slices
 
 | Slice | Content | Notes |

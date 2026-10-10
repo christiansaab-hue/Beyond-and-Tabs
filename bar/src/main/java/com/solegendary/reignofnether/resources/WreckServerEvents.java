@@ -114,6 +114,8 @@ public class WreckServerEvents {
             return;   // a Bone Dragon's risen skeleton was free - its death must not pay out metal
         if (com.solegendary.reignofnether.ability.abilities.TotemOfThePack.isSpectral(le))
             return;   // so was a Totem of the Pack's spectral wolf
+        if (com.solegendary.reignofnether.ability.abilities.AwakenThicket.isAwakened(le))
+            return;   // and an Elder Druid's awakened treant
         ResourceCost cost = unit.getCost();
         if (cost == null || cost.metal() < MIN_COST)
             return;

@@ -76,6 +76,8 @@ public class Buildings {
     public static final com.solegendary.reignofnether.building.buildings.shared.MetalExtractor METAL_EXTRACTOR_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "metal_extractor_verdant"), new com.solegendary.reignofnether.building.buildings.shared.MetalExtractor("_verdant"));
     public static final com.solegendary.reignofnether.building.buildings.shared.WindGenerator WIND_GENERATOR_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_verdant"), new com.solegendary.reignofnether.building.buildings.shared.WindGenerator("_verdant"));
     public static final com.solegendary.reignofnether.building.buildings.shared.EnergyConverter ENERGY_CONVERTER_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "energy_converter_verdant"), new com.solegendary.reignofnether.building.buildings.shared.EnergyConverter("_verdant"));
+    // Verdant Court T2 lab (slice 4)
+    public static final com.solegendary.reignofnether.building.buildings.verdant.CircleOfElders CIRCLE_OF_ELDERS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "circle_of_elders"), new com.solegendary.reignofnether.building.buildings.verdant.CircleOfElders());
 
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);

@@ -138,6 +138,9 @@ public class ClientEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SunriseSortie.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.LeafDash.class);
         vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.SoulWisps.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.AwakenThicket.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.StagLeap.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.ability.abilities.BoulderToss.class);
         vanillaEventBus.register(com.solegendary.reignofnether.player.CommanderClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.building.PatchQuickBuildClientEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.AreaCommandClientEvents.class);

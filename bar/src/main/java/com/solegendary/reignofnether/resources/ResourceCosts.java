@@ -42,6 +42,12 @@ public class ResourceCosts {
     public static final ResourceCost BONEWRIGHT = new ResourceCost(ID, "BONEWRIGHT");
     public static final ResourceCost EMBALMER = new ResourceCost(ID, "EMBALMER");
     public static final ResourceCost ROYAL_ARCHITECT = new ResourceCost(ID, "ROYAL_ARCHITECT");
+    // Verdant Court T2
+    public static final ResourceCost ELDER_DRUID = new ResourceCost(ID, "ELDER_DRUID");
+    public static final ResourceCost STAG_LANCER = new ResourceCost(ID, "STAG_LANCER");
+    public static final ResourceCost SHADE_RANGER = new ResourceCost(ID, "SHADE_RANGER");
+    public static final ResourceCost ELDER_TREANT = new ResourceCost(ID, "ELDER_TREANT");
+    public static final ResourceCost CIRCLE_OF_ELDERS = new ResourceCost(ID, "CIRCLE_OF_ELDERS");
     public static final ResourceCost SUN_COLOSSUS = new ResourceCost(ID, "SUN_COLOSSUS");
     // Verdant Court
     public static final ResourceCost SEEDSHAPER = new ResourceCost(ID, "SEEDSHAPER");
@@ -280,6 +286,11 @@ public class ResourceCosts {
         BONEWRIGHT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONEWRIGHT);
         EMBALMER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EMBALMER);
         ROYAL_ARCHITECT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROYAL_ARCHITECT);
+        ELDER_DRUID.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ELDER_DRUID);
+        STAG_LANCER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.STAG_LANCER);
+        SHADE_RANGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SHADE_RANGER);
+        ELDER_TREANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ELDER_TREANT);
+        CIRCLE_OF_ELDERS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.CIRCLE_OF_ELDERS);
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
         SEEDSHAPER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEEDSHAPER);
         FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
