@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Isometric preview renderer for Minecraft structure NBT files (no dependencies beyond Pillow).
 
-Usage: python3 tools/preview_structure.py <file.nbt> [more.nbt ...] -o out.png
+Usage: python3 tools/preview_structure.py <file.nbt> [more.nbt ...] -o out.png [--cell 10]
 
 Renders each structure as shaded isometric cubes coloured by an approximate block palette, side by side,
 so building changes can be eyeballed before a ~10 minute CI round trip. Unknown blocks fall back to a
@@ -90,6 +90,11 @@ COLOURS = {
     # modded decor (Macaw's etc.)
     "thatch_steep_roof": (196, 168, 86), "thatch": (196, 168, 86), "_window": (165, 200, 215), "_gothic": (120, 150, 170),
     "steep_roof": (100, 100, 100), "concrete": (220, 220, 220),
+    # Verdant Court
+    "azalea_leaves": (95, 130, 45), "flowering_azalea_leaves": (140, 120, 95), "flowering_azalea": (190, 110, 170), "froglight": (200, 235, 160),
+    "calcite": (225, 225, 220), "rooted_dirt": (145, 105, 75), "mangrove_roots": (90, 60, 40),
+    "oak_wood": (105, 85, 50), "oak_log": (105, 85, 50), "iron_ore": (150, 140, 130), "fern": (70, 120, 45),
+    "target": (225, 200, 170), "oxidized": (85, 165, 135), "smoker": (95, 90, 85),
 }
 SKIP = ("air", "structure_void", "barrier", "light")
 
@@ -151,13 +156,16 @@ def render(path, cell=10):
 def main(argv):
     out = "preview.png"
     files = []
+    cell = 10
     i = 0
     while i < len(argv):
         if argv[i] == "-o":
             out = argv[i + 1]; i += 2
+        elif argv[i] == "--cell":
+            cell = int(argv[i + 1]); i += 2
         else:
             files.append(argv[i]); i += 1
-    imgs = [render(f) for f in files]
+    imgs = [render(f, cell) for f in files]
     W = sum(im.width for im in imgs) + 8 * (len(imgs) + 1)
     H = max(im.height for im in imgs) + 16
     sheet = Image.new("RGB", (W, H), (20, 22, 26))

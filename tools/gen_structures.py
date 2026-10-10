@@ -485,42 +485,228 @@ def heartwood_hall():
     return s
 
 
+def leaf_for(x, y, z, every=4):
+    """Azalea with a deterministic sprinkle of flowering azalea (pink from the RTS camera)."""
+    return "flowering_azalea_leaves" if (x * 7 + z * 3 + y * 5) % every == 0 else "azalea_leaves"
+
+
+def crown(s, tx, tz, layers, skip=lambda x, y, z: False, every=4):
+    """A rounded azalea crown round (tx, tz): layers = [(y, radius)]. Never overwrites, clipped to the structure."""
+    sx, _, sz = s.size
+    for y, r in layers:
+        for x in range(max(0, tx - 3), min(sx, tx + 4)):
+            for z in range(max(0, tz - 3), min(sz, tz + 4)):
+                if ((x - tx) ** 2 + (z - tz) ** 2) ** 0.5 <= r and (x, y, z) not in s.blocks and not skip(x, y, z):
+                    s.set(x, y, z, leaf_for(x, y, z, every), **LEAF)
+
+
 def grove():
-    """The Court's training glade: a moss lawn inside mossy stone, a living arch of oak and azalea over the -z
-    entrance, two archery targets on oak posts for the Thornbows, a fletching table and a sapling ring. 9 x 7 x 8."""
-    W, D = 9, 8
-    s = Structure(W, 7, D)
+    """The Court's training glade, read from the RTS camera as a RING OF TREES round an open lawn: five small oaks with
+    rounded azalea crowns (flowering here and there) knit into a horseshoe canopy that leaves the glade in the middle
+    open to the sky, an arched living-wood gate at -z (two trunks, rounded oak shoulders, a froglight keystone, a
+    flowering crest), a calcite path running in to a silver sparring ring, two archery targets on birch posts and a
+    fletching table at the back for the Thornbows, lanterns on mossy walls and ferns / flowers under the trees.
+    Footprint 9 x 8 like before (placement and tests depend on it); 9 tall. Nothing hangs (the build runs bottom-up)."""
+    W, H, D = 9, 9, 8
+    s = Structure(W, H, D)
+    gx, gz = 4, 3                                       # the glade's centre
     for x in range(W):
         for z in range(D):
             edge = x in (0, W - 1) or z in (0, D - 1)
-            s.set(x, 0, z, "mossy_stone_bricks" if edge else "moss_block")
-    # the arch: two oak trunks and a leafy lintel over the entrance
+            ring = 1.3 <= ((x - gx) ** 2 + (z - gz) ** 2) ** 0.5 <= 1.9
+            s.set(x, 0, z, "mossy_stone_bricks" if edge else "calcite" if ring else "moss_block")
+    for z in range(0, 2):
+        s.set(gx, 0, z, "calcite")                      # the path in through the gate
+    s.set(gx, 0, gz, "verdant_froglight", axis="y")     # a glow at the heart of the sparring ring
+    # the gate: two trunks on the front edge, rounded shoulders, a lintel with a froglight keystone and a leafy crest
     for y in range(1, 5):
-        s.set(2, y, 0, "oak_log", axis="y"); s.set(W - 3, y, 0, "oak_log", axis="y")
-    for x in range(1, W - 1):
-        s.set(x, 5, 0, "stripped_oak_log", axis="x")
-        s.set(x, 6, 0, "azalea_leaves", **LEAF)
-    for x in (1, W - 2):
-        s.set(x, 5, 1, "flowering_azalea_leaves", **LEAF)
-        s.set(x, 4, 0, "azalea_leaves", **LEAF)
-    s.set(4, 4, 0, "verdant_froglight", axis="y")
-    # low mossy walls down the sides, lanterns standing on them
-    for z in range(2, D - 1):
-        s.set(0, 1, z, "mossy_cobblestone_wall"); s.set(W - 1, 1, z, "mossy_cobblestone_wall")
-    for z in (3, D - 2):
-        s.set(0, 2, z, "lantern", hanging="false", waterlogged="false")
-        s.set(W - 1, 2, z, "lantern", hanging="false", waterlogged="false")
-    # archery targets on posts at the back
-    for x in (2, W - 3):
-        s.set(x, 1, D - 2, "stripped_birch_log", axis="y")
-        s.set(x, 2, D - 2, "target")
-    s.set(4, 1, D - 2, "fletching_table")
-    # saplings and moss carpet on the lawn
-    for (x, z) in [(2, 3), (W - 3, 3), (4, 4)]:
-        s.set(x, 1, z, "azalea")
-    for (x, z) in [(3, 2), (5, 5), (6, 2), (3, 5)]:
-        s.set(x, 1, z, "moss_carpet")
+        s.set(2, y, 0, "oak_log", axis="y"); s.set(6, y, 0, "oak_log", axis="y")
+    s.set(3, 4, 0, "oak_wood", axis="y"); s.set(5, 4, 0, "oak_wood", axis="y")
+    for x in range(2, 7):
+        s.set(x, 5, 0, "verdant_froglight" if x == gx else "oak_log", axis="y" if x == gx else "x")
+    for x in range(1, 8):
+        s.set(x, 6, 0, "flowering_azalea_leaves" if x in (3, 4, 5) else "azalea_leaves", **LEAF)
+    s.set(gx, 7, 0, "flowering_azalea_leaves", **LEAF)
+    # the ring of trees: trunks, mangrove roots at their feet, rounded crowns that stay off the glade
+    trees = [(1, 2), (7, 2), (1, 6), (7, 6), (4, 6)]
+    in_glade = lambda x, y, z: abs(x - gx) <= 1 and 2 <= z <= 4 and y <= 6
+    for (tx, tz) in trees:
+        top = 5 if (tx, tz) == (4, 6) else 4
+        for y in range(1, top + 1):
+            s.set(tx, y, tz, "oak_log", axis="y")
+        for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            x, z = tx + dx, tz + dz
+            if 0 < x < W - 1 and 0 < z < D - 1 and (x, 1, z) not in s.blocks and (x, z) != (gx, gz) \
+                    and (tx * 3 + tz + dx * 5 + dz) % 3 == 0:
+                s.set(x, 1, z, "mangrove_roots", waterlogged="false")
+        crown(s, tx, tz, [(top, 1.5), (top + 1, 1.9), (top + 2, 1.5), (top + 3, 0.6)], skip=in_glade)
+    # knit the side crowns into one canopy so the ring reads closed from above (only the glade and gate stay open)
+    for x in (0, 1, 2, 6, 7, 8):
+        for y in (5, 6):
+            if (x, y, 4) not in s.blocks and (y == 6 or x in (1, 7)):
+                s.set(x, y, 4, leaf_for(x, y, 4), **LEAF)
+    # archery targets on birch posts either side of the back tree, a fletching table between the side trees
+    for x in (3, 5):
+        s.set(x, 1, 6, "stripped_birch_log", axis="y")
+        s.set(x, 2, 6, "target")
+    s.set(7, 1, 4, "fletching_table")
+    # lanterns standing on mossy walls along the sides and either side of the gate
+    for (x, z) in [(0, 4), (8, 4), (1, 0), (7, 0)]:
+        s.set(x, 1, z, "mossy_cobblestone_wall")
+        s.set(x, 2, z, "lantern", hanging="false", waterlogged="false")
+    # undergrowth: flowering azalea bushes, ferns, flowers and moss carpet on the lawn round the glade
+    for (x, z, b) in [(1, 4, "flowering_azalea"), (2, 1, "fern"), (6, 1, "fern"), (2, 5, "allium"),
+                      (6, 5, "oxeye_daisy"), (3, 1, "azure_bluet"), (5, 1, "cornflower"), (2, 3, "fern"),
+                      (6, 3, "flowering_azalea")]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, b)
+    for (x, z) in [(3, 2), (5, 4), (3, 4)]:
+        if (x, 1, z) not in s.blocks:
+            s.set(x, 1, z, "moss_carpet")
     fill_air(s)
+    return s
+
+
+# ---- Verdant Court economy: living-wood takes on the shared extractor / wind generator / converter ------------
+# Same footprints and tier rules as the generic builders (placement, metal-patch checks and getUpgradeLevel depend on
+# them), but grown rather than built so they read as the Court's from the RTS camera instead of grass pads with a
+# stone rim. Sparse like the generic ones (unlisted positions keep the terrain). Nothing hangs (bottom-up build),
+# leaves are persistent, no vines (a vine placed before its supporting log pops off).
+
+def verdant_pad(s, path=()):
+    """5x5 / 3x3 moss pad: rooted-dirt corners, mossy stone brick kerb, calcite path stones."""
+    sx, _, sz = s.size
+    for x in range(sx):
+        for z in range(sz):
+            corner = x in (0, sx - 1) and z in (0, sz - 1)
+            edge = x in (0, sx - 1) or z in (0, sz - 1)
+            s.set(x, 0, z, "rooted_dirt" if corner else "mossy_stone_bricks" if edge else "moss_block")
+    for (x, z) in path:
+        s.set(x, 0, z, "calcite")
+
+
+def verdant_root_claws(s, c, top):
+    """Four great roots rising from the pad corners and bending in over the core at y=top, like fingers gripping it."""
+    for (dx, dz) in [(-1, -1), (1, -1), (-1, 1), (1, 1)]:
+        s.set(c + 2 * dx, 1, c + 2 * dz, "oak_wood", axis="y")                    # the root's foot
+        s.set(c + dx, 1, c + dz, "mangrove_roots", waterlogged="false")
+        for y in range(2, top):
+            s.set(c + dx, y, c + dz, "oak_wood", axis="y")                         # the knuckle
+    for (dx, dz, ax) in [(1, 0, "x"), (-1, 0, "x"), (0, 1, "z"), (0, -1, "z")]:
+        s.set(c + dx, top, c + dz, "oak_log", axis=ax)                              # fingertips over the core
+
+
+def verdant_metal_extractor():
+    """T1: roots gripping a glowing ore core. Four oak roots climb from the pad's corners and close their fingertips
+    round a raw-iron core banded with froglight, its glowing crown showing between them; moss carpet on the knuckles, a
+    lantern stump and a fern tuft at the foot. 5 x 5 x 5. No copper anywhere (copper marks tier 2)."""
+    s = Structure(5, 5, 5)
+    c = 2
+    verdant_pad(s, path=[(2, 0), (2, 4), (0, 2), (4, 2)])
+    s.set(c, 0, c, "verdant_froglight", axis="y")
+    s.set(c, 1, c, "raw_iron_block")
+    s.set(c, 2, c, "verdant_froglight", axis="y")
+    s.set(c, 3, c, "raw_iron_block")
+    verdant_root_claws(s, c, 3)
+    s.set(c, 4, c, "verdant_froglight", axis="y")       # the core's glowing crown, held up in the grip
+    for (dx, dz) in [(-1, -1), (1, 1)]:
+        s.set(c + dx, 3, c + dz, "moss_carpet")
+    s.set(c + 1, 3, c - 1, "azalea_leaves", **LEAF)
+    s.set(c - 1, 3, c + 1, "flowering_azalea_leaves", **LEAF)
+    # a lantern on a mossy stump at the front edge, a fern and a flowering azalea at the other edges
+    s.set(1, 1, 0, "mossy_cobblestone_wall")
+    s.set(1, 2, 0, "lantern", hanging="false", waterlogged="false")
+    s.set(2, 1, 3, "fern")                              # on the moss between the roots (the kerb is stone)
+    s.set(3, 1, 2, "flowering_azalea")
+    return s
+
+
+def verdant_metal_extractor_t2():
+    """T2: the claws have grown into a little elder over the core - the same four roots, a trunk rising from the grip
+    banded with oxidised copper runes (the Court's silver), a flowering azalea crown with froglights glowing in it
+    and a lightning rod drawing on the deep metal. 5 x 8 x 5, so T1 and T2 tell apart at a glance. Contains a
+    cut_copper heart block: MetalExtractor.getUpgradeLevel() reads it as the save-proof tier marker."""
+    s = Structure(5, 8, 5)
+    c = 2
+    verdant_pad(s, path=[(2, 0), (2, 4), (0, 2), (4, 2)])
+    s.set(c, 0, c, "cut_copper")                        # tier marker, buried under the core
+    s.set(c, 1, c, "raw_iron_block")
+    s.set(c, 2, c, "verdant_froglight", axis="y")
+    verdant_root_claws(s, c, 3)
+    s.set(c, 3, c, "raw_iron_block")
+    for y in (4, 5, 6):
+        s.set(c, y, c, "oak_log", axis="y")
+    for (dx, dz) in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+        s.set(c + dx, 4, c + dz, "oxidized_cut_copper")  # the rune band round the trunk's foot
+    crown(s, c, c, [(5, 1.5), (6, 2.2), (7, 1.0)], every=3)
+    for (x, y, z) in [(c + 2, 6, c), (c - 2, 6, c), (c, 6, c + 2)]:
+        s.set(x, y, z, "verdant_froglight", axis="y")
+    s.set(c, 7, c, "lightning_rod", facing="up", powered="false", waterlogged="false")
+    s.set(1, 1, 0, "mossy_cobblestone_wall")
+    s.set(1, 2, 0, "lantern", hanging="false", waterlogged="false")
+    s.set(2, 1, 3, "fern")                              # on the moss between the roots (the kerb is stone)
+    s.set(3, 1, 2, "flowering_azalea")
+    return s
+
+
+def verdant_wind_generator():
+    """A tall slender oak on a moss pad, roots splayed at its foot, with its sails' hub growing out of the trunk's
+    front: WindmillRenderClientEvents finds the horizontal stripped oak log and spins leaf-green sails on birch arms
+    round it, so the tree reads as a living windmill. The crown sits above and behind the sails' sweep (a 3.2 block
+    blade tilted back 40 degrees reaches y~7 at the middle column) so they never cut through it. The hub must stay
+    the only horizontal stripped log in the structure. 3 x 10 x 3."""
+    s = Structure(3, 10, 3)
+    verdant_pad(s)
+    s.set(1, 0, 1, "oak_wood", axis="y")
+    # flared foot: wood on the plus, roots / undergrowth / a lantern in the corners
+    for (x, z) in [(1, 0), (1, 2), (0, 1), (2, 1)]:
+        s.set(x, 1, z, "oak_wood", axis="y")
+    s.set(0, 1, 0, "mangrove_roots", waterlogged="false")
+    s.set(2, 1, 0, "fern")
+    s.set(0, 1, 2, "flowering_azalea")
+    s.set(2, 1, 2, "mossy_cobblestone_wall")
+    s.set(2, 2, 2, "lantern", hanging="false", waterlogged="false")
+    s.set(1, 2, 2, "mangrove_roots", waterlogged="false")
+    # the trunk, with a knot under the hub
+    for y in range(1, 9):
+        s.set(1, y, 1, "oak_log", axis="y")
+    s.set(1, 3, 0, "oak_wood", axis="y")
+    s.set(1, 4, 0, "stripped_oak_log", axis="z")       # <- rotor hub (found by the renderer)
+    s.set(1, 5, 2, "oak_wood", axis="y")               # a bough on the back balancing the sails
+    # the crown: a band of leaves on the back and sides at y=7, a full head at y=8, a flowering crest with a froglight
+    for (x, z) in [(0, 2), (1, 2), (2, 2), (0, 1), (2, 1)]:
+        s.set(x, 6 if z == 2 else 7, z, "azalea_leaves", **LEAF)
+    for (x, z) in [(0, 2), (2, 2)]:
+        s.set(x, 7, z, "flowering_azalea_leaves", **LEAF)
+    s.set(1, 7, 2, "azalea_leaves", **LEAF)
+    for x in range(3):
+        for z in range(3):
+            if (x, z) != (1, 1):
+                s.set(x, 8, z, leaf_for(x, 8, z, 3), **LEAF)
+    s.set(1, 9, 1, "verdant_froglight", axis="y")
+    for (x, z) in [(1, 0), (0, 1), (2, 1), (1, 2)]:
+        s.set(x, 9, z, "flowering_azalea_leaves" if (x + z) % 2 else "azalea_leaves", **LEAF)
+    return s
+
+
+def verdant_energy_converter():
+    """A leafy bower over a glowing hearth: four oak posts roofed with a ring of azalea (flowering at the corners)
+    round an open smoke hole, a lit campfire on a smoker at the centre - the fire shows from the RTS camera through
+    the hole - on a froglight hearthstone, mossy slabs as the hearth's kerb and a lantern post at the front. 3 x 5 x 3."""
+    s = Structure(3, 5, 3)
+    verdant_pad(s)
+    s.set(1, 0, 1, "verdant_froglight", axis="y")
+    for (x, z) in [(0, 0), (2, 0), (0, 2), (2, 2)]:
+        for y in (1, 2, 3):
+            s.set(x, y, z, "oak_log", axis="y")
+        s.set(x, 4, z, "flowering_azalea_leaves", **LEAF)
+    for (x, z) in [(1, 0), (0, 1), (2, 1), (1, 2)]:
+        s.set(x, 1, z, "mossy_stone_brick_slab", type="bottom", waterlogged="false")
+        s.set(x, 3, z, "azalea_leaves", **LEAF)
+    s.set(1, 1, 1, "smoker", facing="north", lit="true")
+    s.set(1, 2, 1, "campfire", lit="true", facing="north", signal_fire="false", waterlogged="false")
+    s.set(1, 1, 0, "mossy_cobblestone_wall")           # a lantern post at the front (a slab can't carry a lantern)
+    s.set(1, 2, 0, "lantern", hanging="false", waterlogged="false")
     return s
 
 
@@ -908,6 +1094,12 @@ if __name__ == "__main__":
     os.makedirs(OUT_DATA, exist_ok=True)
     for out in (OUT, OUT_DATA):
         for variant, P in PALETTES.items():
+            if variant == "_verdant":   # grown, not built: bespoke living-wood takes (see the Verdant section)
+                verdant_metal_extractor().write(f"{out}/metal_extractor{variant}.nbt")
+                verdant_metal_extractor_t2().write(f"{out}/metal_extractor_t2{variant}.nbt")
+                verdant_wind_generator().write(f"{out}/wind_generator{variant}.nbt")
+                verdant_energy_converter().write(f"{out}/energy_converter{variant}.nbt")
+                continue
             metal_extractor(P).write(f"{out}/metal_extractor{variant}.nbt")
             metal_extractor_t2(P).write(f"{out}/metal_extractor_t2{variant}.nbt")
             wind_generator(P).write(f"{out}/wind_generator{variant}.nbt")

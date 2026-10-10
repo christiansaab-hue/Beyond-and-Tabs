@@ -1,16 +1,87 @@
 {
   "variants": {
-    "age=0": {
-      "model": "reignofnether:block/thicket_stage0"
-    },
-    "age=1": {
-      "model": "reignofnether:block/thicket_stage1"
-    },
-    "age=2": {
-      "model": "reignofnether:block/thicket_stage2"
-    },
-    "age=3": {
-      "model": "reignofnether:block/thicket_stage3"
-    }
+    "age=0": [
+      {
+        "model": "reignofnether:block/thicket_stage0"
+      },
+      {
+        "model": "reignofnether:block/thicket_stage0",
+        "y": 90
+      },
+      {
+        "model": "reignofnether:block/thicket_stage0",
+        "y": 180
+      },
+      {
+        "model": "reignofnether:block/thicket_stage0",
+        "y": 270
+      }
+    ],
+    "age=1": [
+      {
+        "model": "reignofnether:block/thicket_stage1"
+      },
+      {
+        "model": "reignofnether:block/thicket_stage1",
+        "y": 90
+      },
+      {
+        "model": "reignofnether:block/thicket_stage1",
+        "y": 180
+      },
+      {
+        "model": "reignofnether:block/thicket_stage1",
+        "y": 270
+      }
+    ],
+    "age=2": [
+      {
+        "model": "reignofnether:block/thicket_stage2"
+      },
+      {
+        "model": "reignofnether:block/thicket_stage2",
+        "y": 90
+      },
+      {
+        "model": "reignofnether:block/thicket_stage2",
+        "y": 180
+      },
+      {
+        "model": "reignofnether:block/thicket_stage2",
+        "y": 270
+      }
+    ],
+    "age=3": [
+      {
+        "model": "reignofnether:block/thicket_stage3"
+      },
+      {
+        "model": "reignofnether:block/thicket_stage3",
+        "y": 90
+      },
+      {
+        "model": "reignofnether:block/thicket_stage3",
+        "y": 180
+      },
+      {
+        "model": "reignofnether:block/thicket_stage3",
+        "y": 270
+      },
+      {
+        "model": "reignofnether:block/thicket_stage3b"
+      },
+      {
+        "model": "reignofnether:block/thicket_stage3b",
+        "y": 90
+      },
+      {
+        "model": "reignofnether:block/thicket_stage3b",
+        "y": 180
+      },
+      {
+        "model": "reignofnether:block/thicket_stage3b",
+        "y": 270
+      }
+    ]
   }
 }

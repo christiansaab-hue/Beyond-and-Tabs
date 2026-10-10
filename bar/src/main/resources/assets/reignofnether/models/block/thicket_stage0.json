@@ -1,27 +1,200 @@
 {
   "parent": "minecraft:block/block",
   "render_type": "minecraft:cutout_mipped",
-  "ambientocclusion": false,
+  "ambientocclusion": true,
   "textures": {
     "particle": "minecraft:block/azalea_leaves",
     "leaves": "minecraft:block/azalea_leaves",
-    "flowers": "minecraft:block/flowering_azalea_leaves"
+    "flowers": "minecraft:block/flowering_azalea_leaves",
+    "dark": "minecraft:block/oak_leaves",
+    "fern": "minecraft:block/fern",
+    "stem": "minecraft:block/oak_log",
+    "allium": "minecraft:block/allium",
+    "daisy": "minecraft:block/oxeye_daisy",
+    "bluet": "minecraft:block/azure_bluet",
+    "cornflower": "minecraft:block/cornflower"
   },
   "elements": [
     {
       "from": [
-        4,
+        5.5,
         0,
-        4
+        5.5
       ],
       "to": [
-        12,
-        6,
-        12
+        10.5,
+        4,
+        10.5
       ],
       "faces": {
         "north": {
           "texture": "#leaves",
+          "uv": [
+            5.5,
+            12,
+            10.5,
+            16.0
+          ]
+        },
+        "south": {
+          "texture": "#leaves",
+          "uv": [
+            5.5,
+            12,
+            10.5,
+            16.0
+          ]
+        },
+        "west": {
+          "texture": "#leaves",
+          "uv": [
+            5.5,
+            12,
+            10.5,
+            16.0
+          ]
+        },
+        "east": {
+          "texture": "#leaves",
+          "uv": [
+            5.5,
+            12,
+            10.5,
+            16.0
+          ]
+        },
+        "up": {
+          "texture": "#leaves",
+          "uv": [
+            5.5,
+            5.5,
+            10.5,
+            10.5
+          ]
+        },
+        "down": {
+          "texture": "#leaves",
+          "uv": [
+            5.5,
+            5.5,
+            10.5,
+            10.5
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        3.5,
+        0,
+        8
+      ],
+      "to": [
+        12.5,
+        7,
+        8
+      ],
+      "shade": false,
+      "rotation": {
+        "origin": [
+          8,
+          0,
+          8
+        ],
+        "axis": "y",
+        "angle": 45
+      },
+      "faces": {
+        "north": {
+          "texture": "#fern",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "tintindex": 0
+        },
+        "south": {
+          "texture": "#fern",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "tintindex": 0
+        }
+      }
+    },
+    {
+      "from": [
+        3.5,
+        0,
+        8
+      ],
+      "to": [
+        12.5,
+        7,
+        8
+      ],
+      "shade": false,
+      "rotation": {
+        "origin": [
+          8,
+          0,
+          8
+        ],
+        "axis": "y",
+        "angle": -45
+      },
+      "faces": {
+        "north": {
+          "texture": "#fern",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "tintindex": 0
+        },
+        "south": {
+          "texture": "#fern",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "tintindex": 0
+        }
+      }
+    },
+    {
+      "from": [
+        9.0,
+        0,
+        4.5
+      ],
+      "to": [
+        14.0,
+        6,
+        4.5
+      ],
+      "shade": false,
+      "rotation": {
+        "origin": [
+          11.5,
+          0,
+          4.5
+        ],
+        "axis": "y",
+        "angle": 45
+      },
+      "faces": {
+        "north": {
+          "texture": "#daisy",
           "uv": [
             0,
             0,
@@ -30,7 +203,40 @@
           ]
         },
         "south": {
-          "texture": "#leaves",
+          "texture": "#daisy",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "from": [
+        9.0,
+        0,
+        4.5
+      ],
+      "to": [
+        14.0,
+        6,
+        4.5
+      ],
+      "shade": false,
+      "rotation": {
+        "origin": [
+          11.5,
+          0,
+          4.5
+        ],
+        "axis": "y",
+        "angle": -45
+      },
+      "faces": {
+        "north": {
+          "texture": "#daisy",
           "uv": [
             0,
             0,
@@ -38,35 +244,8 @@
             16
           ]
         },
-        "east": {
-          "texture": "#leaves",
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ]
-        },
-        "west": {
-          "texture": "#leaves",
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ]
-        },
-        "up": {
-          "texture": "#leaves",
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ]
-        },
-        "down": {
-          "texture": "#leaves",
+        "south": {
+          "texture": "#daisy",
           "uv": [
             0,
             0,

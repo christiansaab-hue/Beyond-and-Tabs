@@ -88,6 +88,13 @@ public class ClientModEvents {
                 BlockRegistrar.TIDEPOOL.get()
         );
 
+        // Verdant thicket: its dark base leaves and ferns are the grey vanilla textures (tintindex 0) painted one fixed
+        // deep green, so the bush has depth against its untinted azalea top and never turns biome-lime
+        evt.register(
+                (state, level, pos, tintIndex) -> 0x3E6B2A,
+                BlockRegistrar.THICKET.get()
+        );
+
         // wrap every block's provider with the fog multiplier; biome-tinted ones only fog their untinted quads
         // (BiomeColorsMixin fogs the biome colour itself)
         java.util.Set<Block> biomeTinted = java.util.Set.of(
@@ -220,6 +227,12 @@ public class ClientModEvents {
             ItemBlockRenderTypes.setRenderLayer(
                     BlockRegistrar.UNEXTINGUISHABLE_SOUL_FIRE.get(),
                     RenderType.cutout()
+            );
+            // the thicket model also names cutout_mipped, but registering it here keeps the leaf holes cut out under
+            // renderers that ignore the model's render_type (otherwise the bush draws as solid lime cubes)
+            ItemBlockRenderTypes.setRenderLayer(
+                    BlockRegistrar.THICKET.get(),
+                    RenderType.cutoutMipped()
             );
         });
         evt.enqueueWork(() -> {

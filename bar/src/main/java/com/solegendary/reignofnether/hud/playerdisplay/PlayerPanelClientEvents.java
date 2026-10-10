@@ -32,6 +32,11 @@ import java.util.List;
  * Allied lines also show metal / energy income and the commander's health; enemy lines only the name and whether
  * they are still in the game. Fed every 2 s by PlayerPanelServerEvents, which leaves enemy economy off the wire.
  *
+ * Names are drawn with a shadow and, when the player colour is too dark to read on the panel (dark blue, black...),
+ * lifted toward white keeping its hue. A trailing "(difficulty)" tag on bot names is split off and drawn as a small
+ * grey suffix so it doesn't eat the name column. The panel drops below the economy bar's warning row (stall /
+ * WASTING labels) whenever that row is showing, so the two never overlap.
+ *
  * F4 toggles it (and F1 hides it with the rest of the HUD). The minimap sits bottom-right below it: when an 8v8
  * roster would run into it the panel lists what fits plus a "+N more" line, and in the strategic view (where the
  * map overview matters most) it steps aside entirely instead.
@@ -40,7 +45,7 @@ public class PlayerPanelClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
-    static final int PANEL_W = 160;
+    static final int PANEL_W = 184;
     static final int ROW_H = 11;
     static final int TOP = 38;            // under the economy bar (EconomyBarRenderer.PANEL_H = 34)
     // clear of the right-edge button columns (help / diplomacy / chat at -28, beacon / gamerules at -56)
@@ -48,12 +53,19 @@ public class PlayerPanelClientEvents {
     static final int PAD = 3;
     static final int BG = 0xA0101216;
     static final int METAL_COL = 0xFFB4BEC8, ENERGY_COL = 0xFFF0C83C;   // as on the economy bar
+    static final int TAG_COL = 0xFF9AA0A6;
+    static final float TAG_SCALE = 0.75f;
+    // ally columns, right-aligned from the panel's right edge: hp bar, energy, metal. The name gets the rest
+    static final int HP_W = 20, ENERGY_RIGHT = HP_W + 8, METAL_RIGHT = ENERGY_RIGHT + 32, NUM_W = 32;
+    static final int NAME_X = 13;
+    /** Player colours darker than this (0-255 perceived luminance) are lifted to it so they read on BG. */
+    static final int MIN_NAME_LUMA = 135;
 
     public static boolean enabled = true;
 
     /** A synced line plus its pre-formatted strings, so a frame draws without building any. */
     private record Line(PlayerPanelClientboundPacket.Entry e, ResourceLocation icon, String metal, String energy,
-                        String name) {}
+                        String name, String tag) {}
 
     private static List<Line> lines = List.of();
     private static int allyCount = 0;   // lines [0, allyCount) are you + allies
@@ -65,7 +77,8 @@ public class PlayerPanelClientEvents {
         for (var e : entries) {
             Faction f = Factions.getFaction(e.factionKey().isEmpty() ? null : ResourceLocation.tryParse(e.factionKey()));
             ResourceLocation icon = f == null || f == Factions.NONE ? null : f.icon;
-            out.add(new Line(e, icon, "+" + fmt(e.metalIncome()), "+" + fmt(e.energyIncome()), fitName(e)));
+            String[] nameTag = fitName(e);
+            out.add(new Line(e, icon, "+" + fmt(e.metalIncome()), "+" + fmt(e.energyIncome()), nameTag[0], nameTag[1]));
             if (e.hasAllyData())
                 allies++;
         }
@@ -73,11 +86,47 @@ public class PlayerPanelClientEvents {
         allyCount = allies;
     }
 
-    /** The name cut to its column once per sync (it was measured and substringed every frame). */
-    static String fitName(PlayerPanelClientboundPacket.Entry e) {
+    /**
+     * The name cut to its column once per sync (it was measured and substringed every frame), as {name, tag}: a bot's
+     * trailing " (hard)" becomes a separate tag drawn small and grey (null if there is none or it doesn't fit).
+     */
+    static String[] fitName(PlayerPanelClientboundPacket.Entry e) {
         Font font = MC.font;
-        int nameW = e.hasAllyData() ? 54 : PANEL_W - 14 - 40;
-        return font.width(e.name()) > nameW ? font.plainSubstrByWidth(e.name(), nameW - 4) + ".." : e.name();
+        int nameW = e.hasAllyData() ? PANEL_W - NAME_X - METAL_RIGHT - NUM_W
+                : PANEL_W - NAME_X - 4 - font.width("defeated") - 4;
+        String name = e.name();
+        String tag = null;
+        int open = name.lastIndexOf(" (");
+        if (open > 0 && name.endsWith(")")) {
+            tag = name.substring(open + 1);
+            name = name.substring(0, open);
+        }
+        int baseW = font.width(name);
+        if (tag != null && baseW + 2 + tagWidth(font, tag) > nameW)
+            tag = null;   // the name matters more than the difficulty
+        if (baseW > nameW)
+            name = font.plainSubstrByWidth(name, nameW - font.width("..")) + "..";
+        return new String[] { name, tag };
+    }
+
+    static int tagWidth(Font font, String tag) {
+        return (int) Math.ceil(font.width(tag) * TAG_SCALE);
+    }
+
+    /**
+     * A player colour readable on the dark panel: below MIN_NAME_LUMA it is mixed toward white just enough to reach
+     * it, so dark blue becomes a light periwinkle rather than grey and teams stay recognisable.
+     */
+    static int readable(int rgb) {
+        int r = (rgb >> 16) & 0xFF, g = (rgb >> 8) & 0xFF, b = rgb & 0xFF;
+        int luma = (r * 299 + g * 587 + b * 114) / 1000;
+        if (luma >= MIN_NAME_LUMA)
+            return 0xFF000000 | rgb;
+        float f = (MIN_NAME_LUMA - luma) / (float) (255 - luma);
+        r += Math.round((255 - r) * f);
+        g += Math.round((255 - g) * f);
+        b += Math.round((255 - b) * f);
+        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 
     public static void clear() {
@@ -117,6 +166,10 @@ public class PlayerPanelClientEvents {
         int sh = MC.getWindow().getGuiScaledHeight();
         int x = sw - RIGHT_MARGIN - PANEL_W;
         int y = TOP;
+        // drop below the economy bar's warning row (stall / WASTING chips) when it's showing over our x range
+        var bar = HudClientEvents.economyBar;
+        if (bar != null && bar.right() > x && bar.left() < x + PANEL_W)
+            y = Math.max(TOP, bar.bottom() + 3);
         boolean split = allyCount > 0 && allyCount < lines.size();
         int fullH = PAD * 2 + lines.size() * ROW_H + (split ? 3 : 0);
 
@@ -159,11 +212,19 @@ public class PlayerPanelClientEvents {
             gg.fill(x + 1, y - 1, x + PANEL_W - 1, y + ROW_H - 1, 0x30FFFFFF);
         if (line.icon() != null)
             MyRenderer.renderIcon(gg, line.icon(), x + 3, y, 8);
-        int nameColour = e.alive() ? 0xFF000000 | PlayerColors.getPlayerDisplayColorHex(e.name()) : 0xFF707070;
+        int nameColour = e.alive() ? readable(PlayerColors.getPlayerDisplayColorHex(e.name()) & 0xFFFFFF) : 0xFF909090;
         String name = line.name();
-        gg.drawString(font, name, x + 13, y + 1, nameColour);
+        int nameW = font.width(name);
+        gg.drawString(font, name, x + NAME_X, y + 1, nameColour, true);
+        if (line.tag() != null) {
+            gg.pose().pushPose();
+            gg.pose().translate(x + NAME_X + nameW + 2, y + 3, 0);
+            gg.pose().scale(TAG_SCALE, TAG_SCALE, 1f);
+            gg.drawString(font, line.tag(), 0, 0, TAG_COL, true);
+            gg.pose().popPose();
+        }
         if (!e.alive()) {
-            gg.fill(x + 13, y + 4, x + 13 + font.width(name), y + 5, 0xFF909090);   // struck through
+            gg.fill(x + NAME_X, y + 4, x + NAME_X + nameW, y + 5, 0xFF909090);   // struck through
             String s = "defeated";
             gg.drawString(font, s, x + PANEL_W - 4 - font.width(s), y + 1, 0xFF905050);
             return;
@@ -173,10 +234,11 @@ public class PlayerPanelClientEvents {
             gg.drawString(font, s, x + PANEL_W - 4 - font.width(s), y + 1, 0xFF60C060);
             return;
         }
-        gg.drawString(font, line.metal(), x + 70, y + 1, METAL_COL);
-        gg.drawString(font, line.energy(), x + 100, y + 1, ENERGY_COL);
+        int right = x + PANEL_W;
+        gg.drawString(font, line.metal(), right - METAL_RIGHT - font.width(line.metal()), y + 1, METAL_COL);
+        gg.drawString(font, line.energy(), right - ENERGY_RIGHT - font.width(line.energy()), y + 1, ENERGY_COL);
         // commander health: a small bar, grey when the commander is gone
-        int bx = x + 130, bw = PANEL_W - 4 - 130, by = y + 3;
+        int bx = right - 4 - HP_W, bw = HP_W, by = y + 3;
         gg.fill(bx - 1, by - 1, bx + bw + 1, by + 4, 0xFF000000);
         if (e.commanderHp() < 0) {
             gg.fill(bx, by, bx + bw, by + 3, 0xFF404040);
