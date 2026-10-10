@@ -2288,5 +2288,17 @@
   "entity.reignofnether.bone_dragon_unit.tooltip4": "Requires a Stronghold.",
   "research.reignofnether.tier_3": "Tier 3 Technology",
   "research.reignofnether.tier_3.tooltip1": "Requires Tier 2. Unlocks your faction's Tier 3 building - and with it your experimental.",
-  "research.reignofnether.tier_3.tooltip2": "A long, heavy investment: your army runs thin while it researches."
+  "research.reignofnether.tier_3.tooltip2": "A long, heavy investment: your army runs thin while it researches.",
+  "entity.reignofnether.royal_architect_unit": "Royal Architect",
+  "entity.reignofnether.royal_architect_unit.tooltip1": "T2 constructor: builds twice as fast, twice the health of a worker.",
+  "entity.reignofnether.royal_architect_unit.tooltip2": "The only builder that can raise your Tier 3 lab.",
+  "entity.reignofnether.royal_architect_unit.tooltip3": "The Kingdom's master builder.",
+  "entity.reignofnether.embalmer_unit": "Embalmer",
+  "entity.reignofnether.embalmer_unit.tooltip1": "T2 constructor: builds twice as fast, twice the health of a worker.",
+  "entity.reignofnether.embalmer_unit.tooltip2": "The only builder that can raise your Tier 3 lab.",
+  "entity.reignofnether.embalmer_unit.tooltip3": "Tends the dead and the crypts that hold them.",
+  "entity.reignofnether.bonewright_unit": "Bonewright",
+  "entity.reignofnether.bonewright_unit.tooltip1": "T2 constructor: builds twice as fast, twice the health of a worker.",
+  "entity.reignofnether.bonewright_unit.tooltip2": "The only builder that can raise your Tier 3 lab.",
+  "entity.reignofnether.bonewright_unit.tooltip3": "Raises the Horde's great halls from bone and iron."
 }

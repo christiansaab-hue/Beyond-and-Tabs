@@ -48,11 +48,13 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.POISON_SPIDER_UNIT.get(), SpiderUnit.createAttributes().build());
         evt.put(EntityRegistrar.WRAITH_UNIT.get(), WraithUnit.createAttributes().build());
         evt.put(EntityRegistrar.VILLAGER_UNIT.get(), VillagerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_DOG_UNIT.get(), ScoutDogUnit.createAttributes().build());
         evt.put(EntityRegistrar.SCOUT_CAT_UNIT.get(), ScoutCatUnit.createAttributes().build());
         evt.put(EntityRegistrar.MILITIA_UNIT.get(), MilitiaUnit.createAttributes().build());
         evt.put(EntityRegistrar.TEMPORARY_MILITIA_UNIT.get(), MilitiaUnit.createAttributes().build());
         evt.put(EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(), ZombieVillagerUnit.createAttributes().build());
+        evt.put(EntityRegistrar.EMBALMER_UNIT.get(), com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit.createAttributes().build());
         evt.put(EntityRegistrar.BAT_UNIT.get(), BatUnit.createAttributes().build());
         evt.put(EntityRegistrar.PILLAGER_UNIT.get(), PillagerUnit.createAttributes().build());
         evt.put(EntityRegistrar.VINDICATOR_UNIT.get(), VindicatorUnit.createAttributes().build());
@@ -67,6 +69,7 @@ public class CommonModEvents {
         evt.put(EntityRegistrar.WAR_MAMMOTH_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.WarMammothUnit.createAttributes().build());
         evt.put(EntityRegistrar.SILVERFISH_UNIT.get(), SilverfishUnit.createAttributes().build());
         evt.put(EntityRegistrar.GRUNT_UNIT.get(), GruntUnit.createAttributes().build());
+        evt.put(EntityRegistrar.BONEWRIGHT_UNIT.get(), com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit.createAttributes().build());
         evt.put(EntityRegistrar.STRIDER_UNIT.get(), StriderUnit.createAttributes().build());
         evt.put(EntityRegistrar.HEADHUNTER_UNIT.get(), HeadhunterUnit.createAttributes().build());
         evt.put(EntityRegistrar.MARAUDER_UNIT.get(), MarauderUnit.createAttributes().build());

@@ -91,6 +91,7 @@ public class Factions {
 		// Villagers
 		registerWorkerEntity(VILLAGERS, EntityRegistrar.VILLAGER_UNIT.get(), ProductionItems.VILLAGER);
 		registerEntity(VILLAGERS, EntityRegistrar.MILITIA_UNIT.get(), ProductionItems.VILLAGER);
+		registerEntity(VILLAGERS, EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(), ProductionItems.ROYAL_ARCHITECT);
 		registerScoutEntity(VILLAGERS, EntityRegistrar.SCOUT_DOG_UNIT.get(), ProductionItems.SCOUT_DOG);
 		registerEntity(VILLAGERS, EntityRegistrar.SCOUT_CAT_UNIT.get(), ProductionItems.SCOUT_CAT);
 		registerEntity(VILLAGERS, EntityRegistrar.VINDICATOR_UNIT.get(), ProductionItems.VINDICATOR);
@@ -108,6 +109,7 @@ public class Factions {
 		registerWorkerEntity(MONSTERS, EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(), ProductionItems.ZOMBIE_VILLAGER);
 		registerScoutEntity(MONSTERS, EntityRegistrar.BAT_UNIT.get(), ProductionItems.BAT);
 		registerEntity(MONSTERS, EntityRegistrar.ZOMBIE_UNIT.get(), ProductionItems.ZOMBIE);
+		registerEntity(MONSTERS, EntityRegistrar.EMBALMER_UNIT.get(), ProductionItems.EMBALMER);
 		registerEntity(MONSTERS, EntityRegistrar.DROWNED_UNIT.get(), ProductionItems.DROWNED);
 		registerEntity(MONSTERS, EntityRegistrar.HUSK_UNIT.get(), ProductionItems.HUSK);
 		registerEntity(MONSTERS, EntityRegistrar.SKELETON_UNIT.get(), ProductionItems.SKELETON);
@@ -130,6 +132,7 @@ public class Factions {
 		registerWorkerEntity(PIGLINS, EntityRegistrar.GRUNT_UNIT.get(), ProductionItems.GRUNT);
 		registerScoutEntity(PIGLINS, EntityRegistrar.STRIDER_UNIT.get(), ProductionItems.STRIDER);
 		registerEntity(PIGLINS, EntityRegistrar.BRUTE_UNIT.get(), ProductionItems.BRUTE);
+		registerEntity(PIGLINS, EntityRegistrar.BONEWRIGHT_UNIT.get(), ProductionItems.BONEWRIGHT);
 		registerEntity(PIGLINS, EntityRegistrar.WAR_MAMMOTH_UNIT.get(), ProductionItems.WAR_MAMMOTH);
 		registerEntity(PIGLINS, EntityRegistrar.HEADHUNTER_UNIT.get(), ProductionItems.HEADHUNTER);
 		registerEntity(PIGLINS, EntityRegistrar.MARAUDER_UNIT.get(), ProductionItems.MARAUDER);

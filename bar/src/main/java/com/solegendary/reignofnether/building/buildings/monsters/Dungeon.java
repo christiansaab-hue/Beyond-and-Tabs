@@ -48,6 +48,7 @@ public class Dungeon extends ProductionBuilding {
         this.productions.add(ProductionItems.WRAITH, Keybindings.abilitySlot2);
         // Gravebound T2 lab
         this.productions.add(ProductionItems.WARDEN, Keybindings.abilitySlot3);
+        this.productions.add(ProductionItems.EMBALMER, Keybindings.abilitySlot4);   // T2 constructor
 
         this.maxHealth = 120d;
     }

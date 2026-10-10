@@ -210,6 +210,24 @@ public class EntityRegistrar {
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bone_dragon_unit").toString()));
 
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit>> ROYAL_ARCHITECT_UNIT = ENTITIES.register("royal_architect_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "royal_architect_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit>> EMBALMER_UNIT = ENTITIES.register("embalmer_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.EmbalmerUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "embalmer_unit").toString()));
+
+    public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit>> BONEWRIGHT_UNIT = ENTITIES.register("bonewright_unit",
+            () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.piglins.BonewrightUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.PIGLIN.getWidth(), EntityType.PIGLIN.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bonewright_unit").toString()));
+
     public static final RegistryObject<EntityType<WardenUnit>> WARDEN_UNIT = ENTITIES.register("warden_unit",
             () -> EntityType.Builder.of(WardenUnit::new, MobCategory.CREATURE)
                     .sized(EntityType.WARDEN.getWidth(), EntityType.WARDEN.getHeight())
@@ -508,6 +526,9 @@ public class EntityRegistrar {
             case SlimeProd.itemName -> EntityRegistrar.SLIME_UNIT.get();
             case WardenProd.itemName -> EntityRegistrar.WARDEN_UNIT.get();
             case RavagerProd.itemName -> EntityRegistrar.RAVAGER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.piglins.BonewrightProd.itemName -> EntityRegistrar.BONEWRIGHT_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.monsters.EmbalmerProd.itemName -> EntityRegistrar.EMBALMER_UNIT.get();
+            case com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectProd.itemName -> EntityRegistrar.ROYAL_ARCHITECT_UNIT.get();
             case com.solegendary.reignofnether.unit.units.piglins.WarMammothProd.itemName -> EntityRegistrar.WAR_MAMMOTH_UNIT.get();
             case GruntProd.itemName -> EntityRegistrar.GRUNT_UNIT.get();
             case StriderProd.itemName -> EntityRegistrar.STRIDER_UNIT.get();

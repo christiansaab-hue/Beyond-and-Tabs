@@ -39,6 +39,9 @@ public class ResourceCosts {
     public static final ResourceCost EVOKER = new ResourceCost(ID, "EVOKER");
     public static final ResourceCost RAVAGER = new ResourceCost(ID, "RAVAGER");
     public static final ResourceCost WAR_MAMMOTH = new ResourceCost(ID, "WAR_MAMMOTH");
+    public static final ResourceCost BONEWRIGHT = new ResourceCost(ID, "BONEWRIGHT");
+    public static final ResourceCost EMBALMER = new ResourceCost(ID, "EMBALMER");
+    public static final ResourceCost ROYAL_ARCHITECT = new ResourceCost(ID, "ROYAL_ARCHITECT");
     public static final ResourceCost SUN_COLOSSUS = new ResourceCost(ID, "SUN_COLOSSUS");
     public static final ResourceCost BONE_DRAGON = new ResourceCost(ID, "BONE_DRAGON");
     public static final ResourceCost GRUNT = new ResourceCost(ID, "GRUNT");
@@ -265,6 +268,9 @@ public class ResourceCosts {
         EVOKER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EVOKER);
         RAVAGER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.RAVAGER);
         WAR_MAMMOTH.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.WAR_MAMMOTH);
+        BONEWRIGHT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONEWRIGHT);
+        EMBALMER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EMBALMER);
+        ROYAL_ARCHITECT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROYAL_ARCHITECT);
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
         BONE_DRAGON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONE_DRAGON);
         ROYAL_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROYAL_GUARD);

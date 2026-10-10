@@ -51,6 +51,7 @@ public class ArcaneTower extends ProductionBuilding {
         this.productions.add(ProductionItems.WITCH, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.IRON_GOLEM, Keybindings.abilitySlot4);
         this.productions.add(ProductionItems.RAVAGER, Keybindings.abilitySlot5);
+        this.productions.add(ProductionItems.ROYAL_ARCHITECT, Keybindings.abilitySlot6);   // T2 constructor
     }
 
 

@@ -631,6 +631,34 @@ public class SkirmishGameTests {
         });
     }
 
+    /** T2 constructors: one per faction, double build power and health, recognised as T2 workers. */
+    @GameTest(template = ARENA)
+    public static void t2_constructors_build_faster(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = List.of(com.solegendary.reignofnether.registrars.EntityRegistrar.ROYAL_ARCHITECT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.EMBALMER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.BONEWRIGHT_UNIT.get());
+        var factions = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
+            com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.PIGLINS);
+        for (int i = 0; i < types.size(); i++) {
+            var e = types.get(i).create(level);
+            if (e == null) {
+                helper.fail("could not create T2 constructor " + i);
+                return;
+            }
+            if (!(e instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit w) || w.getBuildPower() < 1.99f)
+                helper.fail(e.getType() + " is not a double-speed worker");
+            if (!com.solegendary.reignofnether.unit.T2Workers.isT2Worker(e))
+                helper.fail(e.getType() + " not recognised as a T2 worker");
+            if (!factions.get(i).equals(com.solegendary.reignofnether.faction.Factions.getFaction((com.solegendary.reignofnether.unit.interfaces.Unit) e)))
+                helper.fail(e.getType() + " has the wrong faction");
+            if (((net.minecraft.world.entity.LivingEntity) e).getMaxHealth() < 49)
+                helper.fail(e.getType() + " health " + ((net.minecraft.world.entity.LivingEntity) e).getMaxHealth());
+            e.discard();
+        }
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

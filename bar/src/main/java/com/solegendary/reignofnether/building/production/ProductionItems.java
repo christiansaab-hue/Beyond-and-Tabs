@@ -42,6 +42,9 @@ public class ProductionItems {
     public static final SlimeProd SLIME = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "slime"), new SlimeProd());
     public static final WardenProd WARDEN = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "warden"), new WardenProd());
     public static final com.solegendary.reignofnether.unit.units.villagers.SunColossusProd SUN_COLOSSUS = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_colossus"), new com.solegendary.reignofnether.unit.units.villagers.SunColossusProd());
+    public static final com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectProd ROYAL_ARCHITECT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "royal_architect"), new com.solegendary.reignofnether.unit.units.villagers.RoyalArchitectProd());
+    public static final com.solegendary.reignofnether.unit.units.monsters.EmbalmerProd EMBALMER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "embalmer"), new com.solegendary.reignofnether.unit.units.monsters.EmbalmerProd());
+    public static final com.solegendary.reignofnether.unit.units.piglins.BonewrightProd BONEWRIGHT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "bonewright"), new com.solegendary.reignofnether.unit.units.piglins.BonewrightProd());
     public static final RavagerProd RAVAGER = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "ravager"), new RavagerProd());
     public static final com.solegendary.reignofnether.unit.units.piglins.WarMammothProd WAR_MAMMOTH = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "war_mammoth"), new com.solegendary.reignofnether.unit.units.piglins.WarMammothProd());
 
@@ -167,6 +170,9 @@ public class ProductionItems {
         SLIME,
         WARDEN,
         RAVAGER,
+        ROYAL_ARCHITECT,
+        EMBALMER,
+        BONEWRIGHT,
         WAR_MAMMOTH,
         SUN_COLOSSUS,
         BONE_DRAGON,

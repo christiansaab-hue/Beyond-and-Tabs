@@ -49,6 +49,9 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.EVOKER.define(BUILDER);
         UnitCosts.RAVAGER.define(BUILDER);
         UnitCosts.WAR_MAMMOTH.define(BUILDER);
+        UnitCosts.BONEWRIGHT.define(BUILDER);
+        UnitCosts.EMBALMER.define(BUILDER);
+        UnitCosts.ROYAL_ARCHITECT.define(BUILDER);
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
         UnitCosts.BONE_DRAGON.define(BUILDER);
         UnitCosts.ROYAL_GUARD.define(BUILDER);
@@ -243,6 +246,9 @@ public class ReignOfNetherCommonConfigs {
         // Horde T3: ~4.5x the Siege Ox (T3 rule a); slow and melee-only (rule b)
         public static final ResourceCostConfigEntry SUN_COLOSSUS = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.SUN_COLOSSUS, "Sun Colossus Config");
         public static final ResourceCostConfigEntry BONE_DRAGON = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.BONE_DRAGON, "Bone Dragon Config");
+        public static final ResourceCostConfigEntry ROYAL_ARCHITECT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.ROYAL_ARCHITECT, "RoyalArchitect Config");
+        public static final ResourceCostConfigEntry EMBALMER = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.EMBALMER, "Embalmer Config");
+        public static final ResourceCostConfigEntry BONEWRIGHT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.BONEWRIGHT, "Bonewright Config");
         public static final ResourceCostConfigEntry WAR_MAMMOTH = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.WAR_MAMMOTH, "War Mammoth Config");
         public static final ResourceCostConfigEntry ROYAL_GUARD = ResourceCostConfigEntry.Unit(0,0,0,30, 5, ResourceCosts.ROYAL_GUARD, "Royal Guard Config");
         public static final ResourceCostConfigEntry ENCHANTER = ResourceCostConfigEntry.Unit(0,0,0,30, 5, ResourceCosts.ENCHANTER, "Enchanter Config");

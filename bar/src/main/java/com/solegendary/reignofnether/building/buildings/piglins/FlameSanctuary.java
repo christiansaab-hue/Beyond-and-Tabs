@@ -52,6 +52,7 @@ public class FlameSanctuary extends ProductionBuilding {
         this.productions.add(ProductionItems.WITHER_SKELETON, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.MAGMA_CUBE, Keybindings.abilitySlot4);
         this.productions.add(ProductionItems.GHAST, Keybindings.abilitySlot5);
+        this.productions.add(ProductionItems.BONEWRIGHT, Keybindings.abilitySlot6);   // T2 constructor
     }
 
 

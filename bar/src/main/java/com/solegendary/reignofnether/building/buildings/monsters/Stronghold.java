@@ -81,7 +81,7 @@ public class Stronghold extends ProductionBuilding implements GarrisonableBuildi
             hotkey,
             () -> BuildingClientEvents.getBuildingToPlace() == Buildings.STRONGHOLD,
             () -> false,
-            () -> (hasPrerequisiteBuildings() && ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_3)) || ResearchClient.hasCheat("modifythephasevariance"),
+            () -> (hasPrerequisiteBuildings() && ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_3) && com.solegendary.reignofnether.unit.T2Workers.selectedHasT2Worker()) || ResearchClient.hasCheat("modifythephasevariance"),
             List.of(Component.translatable("buildings.reignofnether.stronghold").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),
                 ResourceCosts.getFormattedCost(cost),
                 FormattedCharSequence.forward("", Style.EMPTY),
