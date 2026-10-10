@@ -57,3 +57,17 @@ A fork of Reign of Nether by SoLegendary (GPL v3).
     versionRange="[1.20.1,1.21)"
     ordering="NONE"
     side="BOTH"
+# Alex's Mobs (GPL-3, by sbom_xela) is a hard code dependency; installed separately, never bundled in our jar
+[[dependencies.reignofnether]]
+    modId="alexsmobs"
+    mandatory=true
+    versionRange="[1.22.9,)"
+    ordering="AFTER"
+    side="BOTH"
+# Citadel (LGPL-3) is the library Alex's Mobs runs on
+[[dependencies.reignofnether]]
+    modId="citadel"
+    mandatory=true
+    versionRange="[2.6.3,)"
+    ordering="AFTER"
+    side="BOTH"

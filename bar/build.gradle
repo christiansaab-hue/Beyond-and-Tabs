@@ -64,6 +64,10 @@ minecraft {
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
 
+            // Alex's Mobs / Citadel ship mixins with SRG refmaps; remap them to our dev mappings or they fail to apply
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
             mods {
                 reignofnether {
                     source sourceSets.main
@@ -86,6 +90,10 @@ minecraft {
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
 
+            // Alex's Mobs / Citadel ship mixins with SRG refmaps; remap them to our dev mappings or they fail to apply
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
             mods {
                 reignofnether {
                     source sourceSets.main
@@ -97,6 +105,10 @@ minecraft {
         gameTestServer {
             workingDirectory project.file('run-gametest')
             property 'forge.logging.console.level', 'info'
+
+            // Alex's Mobs / Citadel ship mixins with SRG refmaps; remap them to our dev mappings or they fail to apply
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
             property 'forge.enabledGameTestNamespaces', 'reignofnether'
             mods {
                 reignofnether {
@@ -120,6 +132,10 @@ minecraft {
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
 
+            // Alex's Mobs / Citadel ship mixins with SRG refmaps; remap them to our dev mappings or they fail to apply
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
             args '--mod', 'reignofnether', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
 
@@ -142,6 +158,13 @@ repositories {
             includeGroup "curse.maven"
         }
     }
+    // Alex's Mobs + Citadel (lovish approved the code dependency on Oct 10); resolved from Modrinth's maven by version id
+    maven {
+        url "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth"
+        }
+    }
     mavenCentral()
 }
 
@@ -155,6 +178,13 @@ dependencies {
 
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.0'
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    // Alex's Mobs 1.22.9 (GPL-3, sbom_xela) and its library Citadel 2.6.3 (LGPL-3) for Forge 1.20.1 - the exact
+    // versions in lovish's instance. Plain implementation: on the compile + run classpath (runClient/runGameTestServer
+    // load them) but NOT bundled - no jarJar/shading, players install both mods themselves (mods.toml requires them).
+    // Version ids are Modrinth's: alexs-mobs XoIASRVU = alexsmobs-1.22.9.jar, citadel lTAAe4sZ = citadel-2.6.3-1.20.1.jar
+    implementation fg.deobf('maven.modrinth:alexs-mobs:XoIASRVU')
+    implementation fg.deobf('maven.modrinth:citadel:lTAAe4sZ')
 }
 
 mixin {

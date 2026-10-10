@@ -22,3 +22,11 @@ Totally Accurate Battle Simulator is an inspiration only; no TABS assets are inc
 licensed under the GNU GPL v3. The fork (and therefore the combined mod built from it) is distributed under GPL v3.
 The Essential partner-mod integration bundled with upstream has been removed. Upstream sound files whose origin is not
 documented are kept from upstream as distributed there; they will be replaced before any public release.
+
+## Alex's Mobs and Citadel (external dependencies)
+
+`bar/` depends on [Alex's Mobs](https://modrinth.com/mod/alexs-mobs) by sbom_xela (GNU GPL v3), which in turn runs on
+its library [Citadel](https://modrinth.com/mod/citadel) by the same author (GNU LGPL v3). Both are compiled against and
+required at runtime (tested with Alex's Mobs 1.22.9 and Citadel 2.6.3 for Forge 1.20.1), but neither is bundled in or
+redistributed with this mod: players install them separately. Their code, models, textures and sounds stay under their
+authors' copyright and licences.

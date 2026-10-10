@@ -2006,6 +2006,32 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /** Alex's Mobs (and Citadel under it) must be loaded with our mod: its entity types are registered and spawnable. */
+    @GameTest(template = ARENA)
+    public static void alexs_mobs_is_loaded(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var types = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES;
+        for (String path : new String[] {"grizzly_bear", "elephant"}) {
+            ResourceLocation id = com.solegendary.reignofnether.compat.AlexsMobsCompat.id(path);
+            // containsKey, not getValue: the entity registry is defaulted and returns a pig for unknown ids
+            if (!types.containsKey(id)) {
+                helper.fail("Alex's Mobs entity type not registered: " + id);
+                return;
+            }
+            net.minecraft.world.entity.Entity e = types.getValue(id).create(level);
+            if (e == null) {
+                helper.fail("could not create " + id);
+                return;
+            }
+            e.discard();
+        }
+        // the compile-linked reference must point at the same registered type as the name lookup
+        if (com.solegendary.reignofnether.compat.AlexsMobsCompat.grizzlyBear()
+                != types.getValue(com.solegendary.reignofnether.compat.AlexsMobsCompat.id("grizzly_bear")))
+            helper.fail("AMEntityRegistry.GRIZZLY_BEAR differs from the registry entry");
+        helper.succeed();
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }
