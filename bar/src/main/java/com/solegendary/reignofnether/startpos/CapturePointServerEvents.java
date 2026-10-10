@@ -142,10 +142,22 @@ public class CapturePointServerEvents {
         if (evt.phase != TickEvent.Phase.END || evt.getServer() == null)
             return;
         ServerLevel level = evt.getServer().overworld();
-        if (level.getGameTime() % 20 != 0 || points.isEmpty())
+        if (level.getGameTime() % 20 != 0)
+            return;
+        // clients can't see the marker entities, so they get the site list (for the strategic-view flags) every
+        // 5 s - also when empty, so a client never keeps flags from a previous map - and right after a change of owner
+        if (ownersDirty || level.getGameTime() % SYNC_TICKS == 0) {
+            ownersDirty = false;
+            points.removeIf(Entity::isRemoved);
+            CapturePointsClientboundPacket.sendAll(points);
+        }
+        if (points.isEmpty())
             return;
         tick(level, 1f);
     }
+
+    private static final int SYNC_TICKS = 100;
+    private static boolean ownersDirty = false;
 
     /** One step of capture + benefits covering {@code seconds}. Public for the game test. */
     public static void tick(ServerLevel level, float seconds) {
@@ -208,6 +220,7 @@ public class CapturePointServerEvents {
 
     static void setOwner(ServerLevel level, Entity p, String owner) {
         p.getPersistentData().putString(KEY_OWNER, owner);
+        ownersDirty = true;   // resync clients on the next second
         BlockPos crown = BlockPos.containing(p.getX(), p.getY() + 2, p.getZ());
         level.setBlock(crown, woolFor(owner), 3);
         level.playSound(null, crown, owner.isEmpty() ? SoundEvents.BEACON_DEACTIVATE : SoundEvents.BEACON_ACTIVATE,

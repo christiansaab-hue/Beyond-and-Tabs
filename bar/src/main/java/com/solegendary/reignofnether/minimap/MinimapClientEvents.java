@@ -186,13 +186,19 @@ public class MinimapClientEvents {
         public final String playerName;
         public int ticksRemaining;
         public int ageTicks;
+        public final int pingRgb; // -1 = a player's map marker (three rings, owner colour); else a combat ping
 
         public MapMarker(int x, int z, String playerName) {
+            this(x, z, playerName, 200, -1); // 10 seconds
+        }
+
+        public MapMarker(int x, int z, String playerName, int ticks, int pingRgb) {
             this.x = x;
             this.z = z;
             this.playerName = playerName;
-            this.ticksRemaining = 200; // 10 seconds
+            this.ticksRemaining = ticks;
             this.ageTicks = 0;
+            this.pingRgb = pingRgb;
         }
 
         public boolean tick() {
@@ -204,6 +210,34 @@ public class MinimapClientEvents {
 
     public static void addMapMarker(int x, int z, String playerName) {
         mapMarkers.add(new MapMarker(x, z, playerName));
+    }
+
+    // ---- combat pings (BAR: "unit under attack" flashes on the minimap) ----
+    public static final int PING_UNDER_ATTACK = 0xFF3030;     // our units/buildings being hit
+    public static final int PING_ALLY_COMMANDER = 0xFF9A20;   // an ally's commander being hit
+    private static final int PING_TICKS = 80;                 // 4 s
+    private static final int PING_MERGE_DIST = 28;            // a hit this close to a live ping just keeps that one
+    private static final int PING_MIN_GAP_TICKS = 10;         // at most two new pings a second...
+    private static final int PING_MAX_ACTIVE = 5;             // ...and never more than five on the map at once
+    private static int pingCooldown = 0;
+
+    /** Shows a pulsing ring on the minimap; rate-limited so a big fight shows a few rings, not a carpet of them. */
+    public static void addCombatPing(int x, int z, int rgb) {
+        int active = 0;
+        for (MapMarker m : mapMarkers) {
+            if (m.pingRgb == -1)
+                continue;
+            active++;
+            if (m.pingRgb == rgb && Math.abs(m.x - x) < PING_MERGE_DIST && Math.abs(m.z - z) < PING_MERGE_DIST) {
+                // the fight is still going: keep the existing ring alive rather than stacking a new one
+                m.ticksRemaining = Math.max(m.ticksRemaining, PING_TICKS / 2);
+                return;
+            }
+        }
+        if (pingCooldown > 0 || active >= PING_MAX_ACTIVE)
+            return;
+        pingCooldown = PING_MIN_GAP_TICKS;
+        mapMarkers.add(new MapMarker(x, z, "", PING_TICKS, rgb));
     }
 
     public static void addMapMarkerForSelfAndAllies(int mouseX, int mouseY) {
@@ -1031,7 +1065,43 @@ public class MinimapClientEvents {
         return new Vec2(xc + rotated.x, yc + rotated.y);
     }
 
+    // one ring that sweeps outwards every second; drawn into the overlay like the other markers
+    private static void drawCombatPing(MapMarker marker) {
+        int xc = marker.x;
+        int zc = marker.z;
+        float phase = (marker.ageTicks % 20) / 20f;
+        float radius = 4f + phase * (MARKER_RADIUS + 4f);
+        float inner = radius - MARKER_THICKNESS;
+        float inner2 = inner * inner, outer2 = radius * radius;
+        // fade with the sweep, and fade out over the last second of the ping's life
+        float life = Math.min(1f, marker.ticksRemaining / 20f);
+        int alpha = Mth.clamp((int) ((1f - phase * 0.6f) * life * 255f), 40, 255);
+        int argb = MiscUtil.reverseHexRGB(marker.pingRgb) | (alpha << 24);
+        int core = MiscUtil.reverseHexRGB(marker.pingRgb) | (Mth.clamp((int) (life * 230f), 40, 230) << 24);
+        int r = (int) Math.ceil(radius);
+        for (int x = xc - r; x <= xc + r; x++) {
+            for (int z = zc - r; z <= zc + r; z++) {
+                if (!isWorldXZinsideMap(x, z))
+                    continue;
+                int dx = x - xc, dz = z - zc;
+                int d2 = dx * dx + dz * dz;
+                boolean ring = d2 >= inner2 && d2 < outer2;
+                boolean dot = d2 <= 4;   // steady centre so the spot stays readable between sweeps
+                if (!ring && !dot)
+                    continue;
+                int xN = x - xc_world + (mapGuiRadius * 2) + MARKER_PIXEL_OFFSET;
+                int zN = z - zc_world + (mapGuiRadius * 2);
+                if (xN >= 0 && xN < mapColoursOverlays.length && zN >= 0 && zN < mapColoursOverlays[0].length)
+                    mapColoursOverlays[xN][zN] = dot ? core : argb;
+            }
+        }
+    }
+
     private static void drawMapMarker(MapMarker marker) {
+        if (marker.pingRgb != -1) {
+            drawCombatPing(marker);
+            return;
+        }
         int xc = marker.x;
         int zc = marker.z;
         int color = getPulsingMarkerColor(marker);
@@ -1414,6 +1484,8 @@ public class MinimapClientEvents {
         
         // Update map markers
         mapMarkers.removeIf(MapMarker::tick);
+        if (pingCooldown > 0)
+            pingCooldown--;
 
         updateMapUnitsAndBuildings();
         if (!suppressViewQuad)

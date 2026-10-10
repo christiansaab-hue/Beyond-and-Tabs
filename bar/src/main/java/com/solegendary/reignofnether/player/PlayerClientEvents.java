@@ -398,6 +398,7 @@ public class PlayerClientEvents {
         ClientGameModeHelper.gameModeLocked = false;
         SurvivalClientEvents.reset();
         StartPosClientEvents.resetAll();
+        com.solegendary.reignofnether.startpos.CapturePointsClient.clear();   // the server resends within 5 s
         HeroClientEvents.fallenHeroes.clear();
         AlliancesClient.playersWithAlliedControl.clear();
         PlayerColors.reset();
@@ -423,6 +424,7 @@ public class PlayerClientEvents {
         ClientGameModeHelper.gameModeLocked = false;
         SurvivalClientEvents.reset();
         StartPosClientEvents.resetAll();
+        com.solegendary.reignofnether.startpos.CapturePointsClient.clear();   // the server resends within 5 s
         HeroClientEvents.fallenHeroes.clear();
         AlliancesClient.playersWithAlliedControl.clear();
         PlayerColors.reset();
