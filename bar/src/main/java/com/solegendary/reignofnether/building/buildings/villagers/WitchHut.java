@@ -43,7 +43,7 @@ public class WitchHut extends ProductionBuilding {
         this.explodeChance = 0.2f;
         this.maxHealth = 250d;
 
-        this.productions.add(ProductionItems.WITCH, Keybindings.abilitySlot1);
+        // (the Witch is a T2 unit now - trained at the Arcane Tower, the Sunforged T2 lab)
         this.productions.add(ProductionItems.RESEARCH_LINGERING_POTIONS, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.RESEARCH_HEALING_POTIONS, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.RESEARCH_WATER_POTIONS, Keybindings.abilitySlot4);

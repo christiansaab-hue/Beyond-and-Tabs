@@ -47,6 +47,11 @@ public class FlameSanctuary extends ProductionBuilding {
         this.maxHealth = 150d;
 
         this.productions.add(ProductionItems.RESEARCH_BLAZE_FIREWALL, Keybindings.abilitySlot1);
+        // Horde T2 lab
+        this.productions.add(ProductionItems.BLAZE, Keybindings.abilitySlot2);
+        this.productions.add(ProductionItems.WITHER_SKELETON, Keybindings.abilitySlot3);
+        this.productions.add(ProductionItems.MAGMA_CUBE, Keybindings.abilitySlot4);
+        this.productions.add(ProductionItems.GHAST, Keybindings.abilitySlot5);
     }
 
 
@@ -59,7 +64,7 @@ public class FlameSanctuary extends ProductionBuilding {
             hotkey,
             () -> BuildingClientEvents.getBuildingToPlace() == Buildings.FLAME_SANCTUARY,
             () -> false,
-            () -> BuildingClientEvents.hasFinishedBuilding(Buildings.HOGLIN_STABLES) ||
+            () -> (BuildingClientEvents.hasFinishedBuilding(Buildings.HOGLIN_STABLES) && ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_2)) ||   // T2 lab: needs Tier 2
                     ResearchClient.hasCheat("modifythephasevariance"),
             List.of(
                 Component.translatable("buildings.reignofnether.flame_sanctuary").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),

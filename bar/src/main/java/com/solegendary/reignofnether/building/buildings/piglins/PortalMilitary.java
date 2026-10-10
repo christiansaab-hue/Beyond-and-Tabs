@@ -26,10 +26,7 @@ public class PortalMilitary extends AbstractPortal {
         productions.add(ProductionItems.HEADHUNTER, Keybindings.abilitySlot2);
         productions.add(ProductionItems.MARAUDER, Keybindings.abilitySlot3);
         productions.add(ProductionItems.HOGLIN, Keybindings.abilitySlot4);
-        productions.add(ProductionItems.BLAZE, Keybindings.abilitySlot5);
-        productions.add(ProductionItems.WITHER_SKELETON, Keybindings.abilitySlot6);
-        productions.add(ProductionItems.MAGMA_CUBE, Keybindings.abilitySlot7);
-        productions.add(ProductionItems.GHAST, Keybindings.abilitySlot8);
+        // (Blaze, Wither Skeleton, Magma Cube and Ghast are T2 now - Flame Sanctuary, the Horde T2 lab)
     }
 
     @Override

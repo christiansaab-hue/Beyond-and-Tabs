@@ -47,6 +47,10 @@ public class ArcaneTower extends ProductionBuilding {
 
         this.productions.add(ProductionItems.EVOKER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.WINDCALLER, Keybindings.abilitySlot2);
+        // Sunforged T2 lab (lovish, Oct 10: "tier 2 units should have their own lab")
+        this.productions.add(ProductionItems.WITCH, Keybindings.abilitySlot3);
+        this.productions.add(ProductionItems.IRON_GOLEM, Keybindings.abilitySlot4);
+        this.productions.add(ProductionItems.RAVAGER, Keybindings.abilitySlot5);
     }
 
 
@@ -59,7 +63,7 @@ public class ArcaneTower extends ProductionBuilding {
             hotkey,
             () -> BuildingClientEvents.getBuildingToPlace() == Buildings.ARCANE_TOWER,
             TutorialClientEvents::isEnabled,
-            () -> BuildingClientEvents.hasFinishedBuilding(Buildings.BARRACKS) ||
+            () -> (BuildingClientEvents.hasFinishedBuilding(Buildings.BARRACKS) && ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_2)) ||   // T2 lab: needs Tier 2
                     ResearchClient.hasCheat("modifythephasevariance"),
             List.of(
                 Component.translatable("buildings.reignofnether.arcane_tower").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),

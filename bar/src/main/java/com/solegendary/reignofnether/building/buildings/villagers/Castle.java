@@ -78,7 +78,7 @@ public class Castle extends ProductionBuilding implements GarrisonableBuildingAd
         Ability promoteIllager = new PromoteIllager();
         this.abilities.add(promoteIllager, Keybindings.abilitySlot3);
 
-        this.productions.add(ProductionItems.RAVAGER, Keybindings.abilitySlot1);
+        // (the Siege Ox is a T2 heavy now - Arcane Tower; the Castle is the T3 lab)
         this.productions.add(ProductionItems.RESEARCH_RAVAGER_CAVALRY, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.RESEARCH_CASTLE_FLAG, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.SUN_COLOSSUS, Keybindings.abilitySlot4);   // Sunforged T3 experimental

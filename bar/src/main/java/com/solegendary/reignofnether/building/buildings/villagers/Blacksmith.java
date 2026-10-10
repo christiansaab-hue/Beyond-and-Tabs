@@ -84,7 +84,7 @@ public class Blacksmith extends ProductionBuilding implements RangeIndicatorAddo
         this.abilities.add(EQUIP_LEATHER_CHESTPLATE_INSTANCE, Keybindings.abilitySlot5);
         this.abilities.add(EQUIP_CHAINMAIL_CHESTPLATE, Keybindings.abilitySlot6);
 
-        this.productions.add(ProductionItems.IRON_GOLEM, Keybindings.abilitySlot1);
+        // (the Iron Golem is a T2 unit now - built at the Arcane Tower, the Sunforged T2 lab)
         this.productions.add(ProductionItems.RESEARCH_GOLEM_SMITHING, Keybindings.abilitySlot2);
         this.productions.add(ProductionItems.RESEARCH_MILITIA_BOWS, Keybindings.abilitySlot3);
         this.productions.add(ProductionItems.RESEARCH_SUPERIOR_BLACKSMITH, Keybindings.abilitySlot4);

@@ -46,6 +46,8 @@ public class Dungeon extends ProductionBuilding {
         this.explodeChance = 0.2f;
         this.productions.add(ProductionItems.CREEPER, Keybindings.abilitySlot1);
         this.productions.add(ProductionItems.WRAITH, Keybindings.abilitySlot2);
+        // Gravebound T2 lab
+        this.productions.add(ProductionItems.WARDEN, Keybindings.abilitySlot3);
 
         this.maxHealth = 120d;
     }
@@ -60,7 +62,7 @@ public class Dungeon extends ProductionBuilding {
             hotkey,
             () -> BuildingClientEvents.getBuildingToPlace() == Buildings.DUNGEON,
             () -> false,
-            () -> BuildingClientEvents.hasFinishedBuilding(Buildings.GRAVEYARD) ||
+            () -> (BuildingClientEvents.hasFinishedBuilding(Buildings.GRAVEYARD) && ResearchClient.hasResearch(ProductionItems.RESEARCH_TIER_2)) ||   // T2 lab: needs Tier 2
                     ResearchClient.hasCheat("modifythephasevariance"),
             List.of(
                 Component.translatable("buildings.reignofnether.dungeon").withStyle(Style.EMPTY.withBold(true)).getVisualOrderText(),

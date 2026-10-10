@@ -54,7 +54,7 @@ public class Stronghold extends ProductionBuilding implements GarrisonableBuildi
         this.startingBlockTypes.add(Blocks.POLISHED_BLACKSTONE_WALL);
         this.startingBlockTypes.add(Blocks.DEEPSLATE);
 
-        this.productions.add(ProductionItems.WARDEN, Keybindings.abilitySlot1);
+        // (the Warden / Bone Colossus is a T2 heavy now - Dungeon; the Stronghold is the T3 lab)
         this.productions.add(ProductionItems.BONE_DRAGON, Keybindings.abilitySlot4);   // Gravebound T3 experimental
 
         setActiveAddon(GarrisonableBuildingAddon.class, this, true);
