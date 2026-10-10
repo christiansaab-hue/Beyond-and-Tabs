@@ -613,10 +613,11 @@ public class SkirmishGameTests {
             helper.fail("no skeleton rose with population room");
             return;
         }
-        int wrecksBefore = com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks().size();
+        var where = risen.position();   // tests run in parallel: look for a wreck HERE, not at the global count
         ((net.minecraft.world.entity.LivingEntity) risen).kill();
         helper.runAfterDelay(2, () -> {
-            if (com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks().size() > wrecksBefore)
+            if (com.solegendary.reignofnether.resources.WreckServerEvents.getWrecks().stream()
+                    .anyMatch(w -> !w.isRemoved() && w.position().distanceToSqr(where) < 4))
                 helper.fail("a risen skeleton left a wreck (free metal)");
             helper.succeed();
         });
