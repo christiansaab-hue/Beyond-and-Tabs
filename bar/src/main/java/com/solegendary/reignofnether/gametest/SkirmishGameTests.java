@@ -921,11 +921,15 @@ public class SkirmishGameTests {
         String kingdom = "gametest_soak_kingdom", grave = "gametest_soak_grave", court = "gametest_soak_court",
             tide = "gametest_soak_tide";
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
-        net.minecraft.world.phys.Vec3[] starts = soakStarts(level, origin.getX() + 1500, origin.getZ(), 4);
-        if (starts == null) {
+        // the first three in a row as before; the fourth (Tidewrought) beside them - asking for four in one row made
+        // a dry strip 480 blocks long, which an ocean seed often doesn't have
+        net.minecraft.world.phys.Vec3[] row = soakStarts(level, origin.getX() + 1500, origin.getZ(), 3);
+        net.minecraft.world.phys.Vec3 extra = row == null ? null : soakExtraStart(level, row);
+        if (row == null || extra == null) {
             helper.fail("no dry ground for four bot bases near x=" + (origin.getX() + 1500));
             return;
         }
+        net.minecraft.world.phys.Vec3[] starts = { row[0], row[1], row[2], extra };
         var bots = com.solegendary.reignofnether.bot.BotServerEvents.brains;
         var failures = com.solegendary.reignofnether.bot.BotServerEvents.thinkFailures;
         List<String> names = List.of(kingdom, grave, court, tide);
@@ -1114,6 +1118,28 @@ public class SkirmishGameTests {
                 }
                 if (ok)
                     return out;
+            }
+        return null;
+    }
+
+    /**
+     * One more dry base site next to a row from {@link #soakStarts}: tried beside each base (160 blocks off to either
+     * side, then diagonally) so it stays in the same small battlefield, at least 150 blocks from every other base.
+     */
+    static net.minecraft.world.phys.Vec3 soakExtraStart(ServerLevel level, net.minecraft.world.phys.Vec3[] row) {
+        int[][] offsets = { {160, 0}, {-160, 0}, {160, 80}, {-160, 80}, {160, -80}, {-160, -80}, {0, -160}, {0, 160},
+            {240, 0}, {-240, 0} };
+        for (int[] o : offsets)
+            for (var base : row) {
+                var spot = soakDrySpot(level, (int) base.x + o[0], (int) base.z + o[1]);
+                if (spot == null)
+                    continue;
+                boolean clear = true;
+                for (var other : row)
+                    if (Math.hypot(other.x - spot.x, other.z - spot.z) < 150)
+                        clear = false;
+                if (clear)
+                    return spot;
             }
         return null;
     }
@@ -1509,7 +1535,8 @@ public class SkirmishGameTests {
         for (var e : List.<net.minecraft.world.entity.LivingEntity>of(architect, foe, friend))
             level.addFreshEntity(e);
         helper.runAfterDelay(3, () -> {
-            var revealed = com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, owner);
+            // an arena-sized pulse (see HolyBell.ring with a radius): the full 24 blocks reach the neighbouring tests
+            var revealed = com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, owner, 11);
             if (!revealed.contains(foe) || !foe.hasEffect(net.minecraft.world.effect.MobEffects.GLOWING))
                 helper.fail("Holy Bell did not reveal an enemy 10 blocks away");
             if (revealed.contains(friend) || friend.hasEffect(net.minecraft.world.effect.MobEffects.GLOWING))
@@ -1543,7 +1570,7 @@ public class SkirmishGameTests {
         com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(owner, ally);
         helper.runAfterDelay(3, () -> {
             try {
-                com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, owner);
+                com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, owner, 9);
                 if (!com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isUnitRevealedTo(foe.getId(), owner))
                     helper.fail("Holy Bell did not lift the caster's fog around the enemy");
                 else if (!com.solegendary.reignofnether.fogofwar.FogOfWarServerEvents.isUnitRevealedTo(foe.getId(), ally))
@@ -3844,7 +3871,7 @@ public class SkirmishGameTests {
         friend.setOwnerName(owner);
         architect.setOwnerName(foeOwner);
         friend.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
-        architect.moveTo(spot.getX() + 10.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
+        architect.moveTo(spot.getX() + 4.5, spot.getY(), spot.getZ() + 0.5, 0, 0);
         level.addFreshEntity(friend);
         boolean[] done = { false };
         Runnable cleanup = () -> {
@@ -3860,7 +3887,8 @@ public class SkirmishGameTests {
                 cleanup.run();
                 return;
             }
-            var rung = com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, foeOwner);
+            // arena-sized (6 blocks round a ringer 4 off): a full 24-block pulse strips the neighbouring tests' cover
+            var rung = com.solegendary.reignofnether.ability.abilities.HolyBell.ring(level, architect, foeOwner, 6);
             com.solegendary.reignofnether.blocks.ThicketCover.refresh(level.getServer());
             if (!rung.contains(friend)) {
                 helper.fail("Holy Bell skipped a unit hidden in a thicket");
@@ -4650,11 +4678,12 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
             return;
         }
-        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 7));
+        // the Admiral at the west edge so the 15-block cannonade (+ its 2-block bursts) stays out of the next arena
+        BlockPos at = helper.absolutePos(new BlockPos(2, 2, 7));
         admiral.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, -90, 0);
         onPath.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
         friend.moveTo(at.getX() + 8.0, at.getY(), at.getZ() + 0.5, 0, 0);
-        behind.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        behind.moveTo(at.getX() - 1.5, at.getY(), at.getZ() + 0.5, 0, 0);
         admiral.setOwnerName(owner);
         friend.setOwnerName(owner);
         onPath.setOwnerName(foeOwner);
