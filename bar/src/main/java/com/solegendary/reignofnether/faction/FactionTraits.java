@@ -166,9 +166,9 @@ public final class FactionTraits {
         .build();
 
     /**
-     * Verdant Court (preview): living wood, moss and lanterns in green and silver. Only the look is designed; the
-     * D-gun is the plain one and the signature ability, debris, quick-build and faction mechanics stay off until
-     * their slice in design/verdant_court_plan.md.
+     * Verdant Court: living wood, moss and lanterns in green and silver. Slice 1 (design/verdant_court_plan.md) gives
+     * the Grove Warden its Thornburst cone and Wildstride and the Seedshapers their quick-build extractor; death
+     * debris (the 2-bit wire field is full) and a faction mechanic (Living Terrain, slice 3) stay off.
      */
     public static final FactionTraits VERDANT = new Builder("verdant")
         .accent(0xFF5CD69A)
@@ -181,7 +181,9 @@ public final class FactionTraits {
         .scaffold(Blocks.OAK_LOG.defaultBlockState(), Blocks.MOSS_BLOCK.defaultBlockState(), ScaffoldDecor.LANTERNS)
         .ambience(Ambience.SPORES)
         .fx(BarFx.N_VERDANT, BarFx.F_NONE)
+        .commander(CommanderDGun.Kind.THORNBURST, CommanderAbility.Kind.WILDSTRIDE)
         .wreck(Blocks.MOSSY_COBBLESTONE.defaultBlockState(), 1f)
+        .extractor(() -> Buildings.METAL_EXTRACTOR_VERDANT)
         .build();
 
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)

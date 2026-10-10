@@ -70,6 +70,12 @@ public class Buildings {
     public static final MonsterMarket MONSTER_MARKET = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "monster_market"), new MonsterMarket());
     public static final PiglinMarket PIGLIN_MARKET = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "piglin_market"), new PiglinMarket());
     public static final VillagerMarket VILLAGER_MARKET = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "villager_market"), new VillagerMarket());
+    // Verdant Court (design/verdant_court_plan.md, slice 1); registered last so no existing building's id moves
+    public static final com.solegendary.reignofnether.building.buildings.verdant.HeartwoodHall HEARTWOOD_HALL = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "heartwood_hall"), new com.solegendary.reignofnether.building.buildings.verdant.HeartwoodHall());
+    public static final com.solegendary.reignofnether.building.buildings.verdant.Grove GROVE = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "grove"), new com.solegendary.reignofnether.building.buildings.verdant.Grove());
+    public static final com.solegendary.reignofnether.building.buildings.shared.MetalExtractor METAL_EXTRACTOR_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "metal_extractor_verdant"), new com.solegendary.reignofnether.building.buildings.shared.MetalExtractor("_verdant"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.WindGenerator WIND_GENERATOR_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "wind_generator_verdant"), new com.solegendary.reignofnether.building.buildings.shared.WindGenerator("_verdant"));
+    public static final com.solegendary.reignofnether.building.buildings.shared.EnergyConverter ENERGY_CONVERTER_VERDANT = register(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "energy_converter_verdant"), new com.solegendary.reignofnether.building.buildings.shared.EnergyConverter("_verdant"));
 
     private static <T extends Building> T register(ResourceLocation id, T building) {
         return Registry.register(ReignOfNetherRegistries.BUILDING, id, building);

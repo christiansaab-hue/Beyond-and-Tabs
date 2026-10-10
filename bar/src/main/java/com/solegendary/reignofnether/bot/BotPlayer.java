@@ -76,6 +76,15 @@ public class BotPlayer {
                 Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,
                 List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER),
                 Buildings.CASTLE, ProductionItems.SUN_COLOSSUS, Buildings.ENERGY_CONVERTER_VILLAGERS);
+        // the Verdant Court has T1 only so far (slice 1): no farm, house, tower, T2 lab or T3 - every use of those
+        // below checks for null, so the bot plays a T1 economy and army and never researches a dead end
+        if (faction.equals(Factions.VERDANT_COURT))
+            return new Kit(Buildings.HEARTWOOD_HALL, null, null,
+                Buildings.METAL_EXTRACTOR_VERDANT, Buildings.WIND_GENERATOR_VERDANT, Buildings.GROVE,
+                null, ProductionItems.SEEDSHAPER,
+                List.of(ProductionItems.LEAFBLADE, ProductionItems.THORNBOW, ProductionItems.SENTINEL_TREANT),
+                null, null, List.of(),
+                null, null, Buildings.ENERGY_CONVERTER_VERDANT);
         return null;
     }
 
@@ -197,7 +206,7 @@ public class BotPlayer {
             // (the soak test caught bots sitting on 850 metal forever because one bad patch blocked every build).
             boolean done = workers.isEmpty();
             // the T2 lab first once Tier 2 is researched (after the first army building, like a player)
-            if (!done && tier2 && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1)
+            if (!done && tier2 && kit.t2Lab() != null && armyBuildings >= 1 && count(buildings, kit.t2Lab()) < 1)
                 done = placeNear(level, kit.t2Lab(), layoutSlot(Layout.ARMY, armyBuildings + 1), workers, 2);
             if (!done && patch != null) {
                 done = placeExtractor(level, patch, workers);
@@ -208,7 +217,7 @@ public class BotPlayer {
                 done = placeNear(level, kit.wind(), layoutSlot(Layout.WIND, winds), workers, 1);
             if (!done && energyFull() && count(buildings, converterFor()) < 1 + (int) (minutes / 6))
                 done = placeNear(level, converterFor(), layoutSlot(Layout.CONVERTER, count(buildings, converterFor())), workers, 1);
-            if (!done && farms < 1)
+            if (!done && kit.farm() != null && farms < 1)
                 done = placeNear(level, kit.farm(), layoutSlot(Layout.FARM, farms), workers, 1);
             // (no houses: there is no supply any more, like BAR)
             if (!done && armyBuildings < 1 + (int) (minutes / 4) && minutes >= 1)
@@ -680,6 +689,8 @@ public class BotPlayer {
     void fieldExperimentals(ServerLevel level, List<BuildingPlacement> buildings, List<LivingEntity> workers, long minutes) {
         if (difficulty == Difficulty.EASY || minutes < (difficulty == Difficulty.HARD ? 12 : 14))
             return;
+        if (kit.t3Building() == null || kit.t3Unit() == null || kit.t2Lab() == null)
+            return;   // a faction without its T3 yet: don't sink the economy into a Tier 3 that unlocks nothing
         // Tier 3 research first (after Tier 2), at the capitol - same gate as a player
         boolean hasT2 = com.solegendary.reignofnether.research.ResearchServerEvents.playerHasResearch(name,
                 com.solegendary.reignofnether.building.production.ProductionItems.RESEARCH_TIER_2);

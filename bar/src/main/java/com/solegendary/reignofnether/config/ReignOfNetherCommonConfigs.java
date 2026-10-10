@@ -53,6 +53,11 @@ public class ReignOfNetherCommonConfigs {
         UnitCosts.EMBALMER.define(BUILDER);
         UnitCosts.ROYAL_ARCHITECT.define(BUILDER);
         UnitCosts.SUN_COLOSSUS.define(BUILDER);
+        UnitCosts.SEEDSHAPER.define(BUILDER);
+        UnitCosts.FOX_COURIER.define(BUILDER);
+        UnitCosts.LEAFBLADE.define(BUILDER);
+        UnitCosts.THORNBOW.define(BUILDER);
+        UnitCosts.SENTINEL_TREANT.define(BUILDER);
         UnitCosts.BONE_DRAGON.define(BUILDER);
         UnitCosts.ROYAL_GUARD.define(BUILDER);
         UnitCosts.ENCHANTER.define(BUILDER);
@@ -112,6 +117,8 @@ public class ReignOfNetherCommonConfigs {
         //VillagersFaction
         BUILDER.comment("VillagersFaction");
         BuildingCosts.TOWN_CENTRE.define(BUILDER);
+        BuildingCosts.HEARTWOOD_HALL.define(BUILDER);
+        BuildingCosts.GROVE.define(BUILDER);
         BuildingCosts.VILLAGER_HOUSE.define(BUILDER);
         BuildingCosts.WHEAT_FARM.define(BUILDER);
         BuildingCosts.BARRACKS.define(BUILDER);
@@ -245,6 +252,12 @@ public class ReignOfNetherCommonConfigs {
         public static final ResourceCostConfigEntry RAVAGER = ResourceCostConfigEntry.Unit(400,50,150,60,7, ResourceCosts.RAVAGER, "Ravager Config");
         // Horde T3: ~4.5x the Siege Ox (T3 rule a); slow and melee-only (rule b)
         public static final ResourceCostConfigEntry SUN_COLOSSUS = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.SUN_COLOSSUS, "Sun Colossus Config");
+        // Verdant Court (T1, balanced against the other factions' T1 - see ResourceCosts)
+        public static final ResourceCostConfigEntry SEEDSHAPER = ResourceCostConfigEntry.Unit(85,0,0,22,1, ResourceCosts.SEEDSHAPER, "Seedshaper Config");
+        public static final ResourceCostConfigEntry FOX_COURIER = ResourceCostConfigEntry.Unit(60,0,0,16,1, ResourceCosts.FOX_COURIER, "Fox Courier Config");
+        public static final ResourceCostConfigEntry LEAFBLADE = ResourceCostConfigEntry.Unit(130,0,0,26,2, ResourceCosts.LEAFBLADE, "Leafblade Config");
+        public static final ResourceCostConfigEntry THORNBOW = ResourceCostConfigEntry.Unit(80,60,0,24,2, ResourceCosts.THORNBOW, "Thornbow Config");
+        public static final ResourceCostConfigEntry SENTINEL_TREANT = ResourceCostConfigEntry.Unit(0,60,240,45,4, ResourceCosts.SENTINEL_TREANT, "Sentinel Treant Config");
         public static final ResourceCostConfigEntry BONE_DRAGON = ResourceCostConfigEntry.Unit(1800,200,700,150,20, ResourceCosts.BONE_DRAGON, "Bone Dragon Config");
         public static final ResourceCostConfigEntry ROYAL_ARCHITECT = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.ROYAL_ARCHITECT, "RoyalArchitect Config");
         public static final ResourceCostConfigEntry EMBALMER = ResourceCostConfigEntry.Unit(160,80,40,35,2, ResourceCosts.EMBALMER, "Embalmer Config");
@@ -310,6 +323,8 @@ public class ReignOfNetherCommonConfigs {
 
         // VillagersFaction
         public static final ResourceCostConfigEntry TOWN_CENTRE = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.TOWN_CENTRE, "Town Centre Config");
+        public static final ResourceCostConfigEntry HEARTWOOD_HALL = ResourceCostConfigEntry.Building(0,350,250, 10, ResourceCosts.HEARTWOOD_HALL, "Heartwood Hall Config");
+        public static final ResourceCostConfigEntry GROVE = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.GROVE, "Grove Config");
         public static final ResourceCostConfigEntry VILLAGER_HOUSE = ResourceCostConfigEntry.Building(0,90,0, 10, ResourceCosts.VILLAGER_HOUSE, "Villager House Config");
         public static final ResourceCostConfigEntry WHEAT_FARM = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.WHEAT_FARM, "Wheat Farm Config");
         public static final ResourceCostConfigEntry BARRACKS = ResourceCostConfigEntry.Building(0,150,0, 0, ResourceCosts.BARRACKS, "Barracks Config");

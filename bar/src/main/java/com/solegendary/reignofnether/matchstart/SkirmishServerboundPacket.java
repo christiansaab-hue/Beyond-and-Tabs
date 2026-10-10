@@ -25,7 +25,8 @@ import java.util.function.Supplier;
  * pins the arena size and metal richness for the battlefield that forms a few seconds later, and calls in each
  * configured bot at the chosen spawn distance.
  *
- * Faction codes: 0 Sunforged Kingdom (villagers), 1 Gravebound (monsters), 2 Ironhide Horde (piglins), 3 random.
+ * Faction codes: 0 Sunforged Kingdom (villagers), 1 Gravebound (monsters), 2 Ironhide Horde (piglins), 3 random,
+ * 4 Verdant Court. 3 kept its meaning when the Court arrived (codes travel as bytes and persist in the lobby screen).
  * Arena: 0 small, 1 medium, 2 large, 3 huge, 4 random.  Metal: 0 lean, 1 normal, 2 rich, 3 random.
  * Spawn distance: 0 close, 1 normal, 2 far.  Difficulty: 0 easy, 1 medium, 2 hard.
  */
@@ -90,11 +91,12 @@ public class SkirmishServerboundPacket {
             case 0 -> Factions.VILLAGERS;
             case 1 -> Factions.MONSTERS;
             case 2 -> Factions.PIGLINS;
-            default -> List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS).get(rng.nextInt(3));
+            case 4 -> Factions.VERDANT_COURT;
+            default -> Factions.randomLive(rng);
         };
     }
 
-    // the registry path ("villagers", "monsters", "piglins") is what /bot add parses; an unknown faction is then
+    // the registry path ("villagers", "monsters", "piglins", "verdant_court") is what /bot add parses; an unknown faction is then
     // refused there instead of silently becoming a villager bot
     static String factionName(Faction f) {
         return f.getName();

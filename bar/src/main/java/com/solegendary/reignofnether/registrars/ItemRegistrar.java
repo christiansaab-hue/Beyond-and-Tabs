@@ -76,6 +76,27 @@ public class ItemRegistrar {
             ITEMS.register("zombie_villager_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.ZOMBIE_VILLAGER_UNIT,
                     0x523632, 0x647E51, new Item.Properties()));
 
+    // Verdant Court
+    public static final RegistryObject<ForgeSpawnEggItem> SEEDSHAPER_UNIT_SPAWN_EGG =
+            ITEMS.register("seedshaper_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SEEDSHAPER_UNIT,
+                    0x6B8F3E, 0xC8B496, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> FOX_COURIER_UNIT_SPAWN_EGG =
+            ITEMS.register("fox_courier_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.FOX_COURIER_UNIT,
+                    0xE2803A, 0xF6EEE2, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> LEAFBLADE_UNIT_SPAWN_EGG =
+            ITEMS.register("leafblade_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.LEAFBLADE_UNIT,
+                    0x3E7A34, 0xC0C8CC, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> THORNBOW_UNIT_SPAWN_EGG =
+            ITEMS.register("thornbow_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.THORNBOW_UNIT,
+                    0x427A34, 0x684A2E, new Item.Properties()));
+
+    public static final RegistryObject<ForgeSpawnEggItem> SENTINEL_TREANT_UNIT_SPAWN_EGG =
+            ITEMS.register("sentinel_treant_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.SENTINEL_TREANT_UNIT,
+                    0x5C4228, 0x5E8C34, new Item.Properties()));
+
     public static final RegistryObject<ForgeSpawnEggItem> VINDICATOR_UNIT_SPAWN_EGG =
             ITEMS.register("vindicator_unit_spawn_egg", () -> new ForgeSpawnEggItem(EntityRegistrar.VINDICATOR_UNIT,
                     0x8B8F90, 0x1F4952, new Item.Properties()));

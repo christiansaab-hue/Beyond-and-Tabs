@@ -93,6 +93,7 @@ class Structure:
 #   ""        Sunforged Kingdom (villagers): white quartz and diorite, gold-capped, spruce sails
 #   "_dark"   Gravebound (monsters): deepslate, dark oak, chains, soul fire
 #   "_nether" Ironhide Horde (piglins): mud brick, rust-red terracotta, bone and dark timber
+#   "_verdant" Verdant Court: moss and mossy stone, living oak, verdant froglights, lanterns, iron/oxidised-copper silver
 # accent/lamp are Chipped blocks. They are decoration only (a frieze, hanging lamps): if Chipped is absent they
 # load as air and the building still stands and works. Structural and foundation blocks stay vanilla.
 PALETTES = {
@@ -122,6 +123,17 @@ PALETTES = {
         furnace="blast_furnace", bars="chain",
         accent="chipped:decorated_red_terracotta", lamp="chipped:burning_coal_lantern",
         core="magma_block", pillar="stripped_dark_oak_log", band="copper_block",
+    ),
+    # accent/lamp are vanilla here: froglights glow green from the RTS camera, lanterns are the Court's silver light.
+    # The hub is a stripped oak log (WindmillRenderClientEvents gives it leaf-green sails on birch arms).
+    "_verdant": dict(
+        pad="moss_block", pad_corner="rooted_dirt", ring="mossy_stone_bricks",
+        stair="mossy_stone_brick_stairs", wall="mossy_stone_brick_wall", slab="mossy_stone_brick_slab",
+        metal="iron_block", body="stripped_birch_wood", cap="oak_planks",
+        cap_stair="oak_stairs", cap_slab="oak_slab", hub="stripped_oak_log",
+        furnace="smoker", bars="iron_bars",
+        accent="verdant_froglight", lamp="lantern",
+        core="campfire", pillar="stripped_oak_log", band="oxidized_copper",
     ),
 }
 
@@ -393,6 +405,110 @@ def fallen_house():
     return s
 
 
+# ---- Verdant Court: Heartwood Hall (capitol) and Grove (T1 lab) --------------------------------------------
+# y=0 holds the classes' startingBlockTypes (moss block, mossy stone bricks). Nothing hangs: the build order runs
+# bottom-up, so a hanging lantern or spore blossom would pop off before the canopy above it exists. Leaves are
+# persistent, or they would decay away from the trunk.
+LEAF = dict(persistent="true", distance="1", waterlogged="false")
+
+
+def heartwood_hall():
+    """A living-wood pavilion round a great oak trunk: moss floor ringed with mossy stone, eight oak posts carrying a
+    stripped-oak beam ring, a domed canopy of azalea and flowering azalea, lanterns on mossy walls, calcite steps
+    (the Court's silver) at the -z entrance and mangrove roots splaying from the trunk. 11 x 10 x 11."""
+    W = 11
+    s = Structure(W, 10, W)
+    c = W // 2
+    for x in range(W):
+        for z in range(W):
+            edge = x in (0, W - 1) or z in (0, W - 1)
+            s.set(x, 0, z, "mossy_stone_bricks" if edge else "moss_block")
+    for x in (c - 1, c, c + 1):
+        s.set(x, 0, 0, "calcite")                   # silver steps at the entrance
+    # the trunk: 3x3 oak, rising through the canopy
+    for y in range(1, 9):
+        for dx in (-1, 0, 1):
+            for dz in (-1, 0, 1):
+                if y >= 7 and dx != 0 and dz != 0:
+                    continue                        # rounds off the top
+                s.set(c + dx, y, c + dz, "oak_log", axis="y")
+    # roots splaying out from the trunk foot
+    for (dx, dz) in [(-2, 0), (2, 0), (0, -2), (0, 2), (-2, -2), (2, 2), (-2, 2), (2, -2)]:
+        s.set(c + dx, 1, c + dz, "mangrove_roots", waterlogged="false")
+    # eight posts on the ring, with mossy walls and standing lanterns between them (the -z middle is the door)
+    posts = [(1, 1), (c, 1), (W - 2, 1), (1, c), (W - 2, c), (1, W - 2), (c, W - 2), (W - 2, W - 2)]
+    for (x, z) in posts:
+        if (x, z) == (c, 1):
+            continue
+        for y in range(1, 5):
+            s.set(x, y, z, "oak_log", axis="y")
+    for (x, z) in [(3, 1), (W - 4, 1), (1, 3), (1, W - 4), (W - 2, 3), (W - 2, W - 4), (3, W - 2), (W - 4, W - 2)]:
+        s.set(x, 1, z, "mossy_cobblestone_wall")
+        s.set(x, 2, z, "lantern", hanging="false", waterlogged="false")
+    # beam ring at y=5 joining the posts, spokes into the trunk
+    for i in range(1, W - 1):
+        s.set(i, 5, 1, "stripped_oak_log", axis="x"); s.set(i, 5, W - 2, "stripped_oak_log", axis="x")
+        s.set(1, 5, i, "stripped_oak_log", axis="z"); s.set(W - 2, 5, i, "stripped_oak_log", axis="z")
+    for i in range(2, c - 1):
+        s.set(i, 5, c, "stripped_oak_log", axis="x"); s.set(W - 1 - i, 5, c, "stripped_oak_log", axis="x")
+        s.set(c, 5, i, "stripped_oak_log", axis="z"); s.set(c, 5, W - 1 - i, "stripped_oak_log", axis="z")
+    # the canopy dome: wide at y6, narrowing to a crown at y9, flowering every few leaves
+    for y, r in [(6, 5.6), (7, 5.0), (8, 3.8), (9, 2.2)]:
+        for x in range(W):
+            for z in range(W):
+                d = ((x - c) ** 2 + (z - c) ** 2) ** 0.5
+                if d <= r and (x, y, z) not in s.blocks:
+                    leaf = "flowering_azalea_leaves" if (x * 7 + z * 3 + y) % 5 == 0 else "azalea_leaves"
+                    s.set(x, y, z, leaf, **LEAF)
+    # froglights glowing through the canopy where the spokes meet the ring
+    for (x, z) in [(c, 1), (1, c), (W - 2, c), (c, W - 2)]:
+        s.set(x, 6, z, "verdant_froglight", axis="y")
+    # flowering azalea bushes in the corners of the floor
+    for (x, z) in [(2, 2), (W - 3, 2), (2, W - 3), (W - 3, W - 3)]:
+        s.set(x, 1, z, "flowering_azalea")
+    fill_air(s)
+    return s
+
+
+def grove():
+    """The Court's training glade: a moss lawn inside mossy stone, a living arch of oak and azalea over the -z
+    entrance, two archery targets on oak posts for the Thornbows, a fletching table and a sapling ring. 9 x 7 x 8."""
+    W, D = 9, 8
+    s = Structure(W, 7, D)
+    for x in range(W):
+        for z in range(D):
+            edge = x in (0, W - 1) or z in (0, D - 1)
+            s.set(x, 0, z, "mossy_stone_bricks" if edge else "moss_block")
+    # the arch: two oak trunks and a leafy lintel over the entrance
+    for y in range(1, 5):
+        s.set(2, y, 0, "oak_log", axis="y"); s.set(W - 3, y, 0, "oak_log", axis="y")
+    for x in range(1, W - 1):
+        s.set(x, 5, 0, "stripped_oak_log", axis="x")
+        s.set(x, 6, 0, "azalea_leaves", **LEAF)
+    for x in (1, W - 2):
+        s.set(x, 5, 1, "flowering_azalea_leaves", **LEAF)
+        s.set(x, 4, 0, "azalea_leaves", **LEAF)
+    s.set(4, 4, 0, "verdant_froglight", axis="y")
+    # low mossy walls down the sides, lanterns standing on them
+    for z in range(2, D - 1):
+        s.set(0, 1, z, "mossy_cobblestone_wall"); s.set(W - 1, 1, z, "mossy_cobblestone_wall")
+    for z in (3, D - 2):
+        s.set(0, 2, z, "lantern", hanging="false", waterlogged="false")
+        s.set(W - 1, 2, z, "lantern", hanging="false", waterlogged="false")
+    # archery targets on posts at the back
+    for x in (2, W - 3):
+        s.set(x, 1, D - 2, "stripped_birch_log", axis="y")
+        s.set(x, 2, D - 2, "target")
+    s.set(4, 1, D - 2, "fletching_table")
+    # saplings and moss carpet on the lawn
+    for (x, z) in [(2, 3), (W - 3, 3), (4, 4)]:
+        s.set(x, 1, z, "azalea")
+    for (x, z) in [(3, 2), (5, 5), (6, 2), (3, 5)]:
+        s.set(x, 1, z, "moss_carpet")
+    fill_air(s)
+    return s
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(OUT_DATA, exist_ok=True)
@@ -404,3 +520,5 @@ if __name__ == "__main__":
             energy_converter(P).write(f"{out}/energy_converter{variant}.nbt")
         kingdom_house().write(f"{out}/villager_house.nbt")
         fallen_house().write(f"{out}/haunted_house.nbt")
+        heartwood_hall().write(f"{out}/heartwood_hall.nbt")
+        grove().write(f"{out}/grove.nbt")

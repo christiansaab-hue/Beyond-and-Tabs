@@ -113,10 +113,11 @@ public class BotServerEvents {
             case "monsters", "monster" -> Factions.MONSTERS;
             case "villagers", "villager" -> Factions.VILLAGERS;
             case "piglins", "piglin" -> Factions.PIGLINS;
+            case "verdant_court", "verdant", "court" -> Factions.VERDANT_COURT;
             default -> null;
         };
         if (faction == null || BotPlayer.kitFor(faction) == null) {   // (kitFor: never hand a bot a faction it has no kit for)
-            caller.sendSystemMessage(Component.literal("Bots can play villagers, monsters or piglins."));
+            caller.sendSystemMessage(Component.literal("Bots can play villagers, monsters, piglins or verdant_court."));
             return 0;
         }
         BotPlayer.Difficulty difficulty = switch (difficultyName.toLowerCase()) {

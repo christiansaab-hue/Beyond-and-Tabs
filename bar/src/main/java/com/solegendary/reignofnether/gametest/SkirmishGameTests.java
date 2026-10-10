@@ -80,7 +80,7 @@ public class SkirmishGameTests {
                 + MetalPatches.solidTop(level, cx, cz) + ")");
         BlockPos origin = new BlockPos(cx - 2, y, cz - 2);   // origin = ground block
         for (Building extractor : List.of(Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.METAL_EXTRACTOR_MONSTERS,
-                Buildings.METAL_EXTRACTOR_PIGLINS)) {
+                Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.METAL_EXTRACTOR_VERDANT)) {
             String err = BuildingValidators.getPlacementValidityError(level, extractor, origin, "tester",
                 Rotation.NONE, false, false, true);
             if (err != null)   // the Legion's extractor is exempt from the nether-terrain rule on purpose
@@ -88,7 +88,7 @@ public class SkirmishGameTests {
         }
         BlockPos windOrigin = new BlockPos(cx + 5, y, cz + 5);
         for (Building wind : List.of(Buildings.WIND_GENERATOR_VILLAGERS, Buildings.WIND_GENERATOR_MONSTERS,
-                Buildings.WIND_GENERATOR_PIGLINS)) {
+                Buildings.WIND_GENERATOR_PIGLINS, Buildings.WIND_GENERATOR_VERDANT)) {
             String err = BuildingValidators.getPlacementValidityError(level, wind, windOrigin, "tester",
                 Rotation.NONE, false, false, true);
             if (err != null)
@@ -899,27 +899,31 @@ public class SkirmishGameTests {
     static final int SOAK_TICKS = 20 * 60 * 4;   // four game-minutes of bot-vs-bot play
 
     /**
-     * Soak: a Sunforged (villagers) bot and a Gravebound (monsters) bot play each other headless for four
-     * game-minutes. Each must grow (lay buildings or train units) and neither brain may throw. The bases sit
+     * Soak: a Sunforged (villagers), a Gravebound (monsters) and a Verdant Court bot play each other headless for four
+     * game-minutes. Each must grow (lay buildings or train units) and no brain may throw. The bases sit
      * ~1500 blocks from the test grid on dry ground so their battlefield (lanes, patches, ring wall <= 520 blocks)
-     * never reaches the other tests' arenas.
+     * never reaches the other tests' arenas. The Court rides in this soak rather than its own: bases started in the
+     * same few seconds form ONE battlefield (BattlefieldSetup), so a second soak elsewhere would join this one into
+     * an arena spanning the test grid. It also checks the Court's start through startRTSBot: three Seedshapers, the
+     * first one the Grove Warden carrying Thornburst and Wildstride, and its capitol is a Heartwood Hall.
      */
     @GameTest(template = ARENA, timeoutTicks = SOAK_TICKS + 600)
     public static void bots_play_each_other_without_errors(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        String kingdom = "gametest_soak_kingdom", grave = "gametest_soak_grave";
+        String kingdom = "gametest_soak_kingdom", grave = "gametest_soak_grave", court = "gametest_soak_court";
         BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
-        net.minecraft.world.phys.Vec3[] starts = soakStarts(level, origin.getX() + 1500, origin.getZ());
+        net.minecraft.world.phys.Vec3[] starts = soakStarts(level, origin.getX() + 1500, origin.getZ(), 3);
         if (starts == null) {
-            helper.fail("no dry ground for two bot bases near x=" + (origin.getX() + 1500));
+            helper.fail("no dry ground for three bot bases near x=" + (origin.getX() + 1500));
             return;
         }
         var bots = com.solegendary.reignofnether.bot.BotServerEvents.brains;
         var failures = com.solegendary.reignofnether.bot.BotServerEvents.thinkFailures;
-        List<String> names = List.of(kingdom, grave);
+        List<String> names = List.of(kingdom, grave, court);
         var factions = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
-            com.solegendary.reignofnether.faction.Factions.MONSTERS);
-        for (int i = 0; i < 2; i++) {
+            com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.VERDANT_COURT);
+        final int count = names.size();
+        for (int i = 0; i < count; i++) {
             failures.remove(names.get(i));
             com.solegendary.reignofnether.player.PlayerServerEvents.startRTSBot(level, names.get(i), starts[i],
                 factions.get(i), 0);
@@ -929,10 +933,75 @@ public class SkirmishGameTests {
         for (String n : names)
             if (!com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(n))
                 helper.fail("startRTSBot did not add " + n + " to the match");
-        int[] startUnits = { soakUnits(kingdom).size(), soakUnits(grave).size() };
-        int[] maxBuildings = new int[2], maxUnits = new int[2];
+        List<String> problemsAtStart = new ArrayList<>();
+        // the Court's start through the real bot start path: Seedshapers, the first promoted to the Grove Warden
+        // (checked a moment later, once the spawned entities have joined the unit lists)
+        helper.runAfterDelay(10, () -> {
+            List<net.minecraft.world.entity.LivingEntity> courtStart = soakUnits(court);
+            long seedshapers = courtStart.stream().filter(e -> e.getType()
+                == com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get()).count();
+            if (seedshapers != 3 || courtStart.size() != 3)
+                problemsAtStart.add("the Verdant bot should start with 3 Seedshapers, got " + courtStart.size() + " units ("
+                    + seedshapers + " Seedshapers)");
+            boolean thornburst = false, wildstride = false;
+            for (var e : courtStart)
+                if (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(e)
+                        && e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    for (var a : u.getAbilities().get()) {
+                        if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun)
+                            thornburst = true;
+                        if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility
+                                && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(u)
+                                == com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.WILDSTRIDE)
+                            wildstride = true;
+                    }
+            if (!thornburst || !wildstride)
+                problemsAtStart.add("the Grove Warden is missing its D-gun (" + thornburst + ") or Wildstride (" + wildstride + ")");
+        });
+        int[] startUnits = new int[count];
+        for (int i = 0; i < count; i++)
+            startUnits[i] = soakUnits(names.get(i)).size();
+        int[] maxBuildings = new int[count], maxUnits = new int[count];
+        boolean[] courtHall = { false };
+        // when the soak fails, say how each side's units left (death cause, place, time) and when a side left the
+        // match - CI only shows the failure message, so this is the only way to see a stall's cause
+        long t0 = level.getGameTime();
+        List<String> leaves = java.util.Collections.synchronizedList(new ArrayList<>());
+        long[] leftMatchAt = new long[count];
+        java.util.function.Consumer<net.minecraftforge.event.entity.living.LivingDeathEvent> onDeath = evt -> {
+            if (evt.getEntity().level() != level || !(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    || !names.contains(u.getOwnerName()) || leaves.size() >= 12)
+                return;
+            var le = evt.getEntity();
+            var src = evt.getSource();
+            leaves.add(u.getOwnerName().substring(14) + " " + net.minecraft.world.entity.EntityType.getKey(le.getType()).getPath()
+                + " died t" + (level.getGameTime() - t0) + " " + src.getMsgId()
+                + (src.getEntity() != null ? " by " + net.minecraft.world.entity.EntityType.getKey(src.getEntity().getType()).getPath() : "")
+                + " at " + le.blockPosition().toShortString()
+                + " cmdr=" + com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(le));
+        };
+        java.util.function.Consumer<net.minecraftforge.event.entity.EntityLeaveLevelEvent> onLeave = evt -> {
+            if (evt.getLevel() != level || !(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                    || !names.contains(u.getOwnerName()) || leaves.size() >= 12)
+                return;
+            var e = evt.getEntity();
+            if (e.getRemovalReason() == net.minecraft.world.entity.Entity.RemovalReason.KILLED)
+                return;   // reported by onDeath
+            leaves.add(u.getOwnerName().substring(14) + " " + net.minecraft.world.entity.EntityType.getKey(e.getType()).getPath()
+                + " left t" + (level.getGameTime() - t0) + " " + e.getRemovalReason() + " at " + e.blockPosition().toShortString());
+        };
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
+            false, net.minecraftforge.event.entity.living.LivingDeathEvent.class, onDeath);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
+            false, net.minecraftforge.event.entity.EntityLeaveLevelEvent.class, onLeave);
         Runnable sample = () -> {
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < count; i++)
+                if (leftMatchAt[i] == 0 && !com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(names.get(i)))
+                    leftMatchAt[i] = level.getGameTime() - t0;
+            for (var bp : soakBuildings(court))
+                if (bp.getBuilding() == Buildings.HEARTWOOD_HALL)
+                    courtHall[0] = true;
+            for (int i = 0; i < count; i++) {
                 maxBuildings[i] = Math.max(maxBuildings[i], soakBuildings(names.get(i)).size());
                 maxUnits[i] = Math.max(maxUnits[i], soakUnits(names.get(i)).size());
             }
@@ -946,32 +1015,12 @@ public class SkirmishGameTests {
                     sample.run();
                 }
             });
-        // how the soak sides lose units (cause, killer, place, time; commander flagged) - a failure says why a side
-        // stalled. Capped, and unregistered when the test ends.
-        long t0 = level.getGameTime();
-        List<String> deaths = java.util.Collections.synchronizedList(new ArrayList<>());
-        java.util.function.Consumer<net.minecraftforge.event.entity.living.LivingDeathEvent> onDeath = evt -> {
-            if (evt.getEntity().level() != level || deaths.size() >= 6
-                    || !(evt.getEntity() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
-                    || !names.contains(u.getOwnerName()))
-                return;
-            var src = evt.getSource();
-            var killer = src.getEntity();
-            deaths.add(u.getOwnerName().replace("gametest_soak_", "")
-                + (com.solegendary.reignofnether.player.CommanderServerEvents.isCommander(evt.getEntity()) ? " COMMANDER " : " ")
-                + net.minecraft.world.entity.EntityType.getKey(evt.getEntity().getType()).getPath()
-                + " t" + (level.getGameTime() - t0) + " " + src.getMsgId()
-                + (killer != null ? " by " + net.minecraft.world.entity.EntityType.getKey(killer.getType())
-                    + (killer instanceof com.solegendary.reignofnether.unit.interfaces.Unit ku ? "(" + ku.getOwnerName() + ")" : "") : "")
-                + " at " + evt.getEntity().blockPosition().toShortString());
-        };
-        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
-            false, net.minecraftforge.event.entity.living.LivingDeathEvent.class, onDeath);
         helper.runAfterDelay(SOAK_TICKS, () -> {
             sample.run();
-            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
-            List<String> problems = new ArrayList<>();
-            for (int i = 0; i < 2; i++) {
+            List<String> problems = new ArrayList<>(problemsAtStart);
+            if (!courtHall[0])
+                problems.add(court + " never laid its Heartwood Hall");
+            for (int i = 0; i < count; i++) {
                 String n = names.get(i);
                 Throwable err = failures.get(n);
                 if (err != null)
@@ -979,14 +1028,11 @@ public class SkirmishGameTests {
                 // capitol + at least two more: a bot that stops after its capitol has stalled (the old bad-patch bug)
                 if (maxBuildings[i] < 3 || maxUnits[i] <= startUnits[i])
                     problems.add(n + " stalled (buildings " + maxBuildings[i] + ", units "
-                        + startUnits[i] + " -> " + maxUnits[i] + (com.solegendary.reignofnether.player.PlayerServerEvents
-                            .isRTSPlayer(n) ? "" : ", defeated") + ")");
+                        + startUnits[i] + " -> " + maxUnits[i] + ")");
             }
-            if (!problems.isEmpty() && !deaths.isEmpty())
-                problems.add("deaths " + deaths);
-            ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} buildings {} units {} (start {}), {} buildings {} units {} (start {})",
-                SOAK_TICKS, kingdom, maxBuildings[0], maxUnits[0], startUnits[0], grave, maxBuildings[1], maxUnits[1],
-                startUnits[1]);
+            for (int i = 0; i < count; i++)
+                ReignOfNether.LOGGER.info("[Soak] after {} ticks: {} buildings {} units {} (start {})",
+                    SOAK_TICKS, names.get(i), maxBuildings[i], maxUnits[i], startUnits[i]);
             // clean up: leave the match, forget the brains, drop the armies (buildings stay, ownerless and far away)
             List<net.minecraft.world.entity.LivingEntity> leftovers = new ArrayList<>();
             for (String n : names)
@@ -997,24 +1043,41 @@ public class SkirmishGameTests {
                 failures.remove(n);
             }
             leftovers.forEach(net.minecraft.world.entity.Entity::discard);
-            if (!problems.isEmpty())
-                helper.fail(String.join("; ", problems));
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onDeath);
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(onLeave);
+            if (!problems.isEmpty()) {
+                StringBuilder diag = new StringBuilder(" | left match at t: ");
+                for (int i = 0; i < count; i++)
+                    diag.append(names.get(i).substring(14)).append('=').append(leftMatchAt[i]).append(' ');
+                diag.append("| starts:");
+                for (var st : starts)
+                    diag.append(' ').append(BlockPos.containing(st).toShortString());
+                diag.append(" | unit exits: ").append(leaves);
+                helper.fail(String.join("; ", problems) + diag);
+            }
             helper.succeed();
         });
     }
 
     /** Two dry, fairly flat base sites 160 blocks apart, searched eastward from (x, z); null if none found. */
     static net.minecraft.world.phys.Vec3[] soakStarts(ServerLevel level, int x, int z) {
+        return soakStarts(level, x, z, 2);
+    }
+
+    /** {@code count} dry, fairly flat base sites 160 blocks apart in a row along z; null if none found. */
+    static net.minecraft.world.phys.Vec3[] soakStarts(ServerLevel level, int x, int z, int count) {
         // the seed is random per CI run, so one line of x can be all ocean: try a few parallel lines before giving up
         for (int bz : new int[] { z, z + 480, z - 480, z + 960, z - 960, z + 1440, z - 1440, z + 1920 })
             for (int step = 0; step < 16; step++) {
                 int bx = x + step * 96;
-                var a = soakDrySpot(level, bx, bz);
-                if (a == null)
-                    continue;
-                var b = soakDrySpot(level, bx, bz + 160);
-                if (b != null)
-                    return new net.minecraft.world.phys.Vec3[] { a, b };
+                net.minecraft.world.phys.Vec3[] out = new net.minecraft.world.phys.Vec3[count];
+                boolean ok = true;
+                for (int k = 0; k < count && ok; k++) {
+                    out[k] = soakDrySpot(level, bx, bz + 160 * k);
+                    ok = out[k] != null;
+                }
+                if (ok)
+                    return out;
             }
         return null;
     }
@@ -1973,47 +2036,76 @@ public class SkirmishGameTests {
     }
 
     /**
-     * Announcing a faction must not disturb the three live ones: each is still playable with a capitol, a worker and a
-     * bot kit that agree, and the Verdant Court preview is registered (so the lobby can show it) but kept out of every
-     * list a player, the title screen, survival or random could pick from. Static registration only, no world state.
+     * The Verdant Court going live must not disturb the three original factions: each is still playable with the same
+     * capitol and worker, and every live faction (the Court included) has a capitol, a worker and a bot kit that agree.
+     * The Court is playable and in the random pool but not a classic (title screen / survival) or survival faction,
+     * and it is registered after the originals so their registry ids are unchanged. Static registration only.
      */
     @GameTest(template = ARENA)
-    public static void preview_faction_leaves_the_three_live_factions_intact(GameTestHelper helper) {
-        var live = List.of(com.solegendary.reignofnether.faction.Factions.VILLAGERS,
-            com.solegendary.reignofnether.faction.Factions.MONSTERS, com.solegendary.reignofnether.faction.Factions.PIGLINS);
+    public static void verdant_court_is_live_and_the_original_three_are_unchanged(GameTestHelper helper) {
+        var old = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS);
+        var verdant = Factions.VERDANT_COURT;
+        List<Building> oldCapitols = List.of(Buildings.TOWN_CENTRE, Buildings.MAUSOLEUM, Buildings.CENTRAL_PORTAL);
+        List<net.minecraft.world.entity.EntityType<?>> oldWorkers = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get());
+        for (int i = 0; i < old.size(); i++) {
+            var f = old.get(i);
+            if (!Factions.CLASSIC_FACTIONS.contains(f.key))
+                helper.fail(f.getName() + " dropped out of the classic list");
+            if (ReignOfNetherRegistries.BUILDING.get(f.capitolBuilding) != oldCapitols.get(i))
+                helper.fail(f.getName() + "'s capitol changed to " + f.capitolBuilding);
+            if (!net.minecraft.world.entity.EntityType.getKey(oldWorkers.get(i)).equals(f.workerEntityType))
+                helper.fail(f.getName() + "'s worker changed to " + f.workerEntityType);
+        }
+        List<com.solegendary.reignofnether.faction.Faction> live = new ArrayList<>(old);
+        live.add(verdant);
         for (var f : live) {
-            if (!com.solegendary.reignofnether.faction.Factions.isLive(f)) {
-                helper.fail(f.getName() + " is no longer a live faction");
+            if (!Factions.isLive(f)) {
+                helper.fail(f.getName() + " is not a live faction");
                 return;
             }
-            if (com.solegendary.reignofnether.faction.Factions.getFaction(f.key) != f)
+            if (Factions.getFaction(f.key) != f)
                 helper.fail(f.getName() + " does not resolve by its key");
-            if (!com.solegendary.reignofnether.faction.Factions.PLAYABLE_FACTIONS.contains(f.key)
-                    || !com.solegendary.reignofnether.faction.Factions.CLASSIC_FACTIONS.contains(f.key))
-                helper.fail(f.getName() + " dropped out of the playable / classic lists");
+            if (!Factions.PLAYABLE_FACTIONS.contains(f.key))
+                helper.fail(f.getName() + " is not in the playable list");
             Building capitol = ReignOfNetherRegistries.BUILDING.get(f.capitolBuilding);
-            if (capitol == null)
-                helper.fail(f.getName() + ": capitol " + f.capitolBuilding + " is not a registered building");
+            if (capitol == null || !capitol.isCapitol)
+                helper.fail(f.getName() + ": capitol " + f.capitolBuilding + " is not a registered capitol");
             if (net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getValue(f.workerEntityType) == null)
                 helper.fail(f.getName() + ": worker " + f.workerEntityType + " is not a registered entity");
-            if (com.solegendary.reignofnether.bot.BotPlayer.kitFor(f).capitol() != capitol)
+            var kit = com.solegendary.reignofnether.bot.BotPlayer.kitFor(f);
+            if (kit == null || kit.capitol() != capitol)
                 helper.fail(f.getName() + ": the bot kit builds a different capitol than the faction starts with");
         }
-        var verdant = com.solegendary.reignofnether.faction.Factions.VERDANT_COURT;
-        if (verdant == null || com.solegendary.reignofnether.faction.Factions.getFaction(verdant.key) != verdant) {
-            helper.fail("Verdant Court preview is not registered");
-            return;
+        if (verdant.preview)
+            helper.fail("the Verdant Court is still marked as a preview");
+        if (ReignOfNetherRegistries.BUILDING.get(verdant.capitolBuilding) != Buildings.HEARTWOOD_HALL)
+            helper.fail("the Verdant Court's capitol is not the Heartwood Hall");
+        if (Factions.CLASSIC_FACTIONS.contains(verdant.key) || Factions.SURVIVAL_FACTIONS.contains(verdant.key))
+            helper.fail("the Verdant Court leaked into the classic or survival list before it has a cube map / wave");
+        if (ReignOfNetherRegistries.FACTIONS.getId(verdant) < ReignOfNetherRegistries.FACTIONS.getId(Factions.NONE))
+            helper.fail("the Verdant Court was registered before the original factions and shifted their ids");
+        // "Random" only ever lands on a live faction, and the Court is in the pool
+        var rng = new java.util.Random(4);
+        Set<String> seen = new HashSet<>();
+        for (int i = 0; i < 400; i++) {
+            var f = Factions.randomLive(rng);
+            if (!Factions.isLive(f))
+                helper.fail("random picked a faction that is not live: " + f.getName());
+            seen.add(f.getName());
         }
-        if (!verdant.preview || com.solegendary.reignofnether.faction.Factions.isLive(verdant))
-            helper.fail("Verdant Court must stay a preview until its units exist");
-        if (com.solegendary.reignofnether.faction.Factions.PLAYABLE_FACTIONS.contains(verdant.key)
-                || com.solegendary.reignofnether.faction.Factions.CLASSIC_FACTIONS.contains(verdant.key)
-                || com.solegendary.reignofnether.faction.Factions.SURVIVAL_FACTIONS.contains(verdant.key))
-            helper.fail("Verdant Court leaked into a pickable faction list");
-        // registered after the originals, so their registry ids (Factions.getFaction(int)) are unchanged
-        if (ReignOfNetherRegistries.FACTIONS.getId(verdant)
-                < ReignOfNetherRegistries.FACTIONS.getId(com.solegendary.reignofnether.faction.Factions.NONE))
-            helper.fail("Verdant Court was registered before the original factions and shifted their ids");
+        if (!seen.contains(verdant.getName()) || seen.size() != live.size())
+            helper.fail("random should reach every live faction, saw " + seen);
+        // every unit the Court trains belongs to the Court (Factions.getFaction(unit) is how its look is chosen)
+        for (var type : List.of(com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.FOX_COURIER_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.LEAFBLADE_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.THORNBOW_UNIT.get(),
+                com.solegendary.reignofnether.registrars.EntityRegistrar.SENTINEL_TREANT_UNIT.get()))
+            if (!verdant.key.equals(Factions.ENTITY_FACTION.get(net.minecraft.world.entity.EntityType.getKey(type))))
+                helper.fail(net.minecraft.world.entity.EntityType.getKey(type) + " is not registered to the Verdant Court");
         helper.succeed();
     }
 
@@ -2034,19 +2126,23 @@ public class SkirmishGameTests {
         var horde = FactionTraits.of(Factions.PIGLINS);
         var verdant = FactionTraits.of(Factions.VERDANT_COURT);
         var neutral = FactionTraits.NEUTRAL;
-        if (verdant.dgunKind == sun.dgunKind)
-            helper.fail("Verdant Court uses the Sunforged D-gun");
+        if (verdant.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.THORNBURST)
+            helper.fail("Verdant Court's D-gun should be Thornburst, is " + verdant.dgunKind);
         if (com.solegendary.reignofnether.resources.WreckServerEvents.lookFor(Factions.VERDANT_COURT)
                 == com.solegendary.reignofnether.resources.WreckServerEvents.lookFor(Factions.VILLAGERS))
             helper.fail("Verdant Court leaves Sunforged wrecks");
         if (verdant.scaffoldPole == sun.scaffoldPole || verdant.scaffoldRail == sun.scaffoldRail
                 || verdant.scaffoldDecor == sun.scaffoldDecor)
             helper.fail("Verdant Court builds with Sunforged scaffold materials");
-        // behaviours Verdant has not designed yet stay off
-        if (verdant.formation || verdant.momentum
-                || verdant.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.NONE
-                || com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.VERDANT_COURT) != null)
-            helper.fail("Verdant Court picked up an undesigned behaviour (formation/momentum/signature/bot kit)");
+        // slice 1: Wildstride, a bot kit and a quick-build extractor; the other factions' mechanics stay off
+        if (verdant.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.WILDSTRIDE)
+            helper.fail("Verdant Court's signature should be Wildstride, is " + verdant.commanderAbility);
+        if (com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.VERDANT_COURT) == null)
+            helper.fail("Verdant Court has no bot kit");
+        if (verdant.metalExtractor.get() != Buildings.METAL_EXTRACTOR_VERDANT)
+            helper.fail("Verdant Court's quick-build extractor is " + verdant.metalExtractor.get());
+        if (verdant.formation || verdant.momentum)
+            helper.fail("Verdant Court picked up Formation or Momentum");
         // the live three keep what the old if/else chains gave them
         if (sun.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SUNFIRE
                 || grave.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SOULREAPER
@@ -2183,7 +2279,8 @@ public class SkirmishGameTests {
             com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get(),
             com.solegendary.reignofnether.registrars.EntityRegistrar.EMBALMER_UNIT.get(),
             com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get(),
-            com.solegendary.reignofnether.registrars.EntityRegistrar.BONEWRIGHT_UNIT.get());
+            com.solegendary.reignofnether.registrars.EntityRegistrar.BONEWRIGHT_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get());
         List<String> problems = new ArrayList<>();
         for (var type : types) {
             var commander = type.create(level);
@@ -2277,6 +2374,251 @@ public class SkirmishGameTests {
     }
 
     /**
+     * The Verdant Court's start, the way a readied player start does it (PlayerServerEvents.startRTS without the
+     * player): its worker type spawns and the first one becomes the Grove Warden with Thornburst and Wildstride, and its
+     * capitol foundation is laid at the start position and survives as a site. Also checks the Court's refit extractor
+     * blueprint loads on the server (it is not a building's own structure, so the blueprint test can't see it), so a
+     * Verdant player researching Tier 2 and refitting an extractor never meets a missing structure. Runs on its own
+     * grass platform high above the arena.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void verdant_capitol_places_and_the_grove_warden_spawns(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var verdant = Factions.VERDANT_COURT;
+        String owner = "gametest_verdant_start";
+        BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
+        final int y = 220;
+        int cx = base.getX() - 60, cz = base.getZ() + 60;   // clear of the other platform tests
+        for (int dx = -9; dx <= 9; dx++)
+            for (int dz = -9; dz <= 9; dz++) {
+                level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
+                level.setBlock(new BlockPos(cx + dx, y, cz + dz), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        if (com.solegendary.reignofnether.building.BuildingBlockData.getBuildingNbt("metal_extractor_t2_verdant",
+                level.getServer().getResourceManager()) == null)
+            helper.fail("the Verdant refit extractor (metal_extractor_t2_verdant) is missing from data/");
+        var workerType = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getValue(verdant.workerEntityType);
+        var warden = workerType == null ? null : workerType.create(level);
+        if (!(warden instanceof com.solegendary.reignofnether.unit.units.verdant.SeedshaperUnit seed)) {
+            helper.fail("the Verdant worker type does not make a Seedshaper: " + verdant.workerEntityType);
+            return;
+        }
+        seed.setOwnerName(owner);
+        seed.moveTo(cx + 0.5, y + 1, cz - 7.5, 0, 0);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(seed);
+        level.addFreshEntity(seed);
+        boolean dgun = false, wild = false;
+        for (var a : seed.getAbilities().get()) {
+            dgun |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun;
+            wild |= a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility;
+        }
+        if (!dgun || !wild)
+            helper.fail("the Grove Warden lacks its D-gun (" + dgun + ") or signature (" + wild + ")");
+        Building capitol = ReignOfNetherRegistries.BUILDING.get(verdant.capitolBuilding);
+        var blocks = capitol.getRelativeBlockData(level);
+        BlockPos origin = com.solegendary.reignofnether.player.PlayerServerEvents.getBuildingOriginPos(
+            new BlockPos(cx, y, cz), blocks);
+        var placement = com.solegendary.reignofnether.building.BuildingServerEvents.placeBuilding(capitol, origin,
+            Rotation.NONE, owner, new int[] { seed.getId() }, false, false, true, true);
+        if (placement == null) {
+            seed.discard();
+            helper.fail("the Heartwood Hall could not be placed at a readied start");
+            return;
+        }
+        helper.runAfterDelay(40, () -> {
+            try {
+                if (placement.isDestroyedServerside
+                        || !com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().contains(placement))
+                    helper.fail("the Heartwood Hall site was destroyed right after being placed");
+                if (!placement.getBuilding().isCapitol || placement.getBuilding() != Buildings.HEARTWOOD_HALL)
+                    helper.fail("the placed capitol is " + placement.getBuilding().name);
+                helper.succeed();
+            } finally {
+                com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings().remove(placement);
+                seed.discard();
+            }
+        });
+    }
+
+    /**
+     * Every Verdant unit can be made and fights: each one, ordered onto its own enemy Villager, lands a blow (melee or
+     * arrow) within a few seconds, and the Thornbow's arrows root what they hit. One row of the arena per attacker.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 240)
+    public static void verdant_units_are_made_and_attack(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_verdant_atk", foeOwner = "gametest_verdant_foe";
+        List<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>> types = List.of(
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.FOX_COURIER_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.LEAFBLADE_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.THORNBOW_UNIT.get(),
+            com.solegendary.reignofnether.registrars.EntityRegistrar.SENTINEL_TREANT_UNIT.get());
+        List<net.minecraft.world.entity.Mob> attackers = new ArrayList<>(), foes = new ArrayList<>();
+        for (int i = 0; i < types.size(); i++) {
+            var atk = types.get(i).create(level);
+            var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get().create(level);
+            if (!(atk instanceof com.solegendary.reignofnether.unit.interfaces.AttackerUnit) || foe == null) {
+                helper.fail("could not create " + net.minecraft.world.entity.EntityType.getKey(types.get(i)) + " as an attacker");
+                for (var e : attackers) e.discard();
+                for (var e : foes) e.discard();
+                return;
+            }
+            boolean ranged = atk instanceof com.solegendary.reignofnether.unit.units.verdant.ThornbowUnit;
+            BlockPos row = helper.absolutePos(new BlockPos(ranged ? 2 : 4, 2, 1 + i * 3));
+            atk.moveTo(row.getX() + 0.5, row.getY(), row.getZ() + 0.5, -90, 0);
+            foe.moveTo(row.getX() + (ranged ? 7.5 : 2.5), row.getY(), row.getZ() + 0.5, 90, 0);
+            ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).setOwnerName(owner);
+            foe.setOwnerName(foeOwner);
+            level.addFreshEntity(atk);
+            level.addFreshEntity(foe);
+            attackers.add(atk);
+            foes.add(foe);
+        }
+        helper.runAfterDelay(3, () -> {
+            for (int i = 0; i < attackers.size(); i++)
+                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
+        });
+        boolean[] landed = new boolean[attackers.size()];
+        boolean[] rooted = { false };
+        int thornbow = 3;
+        for (int t = 4; t < 200; t++)
+            helper.runAfterDelay(t, () -> {
+                for (int i = 0; i < attackers.size(); i++) {
+                    var atk = attackers.get(i);
+                    var hit = atk.getLastHurtMob();
+                    if (hit instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && foeOwner.equals(u.getOwnerName()))
+                        landed[i] = true;
+                    if (foes.get(i).getLastHurtByMob() == atk)
+                        landed[i] = true;
+                }
+                var mark = foes.get(thornbow).getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+                if (mark != null && mark.getAmplifier()
+                        >= com.solegendary.reignofnether.unit.units.verdant.ThornbowUnit.ROOT_AMPLIFIER)
+                    rooted[0] = true;
+            });
+        helper.runAfterDelay(200, () -> {
+            List<String> problems = new ArrayList<>();
+            for (int i = 0; i < attackers.size(); i++)
+                if (!landed[i])
+                    problems.add(net.minecraft.world.entity.EntityType.getKey(types.get(i)).getPath() + " never hit its target");
+            if (!rooted[0])
+                problems.add("the Thornbow's arrows did not root their target");
+            for (var e : attackers) e.discard();
+            for (var e : foes) e.discard();
+            if (!problems.isEmpty())
+                helper.fail(String.join("; ", problems));
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The Grove Warden: Thornburst hits and roots the enemy in its cone, spares the friend in it and the enemy behind the
+     * commander, charges energy and cools down; Wildstride speeds a nearby ally. Leaf Dash carries a Leafblade most of
+     * its length and cuts the enemy it passes.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void verdant_thornburst_wildstride_and_leaf_dash(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        String owner = "gametest_verdant_warden", foeOwner = "gametest_verdant_target";
+        var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+        pool.addEnergy(500);
+        com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+        var seed = com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get();
+        var vill = com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+        var warden = seed.create(level);
+        var inCone = vill.create(level);       // ahead, off the centre line: a line D-gun would miss it, the cone not
+        var friend = vill.create(level);       // ahead, ours
+        var behind = vill.create(level);       // behind the commander
+        var blade = com.solegendary.reignofnether.registrars.EntityRegistrar.LEAFBLADE_UNIT.get().create(level);
+        var onPath = vill.create(level);       // in the Leafblade's way
+        if (warden == null || inCone == null || friend == null || behind == null || blade == null || onPath == null) {
+            helper.fail("could not create the Verdant test units");
+            return;
+        }
+        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 4));
+        warden.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        inCone.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 2.5, 0, 0);    // ~24 degrees off +x, 5.7 blocks
+        friend.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        behind.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        BlockPos lane = helper.absolutePos(new BlockPos(2, 2, 11));
+        blade.moveTo(lane.getX() + 0.5, lane.getY(), lane.getZ() + 0.5, -90, 0);
+        onPath.moveTo(lane.getX() + 4.5, lane.getY(), lane.getZ() + 0.5, 0, 0);
+        warden.setOwnerName(owner);
+        friend.setOwnerName(owner);
+        blade.setOwnerName(owner);
+        inCone.setOwnerName(foeOwner);
+        behind.setOwnerName(foeOwner);
+        onPath.setOwnerName(foeOwner);
+        List<net.minecraft.world.entity.Mob> all = List.of(warden, inCone, friend, behind, blade, onPath);
+        for (var e : all)
+            level.addFreshEntity(e);
+        com.solegendary.reignofnether.player.CommanderServerEvents.makeCommander(warden);
+        com.solegendary.reignofnether.ability.abilities.CommanderDGun dgun = null;
+        com.solegendary.reignofnether.ability.abilities.CommanderAbility wild = null;
+        for (var a : warden.getAbilities().get()) {
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderDGun d) dgun = d;
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility c) wild = c;
+        }
+        com.solegendary.reignofnether.ability.abilities.LeafDash dash = null;
+        for (var a : blade.getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.LeafDash d) dash = d;
+        if (dgun == null || wild == null || dash == null) {
+            helper.fail("missing ability: Thornburst " + dgun + ", Wildstride " + wild + ", Leaf Dash " + dash);
+            for (var e : all) e.discard();
+            com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            return;
+        }
+        final var thornburst = dgun;
+        final var wildstride = wild;
+        helper.runAfterDelay(5, () -> {
+            try {
+                float friendHp = friend.getHealth(), behindHp = behind.getHealth(), pathHp = onPath.getHealth();
+                thornburst.use(level, warden, BlockPos.containing(at.getX() + 12, at.getY(), at.getZ()));
+                if (inCone.isAlive() && inCone.getMaxHealth() - inCone.getHealth() < 40)
+                    helper.fail("Thornburst barely hurt the enemy in its cone: " + inCone.getHealth());
+                if (inCone.isAlive() && !inCone.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN))
+                    helper.fail("Thornburst did not root the enemy it hit");
+                if (friend.getHealth() < friendHp)
+                    helper.fail("Thornburst hurt a friendly unit");
+                if (behind.getHealth() < behindHp)
+                    helper.fail("Thornburst hurt an enemy behind the commander");
+                if (pool.getEnergy() > 500 - com.solegendary.reignofnether.ability.abilities.CommanderDGun.ENERGY_COST + 0.01)
+                    helper.fail("Thornburst did not charge energy: " + pool.getEnergy());
+                if (thornburst.isOffCooldown(warden))
+                    helper.fail("Thornburst did not go on cooldown");
+
+                wildstride.use(level, warden, warden.blockPosition());
+                if (!friend.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED))
+                    helper.fail("Wildstride did not speed the nearby ally");
+                if (behind.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED))
+                    helper.fail("Wildstride sped an enemy");
+
+                double x0 = blade.getX();
+                var d = com.solegendary.reignofnether.ability.abilities.LeafDash.begin(level, blade, owner,
+                    new net.minecraft.world.phys.Vec3(lane.getX() + 12.5, lane.getY(), lane.getZ() + 0.5), null);
+                if (d == null) {
+                    helper.fail("Leaf Dash refused to start");
+                    return;
+                }
+                // stepped by hand: the test must not depend on the server tick running the dash
+                com.solegendary.reignofnether.ability.abilities.LeafDash.cancel(d);
+                for (int i = 0; i < com.solegendary.reignofnether.ability.abilities.LeafDash.DURATION_TICKS; i++)
+                    com.solegendary.reignofnether.ability.abilities.LeafDash.step(d);
+                if (blade.getX() - x0 < com.solegendary.reignofnether.ability.abilities.LeafDash.LENGTH - 2)
+                    helper.fail("the Leafblade only dashed " + (blade.getX() - x0) + " blocks");
+                if (onPath.isAlive() && onPath.getHealth() >= pathHp)
+                    helper.fail("Leaf Dash did not cut the enemy on its path");
+                helper.succeed();
+            } finally {
+                for (var e : all)
+                    e.discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.remove(pool);
+            }
+        });
+    }
+
+    /**
      * Wildlife never hunts a commander: neutralAggro points every wild hunter (Alex's Mobs roadrunners, rattlesnakes...)
      * at the closest unit, and a commander killed by one lost a 1v1 to a bird (the flaky bot soak). A wild wolf may
      * still go for an ordinary unit, and an enemy unit may still target the commander.
@@ -2324,6 +2666,7 @@ public class SkirmishGameTests {
         else
             helper.succeed();
     }
+
 
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);

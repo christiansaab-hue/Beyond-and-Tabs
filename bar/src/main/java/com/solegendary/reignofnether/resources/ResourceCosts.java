@@ -43,6 +43,12 @@ public class ResourceCosts {
     public static final ResourceCost EMBALMER = new ResourceCost(ID, "EMBALMER");
     public static final ResourceCost ROYAL_ARCHITECT = new ResourceCost(ID, "ROYAL_ARCHITECT");
     public static final ResourceCost SUN_COLOSSUS = new ResourceCost(ID, "SUN_COLOSSUS");
+    // Verdant Court
+    public static final ResourceCost SEEDSHAPER = new ResourceCost(ID, "SEEDSHAPER");
+    public static final ResourceCost FOX_COURIER = new ResourceCost(ID, "FOX_COURIER");
+    public static final ResourceCost LEAFBLADE = new ResourceCost(ID, "LEAFBLADE");
+    public static final ResourceCost THORNBOW = new ResourceCost(ID, "THORNBOW");
+    public static final ResourceCost SENTINEL_TREANT = new ResourceCost(ID, "SENTINEL_TREANT");
     public static final ResourceCost BONE_DRAGON = new ResourceCost(ID, "BONE_DRAGON");
     public static final ResourceCost GRUNT = new ResourceCost(ID, "GRUNT");
     public static final ResourceCost STRIDER = new ResourceCost(ID, "STRIDER");
@@ -99,6 +105,9 @@ public class ResourceCosts {
     public static final ResourceCost ALTAR_OF_DARKNESS = new ResourceCost(ID, "ALTAR_OF_DARKNESS");
     public static final ResourceCost MONSTER_MARKET = new ResourceCost(ID, "MONSTER_MARKET");
     //VillagersFaction
+    //Verdant Court
+    public static final ResourceCost HEARTWOOD_HALL = new ResourceCost(ID, "HEARTWOOD_HALL");
+    public static final ResourceCost GROVE = new ResourceCost(ID, "GROVE");
     public static final ResourceCost TOWN_CENTRE = new ResourceCost(ID, "TOWN_CENTRE");
     public static final ResourceCost VILLAGER_HOUSE = new ResourceCost(ID, "VILLAGER_HOUSE");
     public static final ResourceCost WHEAT_FARM = new ResourceCost(ID, "WHEAT_FARM");
@@ -272,6 +281,11 @@ public class ResourceCosts {
         EMBALMER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.EMBALMER);
         ROYAL_ARCHITECT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROYAL_ARCHITECT);
         SUN_COLOSSUS.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SUN_COLOSSUS);
+        SEEDSHAPER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SEEDSHAPER);
+        FOX_COURIER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.FOX_COURIER);
+        LEAFBLADE.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.LEAFBLADE);
+        THORNBOW.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.THORNBOW);
+        SENTINEL_TREANT.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.SENTINEL_TREANT);
         BONE_DRAGON.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.BONE_DRAGON);
         ROYAL_GUARD.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ROYAL_GUARD);
         ENCHANTER.bakeValues(ReignOfNetherCommonConfigs.UnitCosts.ENCHANTER);
@@ -328,6 +342,8 @@ public class ResourceCosts {
         MONSTER_MARKET.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.MONSTER_MARKET);
         // VillagersFaction
         TOWN_CENTRE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.TOWN_CENTRE);
+        HEARTWOOD_HALL.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.HEARTWOOD_HALL);
+        GROVE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.GROVE);
         VILLAGER_HOUSE.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.VILLAGER_HOUSE);
         WHEAT_FARM.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.WHEAT_FARM);
         BARRACKS.bakeValues(ReignOfNetherCommonConfigs.BuildingCosts.BARRACKS);

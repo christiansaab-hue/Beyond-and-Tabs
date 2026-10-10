@@ -8,6 +8,7 @@ import com.solegendary.reignofnether.unit.units.monsters.*;
 import com.solegendary.reignofnether.unit.units.neutral.*;
 import com.solegendary.reignofnether.unit.units.piglins.*;
 import com.solegendary.reignofnether.unit.units.villagers.*;
+import com.solegendary.reignofnether.unit.units.verdant.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -202,6 +203,37 @@ public class EntityRegistrar {
                            EntityType.IRON_GOLEM.getHeight() * com.solegendary.reignofnether.unit.units.villagers.SunColossusUnit.SCALE)
                     .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
                     .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sun_colossus_unit").toString()));
+
+    // Verdant Court (design/verdant_court_plan.md, slice 1)
+    public static final RegistryObject<EntityType<SeedshaperUnit>> SEEDSHAPER_UNIT = ENTITIES.register("seedshaper_unit",
+            () -> EntityType.Builder.of(SeedshaperUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "seedshaper_unit").toString()));
+
+    public static final RegistryObject<EntityType<FoxCourierUnit>> FOX_COURIER_UNIT = ENTITIES.register("fox_courier_unit",
+            () -> EntityType.Builder.of(FoxCourierUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.FOX.getWidth(), EntityType.FOX.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "fox_courier_unit").toString()));
+
+    public static final RegistryObject<EntityType<LeafbladeUnit>> LEAFBLADE_UNIT = ENTITIES.register("leafblade_unit",
+            () -> EntityType.Builder.of(LeafbladeUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.VINDICATOR.getWidth(), EntityType.VINDICATOR.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "leafblade_unit").toString()));
+
+    public static final RegistryObject<EntityType<ThornbowUnit>> THORNBOW_UNIT = ENTITIES.register("thornbow_unit",
+            () -> EntityType.Builder.of(ThornbowUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.SKELETON.getWidth(), EntityType.SKELETON.getHeight())
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "thornbow_unit").toString()));
+
+    public static final RegistryObject<EntityType<SentinelTreantUnit>> SENTINEL_TREANT_UNIT = ENTITIES.register("sentinel_treant_unit",
+            () -> EntityType.Builder.of(SentinelTreantUnit::new, MobCategory.CREATURE)
+                    .sized(EntityType.IRON_GOLEM.getWidth() * 1.1f, EntityType.IRON_GOLEM.getHeight() * 1.1f)
+                    .clientTrackingRange(UNIT_CLIENT_TRACKING_RANGE)
+                    .build(ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, "sentinel_treant_unit").toString()));
 
     public static final RegistryObject<EntityType<com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit>> BONE_DRAGON_UNIT = ENTITIES.register("bone_dragon_unit",
             () -> EntityType.Builder.of(com.solegendary.reignofnether.unit.units.monsters.BoneDragonUnit::new, MobCategory.CREATURE)
@@ -521,6 +553,11 @@ public class EntityRegistrar {
             case WindcallerProd.itemName -> EntityRegistrar.WINDCALLER_UNIT.get();
             case IronGolemProd.itemName -> EntityRegistrar.IRON_GOLEM_UNIT.get();
             case com.solegendary.reignofnether.unit.units.villagers.SunColossusProd.itemName -> EntityRegistrar.SUN_COLOSSUS_UNIT.get();
+            case SeedshaperProd.itemName -> EntityRegistrar.SEEDSHAPER_UNIT.get();
+            case FoxCourierProd.itemName -> EntityRegistrar.FOX_COURIER_UNIT.get();
+            case LeafbladeProd.itemName -> EntityRegistrar.LEAFBLADE_UNIT.get();
+            case ThornbowProd.itemName -> EntityRegistrar.THORNBOW_UNIT.get();
+            case SentinelTreantProd.itemName -> EntityRegistrar.SENTINEL_TREANT_UNIT.get();
             case WitchProd.itemName -> EntityRegistrar.WITCH_UNIT.get();
             case EvokerProd.itemName -> EntityRegistrar.EVOKER_UNIT.get();
             case SlimeProd.itemName -> EntityRegistrar.SLIME_UNIT.get();
