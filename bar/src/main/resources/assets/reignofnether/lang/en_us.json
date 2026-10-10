@@ -628,6 +628,7 @@
   "building.reignofnether.outside_map": "Outside or too close to map border",
   "building.reignofnether.ground_not_flat": "Ground is not flat enough",
   "building.reignofnether.too_close": "Too close to another building",
+  "building.reignofnether.needs_t2_worker": "Only a T2 constructor can build this",
   "building.reignofnether.must_be_nether": "Must be built on nether terrain",
   "building.reignofnether.must_be_liquid": "Must be placed in water or lava connected to land",
   "building.reignofnether.unexplored": "Area is unexplored",

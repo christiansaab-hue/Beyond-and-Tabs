@@ -434,6 +434,16 @@ public class BuildingServerEvents {
             newBuilding.freeBuild = fromCommand;
 
             boolean isSandbox = SandboxServer.isAnyoneASandboxPlayer();
+            // only a T2 constructor may raise a T3 lab (the build button checks the selection; this stops a crafted
+            // packet). A fog-queued site re-placed by its worker (ignoreFog, no builder ids) was checked when queued.
+            boolean fogRequeue = ignoreFog && (builderUnitIds == null || builderUnitIds.length == 0);
+            if (!fromCommand && !isSandbox && !fogRequeue
+                    && !ResearchServerEvents.playerHasCheat(ownerName, "modifythephasevariance")
+                    && !com.solegendary.reignofnether.unit.T2Workers.buildersMayPlace(serverLevel, newBuilding.getBuilding(), builderUnitIds)) {
+                HudClientboundPacket.showTempMessageI18n(ownerName, "building.reignofnether.needs_t2_worker");
+                FogBuildingClientboundPacket.removeFogQueuedBuilding(originPos);
+                return null;
+            }
             if (!fromCommand && !isSandbox && !BuildingValidators.isInBrightChunk(serverLevel, newBuilding.centrePos, ownerName) && !ignoreFog) {
                 for (int id : builderUnitIds) {
                     Entity entity = serverLevel.getEntity(id);
