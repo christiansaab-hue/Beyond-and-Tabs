@@ -422,8 +422,12 @@ public class SkirmishGameTests {
                 helper.fail("test wreck did not spawn");
                 return;
             }
-            if (com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner) != 0)
-                helper.fail("raised a Ghoul with no population room");
+            int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
+            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
+            int none = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
+            com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+            if (none != 0)
+                helper.fail("raised a Ghoul past the unit cap");
             com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
             int popBefore = com.solegendary.reignofnether.unit.UnitServerEvents.getCurrentPopulation(owner);
             int raised = com.solegendary.reignofnether.ability.abilities.RaiseDead.raise(level, lich, owner);
@@ -604,8 +608,12 @@ public class SkirmishGameTests {
         ServerLevel level = helper.getLevel();
         String owner = "gametest_wyrm";
         BlockPos at = helper.absolutePos(new BlockPos(14, 2, 2));
-        if (com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at) != null)
-            helper.fail("raised a skeleton with no population room");
+        int cap = com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation;   // no supply now: test the unit cap
+        com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = 0;
+        var none = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
+        com.solegendary.reignofnether.unit.UnitServerEvents.maxPopulation = cap;
+        if (none != null)
+            helper.fail("raised a skeleton past the unit cap");
         com.solegendary.reignofnether.research.ResearchServerEvents.addCheat(owner, "foodforthought");
         var risen = com.solegendary.reignofnether.unit.DragonRaiseServerEvents.raise(level, owner, at);
         com.solegendary.reignofnether.research.ResearchServerEvents.removeCheat(owner, "foodforthought");
