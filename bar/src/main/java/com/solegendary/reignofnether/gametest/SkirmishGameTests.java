@@ -3722,8 +3722,10 @@ public class SkirmishGameTests {
         List<net.minecraft.world.entity.Mob> all = List.of(friend, loner, packA, packB);
         for (var e : all)
             level.addFreshEntity(e);
-        helper.runAfterDelay(5, () -> {
-            com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        // all in this one tick, then discarded: the treants (enemies of every other test's units) must never live long
+        // enough for a neighbouring test's archer to pick one as a target
+        com.solegendary.reignofnether.research.ResearchServerEvents.removeAllResearchFor(owner);
+        {
             try {
                 float friendHp = friend.getHealth();
                 if (oak.strike(level, foeOwner) != null)
@@ -3764,7 +3766,7 @@ public class SkirmishGameTests {
                 for (var e : all)
                     e.discard();
             }
-        });
+        }
     }
 
     static ResourceLocation rl(String path) {
