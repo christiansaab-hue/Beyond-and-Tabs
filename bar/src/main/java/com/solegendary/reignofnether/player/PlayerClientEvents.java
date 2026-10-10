@@ -321,6 +321,7 @@ public class PlayerClientEvents {
         RTSMapInfoClientEvents.reset();
         MinimapClientEvents.clearVirtualUnits();
         PlayerDisplayClientEvents.clearAll();
+        com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.clear();
         rtsPlayers.clear();
     }
 
@@ -371,6 +372,7 @@ public class PlayerClientEvents {
     public static void resetRTS(boolean hardReset) {
         boolean isSandboxOrScenario = SandboxClientEvents.isSandboxPlayer() || GameruleClient.scenarioMode;
         rtsPlayers.clear();
+        com.solegendary.reignofnether.hud.playerdisplay.PlayerPanelClientEvents.clear();
         FogOfWarClientEvents.refreshLocalIsRTSPlayer();
         HelperButtons.updateButtons();
         SoundClientEvents.stopFadeableMusicInstance();

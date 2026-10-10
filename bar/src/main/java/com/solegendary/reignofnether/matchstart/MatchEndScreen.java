@@ -20,6 +20,8 @@ import java.util.Map;
 // End-of-match stats popup. A compact, centered panel (battlefield stays visible behind
 // it) that groups players by team into WINNER / LOSER sections, showing each player's
 // cumulative match totals plus a per-team party total. Opened by MatchEndClientEvents.
+// An 8v8 (16 rows + awards) does not fit at GUI scale 2-3 on 1080p, so the panel first switches to compact rows
+// (small heads, party total and resources on one line) and, if even that is too tall, scrolls with the mouse wheel.
 public class MatchEndScreen extends Screen {
 
     // score array indices (order of RTSPlayerScoresEnum.values())
@@ -45,6 +47,13 @@ public class MatchEndScreen extends Screen {
     private static final int LINE_H = 12;
     private static final int TEAM_GAP = 10;
     private static final int HEAD = 16;
+    // compact layout
+    private static final int HEADER_H_C = 24;
+    private static final int TEAM_HEADER_H_C = 12;
+    private static final int ROW_H_C = 11;
+    private static final int TEAM_GAP_C = 5;
+    private static final int HEAD_C = 9;
+    private static final int SCROLL_STEP = 24;
 
     // column x-offsets (right edge) from the panel's left content edge
     private static final int COL_UNITS = 230;
@@ -61,6 +70,9 @@ public class MatchEndScreen extends Screen {
     // BAR-style award lines ("Most damage dealt: X (12,345)"), precomputed once - only awards someone actually earned
     private final List<String> awards = new ArrayList<>();
     private int panelL, panelT, panelW, panelH;
+    private boolean compact = false;
+    private int contentH = 0;   // full height of everything inside the panel; > panelH means it scrolls
+    private int scroll = 0;
 
     public MatchEndScreen() {
         super(Component.translatable("matchend.reignofnether.title"));
@@ -103,19 +115,38 @@ public class MatchEndScreen extends Screen {
 
     @Override
     protected void init() {
-        panelW = PANEL_W;
-        panelH = PAD + HEADER_H + LINE_H; // header + column-header row
-        for (Team t : teams)
-            panelH += TEAM_HEADER_H + t.members.size() * ROW_H + LINE_H + LINE_H + TEAM_GAP;
-        if (!awards.isEmpty())
-            panelH += LINE_H + 4 + awards.size() * LINE_H; // "Awards" header + divider + one line each
-        panelH += PAD;
+        panelW = Math.min(PANEL_W, this.width - 8);
+        int maxH = this.height - 8;
+        compact = contentHeight(false) > maxH;
+        contentH = contentHeight(compact);
+        panelH = Math.min(contentH, maxH);
+        scroll = Math.max(0, Math.min(scroll, contentH - panelH));
         panelL = (this.width - panelW) / 2;
         panelT = (this.height - panelH) / 2;
 
         // [X] close button, top-right corner of the panel
         addRenderableWidget(Button.builder(Component.literal("✕"), b -> onClose())
                 .bounds(panelL + panelW - 26, panelT + 5, 20, 20).build());
+    }
+
+    private int contentHeight(boolean c) {
+        int h = PAD + (c ? HEADER_H_C : HEADER_H) + LINE_H; // header + column-header row
+        for (Team t : teams)   // team header, rows, party total (+ resources line unless compact), gap
+            h += (c ? TEAM_HEADER_H_C : TEAM_HEADER_H) + t.members.size() * (c ? ROW_H_C : ROW_H)
+                + (c ? LINE_H : LINE_H * 2) + (c ? TEAM_GAP_C : TEAM_GAP);
+        if (!awards.isEmpty())
+            h += LINE_H + 4 + awards.size() * LINE_H; // "Awards" header + divider + one line each
+        return h + PAD;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        int maxScroll = contentH - panelH;
+        if (maxScroll > 0) {
+            scroll = Math.max(0, Math.min(maxScroll, scroll - (int) Math.signum(delta) * SCROLL_STEP));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, delta);
     }
 
     @Override
@@ -128,13 +159,20 @@ public class MatchEndScreen extends Screen {
 
         int cl = panelL + PAD;               // content left
         int cr = panelL + panelW - PAD;      // content right
-        int y = panelT + PAD;
+        int y = panelT + PAD - scroll;
+        int head = compact ? HEAD_C : HEAD;
+        int rowH = compact ? ROW_H_C : ROW_H;
+        int nameX = cl + head + 4 + head + 4;
+        boolean scrolls = contentH > panelH;
+        if (scrolls)
+            g.enableScissor(panelL + 1, panelT + 1, panelL + panelW - 1, panelT + panelH - 1);
 
         // header: title + duration
-        g.drawString(font, Component.translatable("matchend.reignofnether.title"), cl, y + 4, ACCENT, true);
+        int headerY = compact ? y : y + 4;
+        g.drawString(font, Component.translatable("matchend.reignofnether.title"), cl, headerY, ACCENT, true);
         String dur = TimeUtils.getTimeStrFromTicks(MatchEndClientEvents.getGameDurationTicks());
-        g.drawString(font, dur, cr - 34 - font.width(dur), y + 4, TEXT_DIM, true);
-        y += HEADER_H - 6;
+        g.drawString(font, dur, cr - 34 - font.width(dur), headerY, TEXT_DIM, true);
+        y += (compact ? HEADER_H_C : HEADER_H) - 6;
         g.fill(cl, y, cr, y + 1, DIVIDER);
         y += 4;
 
@@ -150,42 +188,47 @@ public class MatchEndScreen extends Screen {
         for (Team t : teams) {
             // team header: WINNER / LOSER
             Component label = Component.translatable(t.winner ? "matchend.reignofnether.winner" : "matchend.reignofnether.loser");
-            g.drawString(font, label, cl, y + 4, t.winner ? WIN_COL : LOSE_COL, true);
-            y += TEAM_HEADER_H;
+            g.drawString(font, label, cl, compact ? y + 2 : y + 4, t.winner ? WIN_COL : LOSE_COL, true);
+            y += compact ? TEAM_HEADER_H_C : TEAM_HEADER_H;
 
             for (MatchStatRow row : t.members) {
                 if (row.name.equals(localName))
-                    g.fill(cl - 2, y - 1, cr + 2, y + HEAD + 1, BG_ROW_SELF);
+                    g.fill(cl - 2, y - 1, cr + 2, y + head + 1, BG_ROW_SELF);
 
                 // player head
                 ResourceLocation skin = MyRenderer.getPlayerSkinRl(row.name);
-                g.blit(skin, cl, y, HEAD, HEAD, 8.0f, 8.0f, 8, 8, 64, 64);
-                g.blit(skin, cl, y, HEAD, HEAD, 40.0f, 8.0f, 8, 8, 64, 64);
+                g.blit(skin, cl, y, head, head, 8.0f, 8.0f, 8, 8, 64, 64);
+                g.blit(skin, cl, y, head, head, 40.0f, 8.0f, 8, 8, 64, 64);
 
                 // faction icon
                 ResourceLocation fIcon = row.faction.icon;
                 if (fIcon != null)
-                    MyRenderer.renderIcon(g, fIcon, cl + HEAD + 4, y, HEAD);
+                    MyRenderer.renderIcon(g, fIcon, cl + head + 4, y, head);
 
-                int textY = y + (HEAD - font.lineHeight) / 2;
-                g.drawString(font, row.name, cl + HEAD + 4 + HEAD + 4, textY, TEXT_NORMAL, true);
+                int textY = y + (head - font.lineHeight) / 2 + (compact ? 1 : 0);
+                g.drawString(font, row.name, nameX, textY, TEXT_NORMAL, true);
                 drawNum(g, row.score(SCORE_UNITS), cl + COL_UNITS, textY, TEXT_NORMAL);
                 drawNum(g, row.score(SCORE_MILITARY), cl + COL_MIL, textY, TEXT_NORMAL);
                 drawNum(g, row.score(SCORE_BUILDINGS), cl + COL_BLDG, textY, TEXT_NORMAL);
-                y += ROW_H;
+                y += rowH;
             }
 
             // party total line
             String totalLabel = Component.translatable("matchend.reignofnether.party_total").getString();
-            g.drawString(font, totalLabel, cl + HEAD + 4 + HEAD + 4, y, TEXT_DIM, true);
+            g.drawString(font, totalLabel, nameX, y, TEXT_DIM, true);
             drawNum(g, t.units, cl + COL_UNITS, y, ACCENT);
             drawNum(g, t.military, cl + COL_MIL, y, ACCENT);
             drawNum(g, t.buildings, cl + COL_BLDG, y, ACCENT);
-            y += LINE_H;
-            // party resource total
+            // party resource total: own line, or after the total label when compact
             String res = Component.translatable("matchend.reignofnether.resources", String.format("%,d", t.resources)).getString();
-            g.drawString(font, res, cl + HEAD + 4 + HEAD + 4, y, TEXT_DIM, true);
-            y += LINE_H + TEAM_GAP;
+            if (compact) {
+                g.drawString(font, res, nameX + font.width(totalLabel) + 8, y, TEXT_DIM, true);
+                y += LINE_H + TEAM_GAP_C;
+            } else {
+                y += LINE_H;
+                g.drawString(font, res, nameX, y, TEXT_DIM, true);
+                y += LINE_H + TEAM_GAP;
+            }
         }
 
         if (!awards.isEmpty()) {
@@ -197,6 +240,16 @@ public class MatchEndScreen extends Screen {
                 g.drawString(font, award, cl + 8, y, TEXT_NORMAL, true);
                 y += LINE_H;
             }
+        }
+
+        if (scrolls) {
+            g.disableScissor();
+            // scrollbar along the right edge
+            int trackT = panelT + 30, trackB = panelT + panelH - 4, trackH = trackB - trackT;
+            int thumbH = Math.max(12, trackH * panelH / contentH);
+            int thumbT = trackT + (trackH - thumbH) * scroll / Math.max(1, contentH - panelH);
+            g.fill(panelL + panelW - 5, trackT, panelL + panelW - 3, trackB, 0x40FFFFFF);
+            g.fill(panelL + panelW - 5, thumbT, panelL + panelW - 3, thumbT + thumbH, 0xC0FFFFFF);
         }
 
         super.render(g, mouseX, mouseY, partialTick); // renders the [X] button

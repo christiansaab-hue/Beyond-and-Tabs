@@ -402,6 +402,34 @@ public class SkirmishGameTests {
     }
 
     /**
+     * Player panel: the roster each player receives lists itself, then its allies, then enemies, and only its own
+     * and its allies' lines carry income / commander health (an enemy's economy must never be sent).
+     */
+    @GameTest(template = ARENA)
+    public static void player_panel_hides_enemy_economy(GameTestHelper helper) {
+        String me = "gametest_panel_me", ally = "gametest_panel_ally", foe = "gametest_panel_foe";
+        List<com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row> rows = List.of(
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(foe, "", true, 9, 90, 0.5f),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(ally, "", true, 3, 30, 1f),
+            new com.solegendary.reignofnether.player.PlayerPanelServerEvents.Row(me, "", true, 2, 20, 0.25f));
+        com.solegendary.reignofnether.alliance.AlliancesServerEvents.addAlliance(me, ally);
+        try {
+            var list = com.solegendary.reignofnether.player.PlayerPanelServerEvents.entriesFor(me, rows);
+            if (list.size() != 3 || !list.get(0).name().equals(me) || !list.get(1).name().equals(ally)
+                    || !list.get(2).name().equals(foe))
+                helper.fail("expected order me, ally, foe");
+            else if (!list.get(0).hasAllyData() || !list.get(1).hasAllyData() || list.get(1).metalIncome() != 3)
+                helper.fail("own and allied lines should carry income");
+            else if (list.get(2).hasAllyData() || list.get(2).metalIncome() != 0 || list.get(2).commanderHp() >= 0)
+                helper.fail("the enemy line leaked economy / commander data");
+            else
+                helper.succeed();
+        } finally {
+            com.solegendary.reignofnether.alliance.AlliancesServerEvents.removeAlliance(me, ally);
+        }
+    }
+
+    /**
      * Nanolathe feedback: a worker standing at its own construction site sends NANO beam events while the site is
      * unfinished. Checks the per-worker record BarFx keeps for its rate limit, so it never depends on global counts.
      */

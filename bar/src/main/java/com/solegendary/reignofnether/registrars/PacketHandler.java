@@ -486,5 +486,11 @@ public final class PacketHandler {
                 .decoder(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket::new)
                 .consumerMainThread(com.solegendary.reignofnether.unit.packets.AreaCommandServerboundPacket::handle)
                 .add();
+        // BAR player list: roster + allied income / commander health every 2 s (PlayerPanelServerEvents)
+        INSTANCE.messageBuilder(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket.class, index++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::encode)
+                .decoder(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::decode)
+                .consumerMainThread(com.solegendary.reignofnether.player.PlayerPanelClientboundPacket::handle)
+                .add();
     }
 }
