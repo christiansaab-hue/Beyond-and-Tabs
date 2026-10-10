@@ -26,7 +26,8 @@ import java.util.Set;
  * paladins is the Kingdom's whole game; caught alone in the open, its crossbows are ordinary.
  *
  * The full design also gives formations +4 range around a banner-bearer; that waits for the banner-bearer unit.
- * Cost: recomputed once a second over Sunforged fighters only; modifiers change only when the state flips.
+ * Cost: recomputed once a second; guards are found through UnitGrid (only nearby cells), and modifiers change
+ * only when the state flips.
  */
 public class FormationServerEvents {
 
@@ -35,6 +36,7 @@ public class FormationServerEvents {
     public static final float BONUS = 0.25f;
 
     private static final Set<Integer> inFormation = new HashSet<>();
+    private static final List<LivingEntity> scratch = new ArrayList<>();   // grid query results, reused
 
     public static boolean isInFormation(LivingEntity le) {
         return inFormation.contains(le.getId());
@@ -64,21 +66,24 @@ public class FormationServerEvents {
     public static void update(ServerLevel level) {
         Set<Integer> was = new HashSet<>(inFormation);
         inFormation.clear();
-        List<LivingEntity> ranged = new ArrayList<>(), guards = new ArrayList<>();
+        List<LivingEntity> ranged = new ArrayList<>();
         for (LivingEntity le : UnitServerEvents.getAllUnits()) {
-            if (le.level() != level || !le.isAlive() || !(le instanceof Unit u) || !isKingdom(u))
-                continue;
-            if (le instanceof RangedAttackerUnit && !(le instanceof WorkerUnit))
+            if (le instanceof RangedAttackerUnit && !(le instanceof WorkerUnit) && le.level() == level && le.isAlive()
+                    && le instanceof Unit u && isKingdom(u))
                 ranged.add(le);
-            else if (isGuard(le))
-                guards.add(le);
         }
+        // guards come from the shared spatial grid: only the units in the cells around each shooter are looked at,
+        // instead of every Sunforged fighter on the map per shooter
         double r2 = RADIUS * RADIUS;
         for (LivingEntity shooter : ranged) {
             String owner = ((Unit) shooter).getOwnerName();
             int n = 0;
-            for (LivingEntity g : guards) {
-                if (owner.equals(((Unit) g).getOwnerName()) && g.distanceToSqr(shooter) <= r2 && ++n >= MIN_GUARDS)
+            for (LivingEntity g : UnitGrid.near(level, shooter.getX(), shooter.getZ(), RADIUS, scratch)) {
+                if (g == shooter || g.distanceToSqr(shooter) > r2 || !g.isAlive() || !(g instanceof Unit gu)
+                        || !owner.equals(gu.getOwnerName()) || !isKingdom(gu)
+                        || (g instanceof RangedAttackerUnit && !(g instanceof WorkerUnit)) || !isGuard(g))
+                    continue;
+                if (++n >= MIN_GUARDS)
                     break;
             }
             if (n >= MIN_GUARDS) {

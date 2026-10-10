@@ -31,6 +31,7 @@ public class GuardServerEvents {
     record GuardTarget(int entityId, BlockPos buildingPos) { }
 
     static final Map<Integer, GuardTarget> guards = new ConcurrentHashMap<>();
+    private static final java.util.List<LivingEntity> scratch = new java.util.ArrayList<>();   // UnitGrid results
 
     private static final double PROTECT_RANGE_SQR = 18 * 18;  // engage enemies this close to the ward
     private static final double ESCORT_GAP_SQR = 7 * 7;       // close back up when further than this
@@ -139,16 +140,18 @@ public class GuardServerEvents {
     private static LivingEntity nearestThreat(Unit guard, BlockPos anchor) {
         LivingEntity best = null;
         double bestD = PROTECT_RANGE_SQR;
-        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+        if (!(((LivingEntity) guard).level() instanceof ServerLevel level))
+            return null;
+        // nearby cells only (UnitGrid), and the cheap distance test before the relationship lookup: with many
+        // guards at 8v8 this used to resolve a relationship for every unit on the map, per guard, twice a second
+        for (LivingEntity le : UnitGrid.near(level, anchor.getX() + 0.5, anchor.getZ() + 0.5, 19, scratch)) {
             if (!le.isAlive() || !(le instanceof Unit))
                 continue;
-            if (UnitServerEvents.getUnitToEntityRelationship(guard, le) != Relationship.HOSTILE)
-                continue;
             double d = le.blockPosition().distSqr(anchor);
-            if (d < bestD) {
-                bestD = d;
-                best = le;
-            }
+            if (d >= bestD || UnitServerEvents.getUnitToEntityRelationship(guard, le) != Relationship.HOSTILE)
+                continue;
+            bestD = d;
+            best = le;
         }
         return best;
     }

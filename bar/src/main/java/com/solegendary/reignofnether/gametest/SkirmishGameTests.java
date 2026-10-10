@@ -1512,6 +1512,242 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    // ------------------------------------------------------------------ 8v8 stress benchmark
+
+    static final int STRESS_OWNERS = 8, STRESS_PER_OWNER = 50, STRESS_WRECKS = 40, STRESS_POINTS = 18;
+    static final int STRESS_WARMUP = 10, STRESS_ITERATIONS = 40;
+    /** Average budget for one pass of every system below, in ms. Most of them run once a second, so this is roomy. */
+    static final double STRESS_BUDGET_MS = 8.0;
+
+    /**
+     * 8v8 scale: 400 units for eight test-only owners (three Sunforged, three Horde, two Gravebound armies whose
+     * clusters overlap, so there are fights everywhere), {@link #STRESS_WRECKS} wrecks and {@link #STRESS_POINTS}
+     * capture sites. Every scaling-sensitive server system is then run directly, {@link #STRESS_ITERATIONS} times,
+     * and timed. The per-system averages are logged ("[Stress]") so a regression shows up in the CI log even while
+     * the total stays under budget. Placed ~3000 blocks west of the test grid (the soak test goes east), spawned,
+     * measured and removed inside one callback, so the units never tick and no other test ever sees them.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void stress_8v8_server_systems_stay_in_budget(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos origin = helper.absolutePos(new BlockPos(8, 1, 8));
+        int baseX = origin.getX() - 3000, baseZ = origin.getZ();
+        final double y = 150;   // floating in the air: no terrain dependence; these units are never ticked
+        // eight overlapping 24x24 clusters on a 4x2 grid 20 blocks apart; their chunks are force-loaded meanwhile
+        List<long[]> chunks = new ArrayList<>();
+        for (int o = 0; o < STRESS_OWNERS; o++) {
+            int cx = baseX + (o % 4) * 20, cz = baseZ + (o / 4) * 20;
+            for (int dx = -16; dx <= 16; dx += 16)
+                for (int dz = -16; dz <= 16; dz += 16) {
+                    long[] c = { (cx + dx) >> 4, (cz + dz) >> 4 };
+                    if (chunks.stream().noneMatch(k -> k[0] == c[0] && k[1] == c[1]))
+                        chunks.add(c);
+                }
+        }
+        for (long[] c : chunks)
+            level.setChunkForced((int) c[0], (int) c[1], true);
+
+        helper.runAfterDelay(40, () -> {
+            var rng = new java.util.Random(8);
+            List<net.minecraft.world.entity.Entity> spawned = new ArrayList<>();
+            List<com.solegendary.reignofnether.resources.Resources> pools = new ArrayList<>();
+            try {
+                for (int o = 0; o < STRESS_OWNERS; o++) {
+                    String owner = "gametest_stress_" + o;
+                    var pool = new com.solegendary.reignofnether.resources.Resources(owner, 0, 0, 0);
+                    com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.add(pool);
+                    pools.add(pool);
+                    int cx = baseX + (o % 4) * 20, cz = baseZ + (o / 4) * 20;
+                    for (int i = 0; i < STRESS_PER_OWNER; i++) {
+                        var e = stressUnitType(o, i).create(level);
+                        if (e == null)
+                            continue;
+                        e.moveTo(cx + rng.nextDouble() * 24 - 12, y, cz + rng.nextDouble() * 24 - 12, rng.nextFloat() * 360, 0);
+                        ((com.solegendary.reignofnether.unit.interfaces.Unit) e).setOwnerName(owner);
+                        level.addFreshEntity(e);
+                        spawned.add(e);
+                    }
+                }
+                for (int i = 0; i < STRESS_WRECKS; i++) {
+                    var w = com.solegendary.reignofnether.resources.WreckServerEvents.spawnWreck(level,
+                        baseX - 12 + rng.nextDouble() * 84, y, baseZ - 12 + rng.nextDouble() * 44, 100000f, null);
+                    if (w != null)
+                        spawned.add(w);
+                }
+                for (int i = 0; i < STRESS_POINTS; i++) {
+                    var m = net.minecraft.world.entity.EntityType.MARKER.create(level);
+                    if (m == null)
+                        continue;
+                    m.moveTo(baseX - 12 + rng.nextDouble() * 84, y, baseZ - 12 + rng.nextDouble() * 44);
+                    m.addTag(com.solegendary.reignofnether.startpos.CapturePointServerEvents.TAG);
+                    level.addFreshEntity(m);
+                    spawned.add(m);
+                }
+
+                // the real code paths (budgeted), then the pre-grid/pre-index ways as a logged reference only
+                String[] names = { "unit grid rebuild", "wreck reclaim", "momentum", "formation", "capture points",
+                    "queue lines", "player panel", "builder lookup x200", "bot enemy scans x64",
+                    "REF builder lookup x200 (old scan)", "REF bot enemy scans x64 (old scan)" };
+                int budgeted = 9;
+                var buildings = com.solegendary.reignofnether.building.BuildingServerEvents.getBuildings();
+                List<net.minecraft.world.entity.LivingEntity> scan = new ArrayList<>();
+                Runnable[] systems = {
+                    () -> {   // paid once per tick by the first grid query; forced here so every pass pays it
+                        com.solegendary.reignofnether.unit.UnitGrid.invalidate();
+                        com.solegendary.reignofnether.unit.UnitGrid.near(level, baseX, baseZ, 1, scan);
+                    },
+                    () -> com.solegendary.reignofnether.resources.WreckServerEvents.tickReclaim(level, 0.05f),
+                    () -> com.solegendary.reignofnether.unit.MomentumServerEvents.sampleAll(level),
+                    () -> com.solegendary.reignofnether.unit.FormationServerEvents.update(level),
+                    () -> com.solegendary.reignofnether.startpos.CapturePointServerEvents.tick(level, 0.05f),
+                    com.solegendary.reignofnether.unit.UnitQueueSync::buildPayloads,
+                    com.solegendary.reignofnether.player.PlayerPanelServerEvents::buildRows,
+                    () -> {   // every building asks for its builders every tick; one index rebuild per tick (a death)
+                        com.solegendary.reignofnether.building.BuilderIndex.invalidate();
+                        int n = 0;
+                        for (int b = 0; b < 200; b++)
+                            n += com.solegendary.reignofnether.building.BuilderIndex.buildersOf(
+                                buildings.isEmpty() ? null : buildings.get(b % buildings.size())).size();
+                        stressSink += n;
+                    },
+                    () -> stressGridEnemyScans(level, 64, 12, scan),
+                    () -> stressNaiveBuilderScans(200),
+                    () -> stressNaiveEnemyScans(64, 12),
+                };
+                long[] total = new long[systems.length];
+                for (int it = 0; it < STRESS_WARMUP + STRESS_ITERATIONS; it++) {
+                    for (var pool : pools)   // keep reclaim paying (full storage would skip its work)
+                        pool.ore = 0;
+                    for (int s = 0; s < systems.length; s++) {
+                        long t0 = System.nanoTime();
+                        systems[s].run();
+                        long dt = System.nanoTime() - t0;
+                        if (it >= STRESS_WARMUP)
+                            total[s] += dt;
+                    }
+                }
+                // the grid must find exactly what the full scan finds
+                int viaGrid = stressGridEnemyScans(level, 64, 12, scan), viaScan = stressNaiveEnemyScans(64, 12);
+                if (viaGrid != viaScan)
+                    helper.fail("UnitGrid found " + viaGrid + " enemies in reach, the full scan " + viaScan);
+                double sum = 0;
+                StringBuilder sb = new StringBuilder();
+                for (int s = 0; s < systems.length; s++) {
+                    double ms = total[s] / 1e6 / STRESS_ITERATIONS;
+                    if (s < budgeted)
+                        sum += ms;
+                    sb.append(String.format(java.util.Locale.ROOT, "%s=%.3fms ", names[s], ms));
+                }
+                int units = 0;
+                for (var e : spawned)
+                    if (e instanceof net.minecraft.world.entity.LivingEntity)
+                        units++;
+                ReignOfNether.LOGGER.info("[Stress] {} units, {} wrecks, {} sites, avg per pass over {} passes: {}| total={}ms (budget {}ms)",
+                    units, STRESS_WRECKS, STRESS_POINTS, STRESS_ITERATIONS, sb,
+                    String.format(java.util.Locale.ROOT, "%.3f", sum), STRESS_BUDGET_MS);
+                if (units < STRESS_OWNERS * STRESS_PER_OWNER * 9 / 10)
+                    helper.fail("only " + units + " stress units spawned");
+                else if (sum > STRESS_BUDGET_MS)
+                    helper.fail(String.format(java.util.Locale.ROOT, "8v8 server systems took %.2f ms per pass (budget %.1f ms): %s",
+                        sum, STRESS_BUDGET_MS, sb));
+            } finally {
+                for (var e : spawned)
+                    e.discard();
+                com.solegendary.reignofnether.resources.ResourcesServerEvents.resourcesList.removeAll(pools);
+                // let the systems drop their now-removed entries (wreck list, capture sites, momentum/formation state)
+                com.solegendary.reignofnether.resources.WreckServerEvents.tickReclaim(level, 0f);
+                com.solegendary.reignofnether.startpos.CapturePointServerEvents.tick(level, 0f);
+                com.solegendary.reignofnether.unit.MomentumServerEvents.sampleAll(level);
+                com.solegendary.reignofnether.unit.FormationServerEvents.update(level);
+                for (long[] c : chunks)
+                    level.setChunkForced((int) c[0], (int) c[1], false);
+            }
+            helper.succeed();
+        });
+    }
+
+    /** Owners 0-2 Sunforged, 3-5 Horde, 6-7 Gravebound; per owner 10 workers, then melee and ranged fighters. */
+    static net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob> stressUnitType(int owner, int i) {
+        int kind = i < 10 ? 0 : i % 2 == 0 ? 1 : 2;   // worker, melee, ranged
+        int faction = owner < 3 ? 0 : owner < 6 ? 1 : 2;
+        switch (faction * 3 + kind) {
+            case 0: return com.solegendary.reignofnether.registrars.EntityRegistrar.VILLAGER_UNIT.get();
+            case 1: return com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get();
+            case 2: return com.solegendary.reignofnether.registrars.EntityRegistrar.PILLAGER_UNIT.get();
+            case 3: return com.solegendary.reignofnether.registrars.EntityRegistrar.GRUNT_UNIT.get();
+            case 4: return com.solegendary.reignofnether.registrars.EntityRegistrar.BRUTE_UNIT.get();
+            case 5: return com.solegendary.reignofnether.registrars.EntityRegistrar.HEADHUNTER_UNIT.get();
+            case 6: return com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_VILLAGER_UNIT.get();
+            case 7: return com.solegendary.reignofnether.registrars.EntityRegistrar.ZOMBIE_UNIT.get();
+            default: return com.solegendary.reignofnether.registrars.EntityRegistrar.SKELETON_UNIT.get();
+        }
+    }
+
+    static int stressSink;   // keeps the JIT from discarding the reference scans below
+
+    /** The pre-index BuildingPlacement.getBuilders body, run once per building as every tick did: the old cost. */
+    static void stressNaiveBuilderScans(int buildings) {
+        int n = 0;
+        for (int b = 0; b < buildings; b++) {
+            List<com.solegendary.reignofnether.unit.interfaces.WorkerUnit> builders = new ArrayList<>();
+            for (var le : com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits())
+                if (le instanceof com.solegendary.reignofnether.unit.interfaces.WorkerUnit wu) {
+                    var goal = wu.getBuildRepairGoal();
+                    if (goal != null && goal.getBuildingTarget() != null && goal.isBuilding())
+                        builders.add(wu);
+                }
+            n += builders.size();
+        }
+        stressSink += n;
+    }
+
+    /** The same check as {@link #stressNaiveEnemyScans}, the way BotPlayer does it now: through UnitGrid. */
+    static int stressGridEnemyScans(ServerLevel level, int casters, double range,
+                                     List<net.minecraft.world.entity.LivingEntity> scan) {
+        var all = com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits();
+        int n = 0;
+        for (int c = 0; c < casters && c < all.size(); c++) {
+            var le = all.get(all.size() - 1 - (c * 5) % all.size());
+            if (!(le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u))
+                continue;
+            String name = u.getOwnerName();
+            for (var other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), range, scan)) {
+                if (!(other instanceof com.solegendary.reignofnether.unit.interfaces.Unit ou) || !other.isAlive()
+                        || other.distanceToSqr(le) > range * range)
+                    continue;
+                String o = ou.getOwnerName();
+                if (o != null && !o.equals(name)
+                        && !com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(name, o))
+                    n++;
+            }
+        }
+        stressSink += n;
+        return n;
+    }
+
+    /** A bot's "three enemies within reach?" check over every unit, for {@code casters} units (the old way). */
+    static int stressNaiveEnemyScans(int casters, double range) {
+        var all = com.solegendary.reignofnether.unit.UnitServerEvents.getAllUnits();
+        int n = 0;
+        for (int c = 0; c < casters && c < all.size(); c++) {
+            var le = all.get(all.size() - 1 - (c * 5) % all.size());
+            if (!(le instanceof com.solegendary.reignofnether.unit.interfaces.Unit u))
+                continue;
+            String name = u.getOwnerName();
+            for (var other : all) {
+                if (!(other instanceof com.solegendary.reignofnether.unit.interfaces.Unit ou) || !other.isAlive()
+                        || other.distanceToSqr(le) > range * range)
+                    continue;
+                String o = ou.getOwnerName();
+                if (o != null && !o.equals(name)
+                        && !com.solegendary.reignofnether.alliance.AlliancesServerEvents.isAllied(name, o))
+                    n++;
+            }
+        }
+        stressSink += n;
+        return n;
+    }
+
     static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(ReignOfNether.MOD_ID, path);
     }

@@ -372,6 +372,10 @@ public class BuildingPlacement {
     }
 
     public ArrayList<WorkerUnit> getBuilders() {
+        // called for every building every server tick: the server uses the target -> workers index (exact, see
+        // BuilderIndex) instead of scanning every unit per building. The client (onBuilt only) keeps the plain scan.
+        if (level != null && !level.isClientSide())
+            return BuilderIndex.buildersOf(this);
         ArrayList<WorkerUnit> builders = new ArrayList<>();
         for (LivingEntity entity : UnitServerEvents.getAllUnits()) {
             if (entity instanceof WorkerUnit workerUnit) {

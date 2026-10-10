@@ -353,6 +353,9 @@ public class BotPlayer {
         }
     }
 
+    /** Reused result list for UnitGrid queries (the think step runs on the server thread, one bot at a time). */
+    final List<LivingEntity> scan = new ArrayList<>();
+
     /** Patches whose extractor placement failed, with the game time of the failure: skipped for two minutes. */
     final java.util.Map<BlockPos, Long> badPatches = new java.util.HashMap<>();
 
@@ -379,6 +382,14 @@ public class BotPlayer {
         BlockPos best = null;
         double bestD = Double.MAX_VALUE;
         for (BlockPos p : MetalPatches.getPatches(level)) {
+            // cheap tests first: the building scans below are patches x buildings (twice), so skip them for any
+            // patch that could not beat the best one anyway - in any patch order that leaves only a handful of scans
+            double d = p.distSqr(home);
+            if (d >= bestD)
+                continue;
+            Long failed = badPatches.get(p);
+            if (failed != null && level.getGameTime() - failed < 20 * 120)
+                continue;
             boolean taken = false;
             for (BuildingPlacement bp : BuildingServerEvents.getBuildings())
                 if (!bp.isDestroyedServerside && bp.originPos.distSqr(p) < 10 * 10) {
@@ -387,18 +398,12 @@ public class BotPlayer {
                 }
             if (taken)
                 continue;
-            Long failed = badPatches.get(p);
-            if (failed != null && level.getGameTime() - failed < 20 * 120)
-                continue;
             // don't send workers to die: skip patches deep in enemy territory (near their buildings)
             BlockPos enemy = nearestEnemyBuildingAny(p);
-            if (enemy != null && enemy.distSqr(p) < 45 * 45 && enemy.distSqr(p) < p.distSqr(home))
+            if (enemy != null && enemy.distSqr(p) < 45 * 45 && enemy.distSqr(p) < d)
                 continue;
-            double d = p.distSqr(home);
-            if (d < bestD) {
-                bestD = d;
-                best = p;
-            }
+            bestD = d;
+            best = p;
         }
         return best;
     }
@@ -412,7 +417,7 @@ public class BotPlayer {
                 if (!(a instanceof com.solegendary.reignofnether.ability.abilities.CommanderAbility) || !a.isOffCooldown(u))
                     continue;
                 int enemies = 0;
-                for (LivingEntity other : UnitServerEvents.getAllUnits()) {
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), 14, scan)) {
                     if (!(other instanceof Unit ou) || !other.isAlive() || other.distanceToSqr(le) > 14 * 14)
                         continue;
                     String o = ou.getOwnerName();
@@ -455,7 +460,7 @@ public class BotPlayer {
                 int enemies = 0;
                 LivingEntity nearest = null;
                 double best = Double.MAX_VALUE;
-                for (LivingEntity other : UnitServerEvents.getAllUnits()) {
+                for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, le.getX(), le.getZ(), 12, scan)) {
                     if (!(other instanceof Unit ou) || !other.isAlive())
                         continue;
                     // the Bone Dragon flies high over the fight: measure its scan flat, or it never sees one
@@ -497,7 +502,7 @@ public class BotPlayer {
                 return;
             LivingEntity target = null;
             double best = 12 * 12;
-            for (LivingEntity other : UnitServerEvents.getAllUnits()) {
+            for (LivingEntity other : com.solegendary.reignofnether.unit.UnitGrid.near(level, commander.getX(), commander.getZ(), 12, scan)) {
                 if (!(other instanceof Unit ou) || !other.isAlive())
                     continue;
                 String o = ou.getOwnerName();
@@ -757,7 +762,7 @@ public class BotPlayer {
     BlockPos nearestEnemyUnit(ServerLevel level, BlockPos from, double range) {
         BlockPos best = null;
         double bestD = range * range;
-        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+        for (LivingEntity le : com.solegendary.reignofnether.unit.UnitGrid.near(level, from.getX() + 0.5, from.getZ() + 0.5, range + 1, scan)) {
             if (!(le instanceof Unit u) || !le.isAlive())
                 continue;
             String owner = u.getOwnerName();

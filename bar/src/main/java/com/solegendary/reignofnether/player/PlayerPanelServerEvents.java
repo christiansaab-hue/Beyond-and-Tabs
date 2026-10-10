@@ -58,7 +58,7 @@ public class PlayerPanelServerEvents {
                 new PlayerPanelClientboundPacket(entriesFor(sp.getName().getString(), rows)));
     }
 
-    static List<Row> buildRows() {
+    public static List<Row> buildRows() {
         List<RTSPlayer> alive = new ArrayList<>();
         List<RTSPlayer> gone = new ArrayList<>();
         synchronized (PlayerServerEvents.rtsPlayers) {

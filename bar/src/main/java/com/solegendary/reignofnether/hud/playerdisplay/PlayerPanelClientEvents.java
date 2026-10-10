@@ -52,7 +52,8 @@ public class PlayerPanelClientEvents {
     public static boolean enabled = true;
 
     /** A synced line plus its pre-formatted strings, so a frame draws without building any. */
-    private record Line(PlayerPanelClientboundPacket.Entry e, ResourceLocation icon, String metal, String energy) {}
+    private record Line(PlayerPanelClientboundPacket.Entry e, ResourceLocation icon, String metal, String energy,
+                        String name) {}
 
     private static List<Line> lines = List.of();
     private static int allyCount = 0;   // lines [0, allyCount) are you + allies
@@ -64,12 +65,19 @@ public class PlayerPanelClientEvents {
         for (var e : entries) {
             Faction f = Factions.getFaction(e.factionKey().isEmpty() ? null : ResourceLocation.tryParse(e.factionKey()));
             ResourceLocation icon = f == null || f == Factions.NONE ? null : f.icon;
-            out.add(new Line(e, icon, "+" + fmt(e.metalIncome()), "+" + fmt(e.energyIncome())));
+            out.add(new Line(e, icon, "+" + fmt(e.metalIncome()), "+" + fmt(e.energyIncome()), fitName(e)));
             if (e.hasAllyData())
                 allies++;
         }
         lines = out;
         allyCount = allies;
+    }
+
+    /** The name cut to its column once per sync (it was measured and substringed every frame). */
+    static String fitName(PlayerPanelClientboundPacket.Entry e) {
+        Font font = MC.font;
+        int nameW = e.hasAllyData() ? 54 : PANEL_W - 14 - 40;
+        return font.width(e.name()) > nameW ? font.plainSubstrByWidth(e.name(), nameW - 4) + ".." : e.name();
     }
 
     public static void clear() {
@@ -152,8 +160,7 @@ public class PlayerPanelClientEvents {
         if (line.icon() != null)
             MyRenderer.renderIcon(gg, line.icon(), x + 3, y, 8);
         int nameColour = e.alive() ? 0xFF000000 | PlayerColors.getPlayerDisplayColorHex(e.name()) : 0xFF707070;
-        int nameW = e.hasAllyData() ? 54 : PANEL_W - 14 - 40;
-        String name = font.width(e.name()) > nameW ? font.plainSubstrByWidth(e.name(), nameW - 4) + ".." : e.name();
+        String name = line.name();
         gg.drawString(font, name, x + 13, y + 1, nameColour);
         if (!e.alive()) {
             gg.fill(x + 13, y + 4, x + 13 + font.width(name), y + 5, 0xFF909090);   // struck through

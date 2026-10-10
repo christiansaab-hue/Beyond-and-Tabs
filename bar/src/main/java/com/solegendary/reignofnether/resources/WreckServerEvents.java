@@ -6,6 +6,7 @@ import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.FloatTag;
@@ -14,6 +15,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -61,6 +63,12 @@ public class WreckServerEvents {
     // explicit RECLAIM orders: worker entity id -> the wreck it was told to strip. While an entry is live the
     // worker counts as busy (WorkerUnit.isIdle), so shift-queued orders behind it wait their turn. Server only.
     private static final Map<Integer, Entity> reclaimTargets = new HashMap<>();
+    // tickReclaim's per-call spatial bucket of the wrecks (cell lists are reused between calls)
+    private static final Long2ObjectOpenHashMap<ArrayList<Entity>> CELLS = new Long2ObjectOpenHashMap<>();
+
+    static long cellKey(int cx, int cz) {
+        return ((long) cx << 32) ^ (cz & 0xffffffffL);
+    }
 
     public static List<Entity> getWrecks() {
         return wrecks;
@@ -163,6 +171,7 @@ public class WreckServerEvents {
     public static void onServerStopping(ServerStoppingEvent evt) {
         wrecks.clear();
         reclaimTargets.clear();
+        CELLS.clear();
     }
 
     @SubscribeEvent
@@ -183,12 +192,28 @@ public class WreckServerEvents {
             return;
         }
         long now = level.getGameTime();
-        for (Entity w : new ArrayList<>(wrecks)) {
+        for (int i = wrecks.size() - 1; i >= 0; i--) {   // backwards: remove() takes the wreck out of the list
+            Entity w = wrecks.get(i);
             long born = w.getPersistentData().getLong(KEY_BORN);
             if (born > now)   // a reload rewinds nothing, but a /time set could; restart its clock
                 w.getPersistentData().putLong(KEY_BORN, now);
             else if (now - born > LIFETIME_TICKS)
                 remove(level, w, false);
+        }
+        // bucket the wrecks by 16x16 cell once, so each worker only looks at the one to four cells its reclaim range
+        // touches instead of every wreck on the map (workers x wrecks was the cost of this method at 8v8)
+        if (CELLS.size() > 4 * MAX_WRECKS)   // empty cells of old battlefields: start over now and then
+            CELLS.clear();
+        for (ArrayList<Entity> cell : CELLS.values())
+            cell.clear();
+        for (Entity w : wrecks) {
+            long k = cellKey(Mth.floor(w.getX()) >> 4, Mth.floor(w.getZ()) >> 4);
+            ArrayList<Entity> cell = CELLS.get(k);
+            if (cell == null) {
+                cell = new ArrayList<>();
+                CELLS.put(k, cell);
+            }
+            cell.add(w);
         }
         // drop orders whose wreck is gone (decayed, raised, stripped by someone else) or whose worker died
         reclaimTargets.values().removeIf(Entity::isRemoved);
@@ -210,16 +235,25 @@ public class WreckServerEvents {
                     u.setMoveTarget(ordered.blockPosition());
                 }
             }
-            for (Entity w : wrecks) {
-                if (best < 0)
-                    break;
-                if (w.isRemoved())
-                    continue;
-                double d = w.distanceToSqr(le);
-                if (d <= best) {
-                    best = d;
-                    nearest = w;
-                }
+            if (best >= 0) {
+                int x0 = Mth.floor(le.getX() - RECLAIM_RANGE) >> 4, x1 = Mth.floor(le.getX() + RECLAIM_RANGE) >> 4;
+                int z0 = Mth.floor(le.getZ() - RECLAIM_RANGE) >> 4, z1 = Mth.floor(le.getZ() + RECLAIM_RANGE) >> 4;
+                for (int cx = x0; cx <= x1; cx++)
+                    for (int cz = z0; cz <= z1; cz++) {
+                        ArrayList<Entity> cell = CELLS.get(cellKey(cx, cz));
+                        if (cell == null)
+                            continue;
+                        for (int i = 0, n = cell.size(); i < n; i++) {
+                            Entity w = cell.get(i);
+                            if (w.isRemoved())   // emptied earlier in this pass
+                                continue;
+                            double d = w.distanceToSqr(le);
+                            if (d <= best) {
+                                best = d;
+                                nearest = w;
+                            }
+                        }
+                    }
             }
             if (nearest == null)
                 continue;

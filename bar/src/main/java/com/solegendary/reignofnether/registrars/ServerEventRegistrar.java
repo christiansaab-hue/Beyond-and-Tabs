@@ -57,6 +57,7 @@ public class ServerEventRegistrar {
         vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitQueueSync.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.MomentumServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.FormationServerEvents.class);
+        vanillaEventBus.register(com.solegendary.reignofnether.unit.UnitGrid.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.VeterancyServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.unit.DragonRaiseServerEvents.class);
         vanillaEventBus.register(com.solegendary.reignofnether.startpos.CapturePointServerEvents.class);

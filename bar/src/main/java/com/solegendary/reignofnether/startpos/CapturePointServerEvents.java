@@ -66,6 +66,7 @@ public class CapturePointServerEvents {
 
     private static final List<Entity> points = new ArrayList<>();
     private static final Map<String, List<Entity>> hired = new HashMap<>();
+    private static final List<LivingEntity> scratch = new ArrayList<>();   // UnitGrid query results, reused
 
     public static List<Entity> getPoints() { return points; }
     public static String ownerOf(Entity p) { return p.getPersistentData().getString(KEY_OWNER); }
@@ -172,7 +173,8 @@ public class CapturePointServerEvents {
         String side = null;
         boolean contested = false;
         double r2 = RADIUS * RADIUS;
-        for (LivingEntity le : UnitServerEvents.getAllUnits()) {
+        // only the units in the grid cells round the site, not every unit on the map per site
+        for (LivingEntity le : com.solegendary.reignofnether.unit.UnitGrid.near(level, p.getX(), p.getZ(), RADIUS, scratch)) {
             if (!(le instanceof Unit u) || !le.isAlive() || le.distanceToSqr(p) > r2)
                 continue;
             String o = u.getOwnerName();

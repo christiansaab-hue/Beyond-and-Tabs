@@ -95,6 +95,8 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew runGameTestServer --no-daemon 2>&1 | tee gametest.log | grep -E "GameTest|gametest|FAIL|fail|Exception|Error|error" || true
+          # the 8v8 stress benchmark's per-system timings, as notices readable through the GitHub API
+          grep -oE "\[Stress\].*" gametest.log | head -5 | sed 's/^/::notice::/' || true
           if ! grep -qE "All [0-9]+ required tests passed" gametest.log; then
             grep -E "FAILED|failed|Exception" gametest.log | head -30 | sed 's/^/::error::/'
             echo "::error::game tests did not report success"; exit 1

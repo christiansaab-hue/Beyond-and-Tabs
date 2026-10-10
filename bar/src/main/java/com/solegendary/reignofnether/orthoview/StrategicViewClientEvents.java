@@ -49,7 +49,6 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
@@ -270,9 +269,16 @@ public class StrategicViewClientEvents {
         }
 
         // ---- units: role icons ----
-        Set<LivingEntity> selected = new HashSet<>(UnitClientEvents.getSelectedUnits());
-        Set<LivingEntity> preselected = new HashSet<>(UnitClientEvents.getPreselectedUnits());
-        List<LivingEntity> drawLast = new ArrayList<>();
+        // reused every frame (open-addressing sets: clear() keeps the table, no per-entry nodes), so a big
+        // selection doesn't allocate two hash sets and a list on every strategic-view frame
+        Set<LivingEntity> selected = SELECTED_SCRATCH;
+        Set<LivingEntity> preselected = PRESELECTED_SCRATCH;
+        List<LivingEntity> drawLast = DRAW_LAST_SCRATCH;
+        selected.clear();
+        preselected.clear();
+        drawLast.clear();
+        selected.addAll(UnitClientEvents.getSelectedUnits());
+        preselected.addAll(UnitClientEvents.getPreselectedUnits());
         for (LivingEntity entity : UnitClientEvents.getAllUnits()) {
             if (selected.contains(entity) || preselected.contains(entity))
                 drawLast.add(entity);
@@ -281,6 +287,9 @@ public class StrategicViewClientEvents {
         }
         for (LivingEntity entity : drawLast)
             drawUnitIcon(bb, mat, entity, partialTick, selected.contains(entity), preselected.contains(entity));
+        selected.clear();   // don't hold on to entities between frames (or after leaving the world)
+        preselected.clear();
+        drawLast.clear();
 
         BufferUploader.drawWithShader(bb.end());
 
@@ -565,6 +574,11 @@ public class StrategicViewClientEvents {
 
     private enum Shape { SQUARE, TRIANGLE, CIRCLE, DIAMOND, STAR }
 
+    private static final float[] STAR_X = new float[10], STAR_Y = new float[10];
+    private static final Set<LivingEntity> SELECTED_SCRATCH = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
+    private static final Set<LivingEntity> PRESELECTED_SCRATCH = new it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet<>();
+    private static final List<LivingEntity> DRAW_LAST_SCRATCH = new ArrayList<>();
+
     private static void drawShape(BufferBuilder bb, Matrix4f mat, Shape shape, float cx, float cy, float r, int argb) {
         switch (shape) {
             case SQUARE -> rect(bb, mat, cx - r * 0.85f, cy - r * 0.85f, cx + r * 0.85f, cy + r * 0.85f, argb);
@@ -575,8 +589,7 @@ public class StrategicViewClientEvents {
             case TRIANGLE -> tri(bb, mat, cx, cy - r * 1.1f, cx + r * 1.05f, cy + r * 0.8f, cx - r * 1.05f, cy + r * 0.8f, argb);
             case STAR -> {   // five points, two fans
                 int n = 10;
-                float[] px = new float[n];
-                float[] py = new float[n];
+                float[] px = STAR_X, py = STAR_Y;   // scratch: no arrays per star per frame
                 for (int i = 0; i < n; i++) {
                     double a = -Math.PI / 2 + Math.PI * i / 5;
                     float rr = (i % 2 == 0) ? r : r * 0.45f;

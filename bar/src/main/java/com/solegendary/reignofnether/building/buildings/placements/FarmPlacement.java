@@ -71,15 +71,16 @@ public class FarmPlacement extends BuildingPlacement {
 
     // tick crop growth here to have precise control over growth speed with no RNG
     private void tickCrops() {
+        // the worker (a scan over every unit) is the same for every crop: look it up once, not twice per crop block
+        WorkerUnit worker = getWorker();
+        int ticksToIncrement = TICK_CROPS_INTERVAL;
+        if (worker != null) {
+            ticksToIncrement = (int) (TICK_CROPS_INTERVAL * CivilEnchantment.getEfficiencyMultiplier(worker));
+        }
         for (FarmCropBlock farmBlock : farmBlocks) {
 
             BlockState bs = level.getBlockState(farmBlock.bp);
             Block block = bs.getBlock();
-
-            int ticksToIncrement = TICK_CROPS_INTERVAL;
-            if (getWorker() != null) {
-                ticksToIncrement = (int) (TICK_CROPS_INTERVAL * CivilEnchantment.getEfficiencyMultiplier(getWorker()));
-            }
 
             if (block instanceof CropBlock cropBlock && (cropBlock == Blocks.WHEAT || cropBlock == Blocks.CARROTS || cropBlock == Blocks.POTATOES)) {
                 farmBlock.tickAge += ticksToIncrement;
