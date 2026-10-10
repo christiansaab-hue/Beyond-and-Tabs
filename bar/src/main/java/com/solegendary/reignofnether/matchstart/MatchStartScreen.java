@@ -47,8 +47,8 @@ public class MatchStartScreen extends Screen {
     private static final int HEADER_H = 32;
     private static final int BOTTOM_H = 28;
     private static final int FRAME_SIZE = 22;
-    // faction tiles per slot row (3 live + Verdant Court preview + random); the row layout is sized from this
-    private static final int FACTION_TILES = 5;
+    // faction tiles per slot row (4 live + Tidewrought preview + random); the row layout is sized from this
+    private static final int FACTION_TILES = 6;
     private static final int ICON_SIZE = 14;
     private static final int ROW_H = 26;
 
@@ -455,7 +455,7 @@ public class MatchStartScreen extends Screen {
         String drawnName = this.font.plainSubstrByWidth(name, nameMaxW);
         g.drawString(this.font, drawnName, nameX, tileY + (FRAME_SIZE - this.font.lineHeight) / 2 + 1, nameCol, false);
 
-        Faction[] order = { Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT, Factions.RANDOM };
+        Faction[] order = { Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT, Factions.TIDEWROUGHT, Factions.RANDOM };
         int currentX = factionStartX - 6;
         for (Faction f : order) {
             renderFactionTile(g, sp, f, currentX, tileY, localName, mx, my);

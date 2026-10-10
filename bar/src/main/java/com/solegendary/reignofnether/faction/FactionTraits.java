@@ -189,6 +189,24 @@ public final class FactionTraits {
         .extractor(() -> Buildings.METAL_EXTRACTOR_VERDANT)
         .build();
 
+    /**
+     * Tidewrought (preview, design/tidewrought_plan.md): corsairs and tide-priests in teal and brass - shipwreck
+     * timber, prismarine and copper. Slice 0 sets only the look (accent, livery, banner, scaffold, wreck), so the
+     * faction is never dressed or built as anyone else. Commander kit, debris, quick-build and the Tides mechanic stay
+     * at the neutral defaults until slice 1.
+     */
+    public static final FactionTraits TIDEWROUGHT = new Builder("tidewrought")
+        .accent(0xFF3CC8BE)
+        .livery(new Livery(0x1E7F7A, 0xC9A23E,
+            Piece.vanilla(Items.LEATHER_HELMET), Piece.vanilla(Items.LEATHER_CHESTPLATE),
+            Piece.vanilla(Items.LEATHER_CHESTPLATE),
+            Piece.vanilla(Items.LEATHER_HELMET), Piece.vanilla(Items.LEATHER_CHESTPLATE),
+            new Piece(null, null), Piece.vanilla(Items.CHAINMAIL_CHESTPLATE)))
+        .banner(Blocks.CYAN_WOOL.defaultBlockState(), Blocks.CUT_COPPER.defaultBlockState())
+        .scaffold(Blocks.STRIPPED_MANGROVE_LOG.defaultBlockState(), Blocks.PRISMARINE_BRICKS.defaultBlockState(), ScaffoldDecor.NONE)
+        .wreck(Blocks.DARK_PRISMARINE.defaultBlockState(), 1f)
+        .build();
+
     // ------------------------------------------------------------------ builder (defaults = NEUTRAL)
 
     static final class Builder {

@@ -41,6 +41,8 @@ public class Factions {
 	public static Faction NONE;
 	// faction 4 of claude/design-factions.md (design/verdant_court_plan.md): playable from slice 1 (T1 only)
 	public static Faction VERDANT_COURT;
+	// faction 5 (design/tidewrought_plan.md): slice 0 = lobby preview only; no capitol, worker or units yet
+	public static Faction TIDEWROUGHT;
 
 	public static void register() {
 		VILLAGERS = register("villagers", new Faction()
@@ -100,6 +102,18 @@ public class Factions {
 			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
 			.noCubeMap()
 			.setTraits(FactionTraits.VERDANT)
+		);
+
+		// After the Court so no existing registry id moves. Preview = unplayable, so it is in none of PLAYABLE / CLASSIC
+		// / SURVIVAL and never in the "Random" pool (randomLive needs isLive); the lobby shows a greyed "coming soon"
+		// tile and the server refuses to reserve or start it. Its traits are explicit from day one so nothing it ever
+		// touches falls back to another faction's look. Icon is vanilla prismarine bricks (teal) until a portrait exists.
+		TIDEWROUGHT = register("tidewrought", new Faction()
+			.setWorkerIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/prismarine_bricks.png"))
+			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/prismarine_bricks.png"))
+			.setPreview()
+			.noCubeMap()
+			.setTraits(FactionTraits.TIDEWROUGHT)
 		);
 
 		registerUnits();

@@ -645,6 +645,11 @@ public class PlayerServerEvents {
 
     /** As above in a given level, with no human online required (headless bot-vs-bot game tests). */
     public static void startRTSBot(ServerLevel level, String name, Vec3 pos, Faction faction, int colorMapId) {
+        // same rule as startRTS: a preview faction has no worker type (getValue(null) below) and no bot kit
+        if (faction == null || faction.preview) {
+            ReignOfNether.LOGGER.warn("[Player] startRTSBot refused: {} is not a startable faction", faction == null ? null : faction.key);
+            return;
+        }
         synchronized (rtsPlayers) {
             EntityType<?> entityType = ForgeRegistries.ENTITY_TYPES.getValue(faction.workerEntityType);
             // the bot starts far from every player: load and hold its chunks first, or its workers spawn into
