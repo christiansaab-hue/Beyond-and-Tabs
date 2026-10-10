@@ -1,6 +1,7 @@
 package com.solegendary.reignofnether.resources;
 
 import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.unit.UnitServerEvents;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
@@ -41,7 +42,7 @@ import java.util.Map;
  *
  * A wreck is a vanilla block-display entity (no collision, no pathing impact, saved with the world) carrying its
  * metal in its persistent data, so nothing here needs its own packets or save file. The look follows the dead
- * unit's faction: Sunforged leave broken iron, Gravebound leave bone, the Horde leaves rusted copper.
+ * unit's faction (FactionTraits): Sunforged leave broken iron, Gravebound bone, the Horde rusted copper.
  * They decay after {@link #LIFETIME_TICKS} and at most {@link #MAX_WRECKS} exist (oldest go first), so a long
  * 8v8 cannot pile them up into a frame-rate problem.
  */
@@ -142,12 +143,9 @@ public class WreckServerEvents {
         return display;
     }
 
-    static BlockState lookFor(Faction faction) {
-        if (faction != null && faction.equals(Factions.MONSTERS))
-            return Blocks.BONE_BLOCK.defaultBlockState();
-        if (faction != null && faction.equals(Factions.PIGLINS))
-            return Blocks.EXPOSED_CUT_COPPER.defaultBlockState();
-        return Blocks.IRON_BLOCK.defaultBlockState();
+    /** The heap's block (FactionTraits.wreckBlock); public for the game test. Unknown factions leave plain rubble. */
+    public static BlockState lookFor(Faction faction) {
+        return FactionTraits.of(faction).wreckBlock;
     }
 
     static ListTag floats(float... v) {
@@ -303,12 +301,7 @@ public class WreckServerEvents {
 
     /** design-factions.md: the Gravebound Gravedigger reclaims double; the Horde's Clan Builder half again. */
     public static float factionReclaim(Unit unit) {
-        Faction f = Factions.getFaction(unit);
-        if (f != null && f.equals(Factions.MONSTERS))
-            return 2f;
-        if (f != null && f.equals(Factions.PIGLINS))
-            return 1.5f;
-        return 1f;
+        return FactionTraits.of(Factions.getFaction(unit)).reclaimMultiplier;
     }
 
     /** Takes metal off a wreck (Raise Dead); an emptied wreck is removed. */

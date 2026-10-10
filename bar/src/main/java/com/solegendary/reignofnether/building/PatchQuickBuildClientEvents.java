@@ -3,7 +3,7 @@ package com.solegendary.reignofnether.building;
 import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
 import com.solegendary.reignofnether.cursor.CursorClientEvents;
 import com.solegendary.reignofnether.faction.Faction;
-import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.hud.HudClientEvents;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
@@ -33,16 +33,9 @@ public class PatchQuickBuildClientEvents {
     static final Minecraft MC = Minecraft.getInstance();
     static long lastHintAt = 0;
 
+    /** FactionTraits.metalExtractor; null (no quick-build) for factions without one. */
     static Building extractorFor(Faction faction) {
-        if (faction == null)
-            return null;
-        if (faction.equals(Factions.VILLAGERS))
-            return Buildings.METAL_EXTRACTOR_VILLAGERS;
-        if (faction.equals(Factions.MONSTERS))
-            return Buildings.METAL_EXTRACTOR_MONSTERS;
-        if (faction.equals(Factions.PIGLINS))
-            return Buildings.METAL_EXTRACTOR_PIGLINS;
-        return null;
+        return FactionTraits.of(faction).metalExtractor.get();
     }
 
     /** The hovered patch block, if the cursor is on (or right above) one. */

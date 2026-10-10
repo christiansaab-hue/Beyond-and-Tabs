@@ -3,8 +3,7 @@ package com.solegendary.reignofnether.building;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.solegendary.reignofnether.building.buildings.placements.ProductionPlacement;
 import com.solegendary.reignofnether.building.buildings.shared.MetalExtractor;
-import com.solegendary.reignofnether.faction.Faction;
-import com.solegendary.reignofnether.faction.Factions;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.orthoview.StrategicViewClientEvents;
 
 import net.minecraft.client.Minecraft;
@@ -97,19 +96,13 @@ public class BannerRenderClientEvents {
             if (mount == null || cam.distanceToSqr(mount.getX(), mount.getY(), mount.getZ()) > MAX_RENDER_DIST_SQR)
                 continue;
 
-            Faction faction = placement.getBuilding().getFaction();
-            BlockState cloth;
-            BlockState trim;
-            if (faction != null && faction.equals(Factions.MONSTERS)) {          // Gravebound: soul-blue on black
-                cloth = Blocks.CYAN_WOOL.defaultBlockState();
-                trim = Blocks.BLACK_WOOL.defaultBlockState();
-            } else if (faction != null && faction.equals(Factions.PIGLINS)) {   // Ironhide Horde: rust red, bone
-                cloth = Blocks.RED_WOOL.defaultBlockState();
-                trim = Blocks.BONE_BLOCK.defaultBlockState();
-            } else {                                                             // Sunforged Kingdom: white, gold
-                cloth = Blocks.WHITE_WOOL.defaultBlockState();
-                trim = Blocks.YELLOW_WOOL.defaultBlockState();
-            }
+            // colours per faction in FactionTraits (Sunforged white/gold, Gravebound soul-blue/black, Horde red/bone,
+            // Verdant green/silver); factions without an entry fly no banner rather than the Kingdom's
+            FactionTraits traits = FactionTraits.of(placement.getBuilding().getFaction());
+            BlockState cloth = traits.bannerCloth;
+            BlockState trim = traits.bannerTrim;
+            if (cloth == null || trim == null)
+                continue;
             int light = LevelRenderer.getLightColor(MC.level, mount.above(2));
             float phase = (mount.hashCode() & 255) / 255f * Mth.TWO_PI;
 

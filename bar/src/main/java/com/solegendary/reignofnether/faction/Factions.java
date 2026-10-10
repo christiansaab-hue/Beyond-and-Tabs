@@ -49,6 +49,7 @@ public class Factions {
 			.setSound(SoundRegistrar.VILLAGER_CALM_THEME_SONG.get())
 			.setSpawnWave(IllagerWaveSpawner::spawnIllagerWave)
 			.setCustomBuildingCondition((cb) -> cb.buildableByVillagers)
+			.setTraits(FactionTraits.SUNFORGED)
 		);
 		
 		MONSTERS = register("monsters", new Faction()
@@ -57,6 +58,7 @@ public class Factions {
 			.setSound(SoundRegistrar.MONSTER_CALM_THEME_SONG.get())
 			.setSpawnWave(MonsterWaveSpawner::spawnMonsterWave)
 			.setCustomBuildingCondition((cb) -> cb.buildableByMonsters)
+			.setTraits(FactionTraits.GRAVEBOUND)
 		);
 		
 		PIGLINS = register("piglins", new Faction()
@@ -66,6 +68,7 @@ public class Factions {
 			.setSound(SoundRegistrar.PIGLIN_CALM_THEME_SONG.get())
 			.setCustomBuildingCondition((cb) -> cb.buildableByPiglins)
 			.setSpawnWave(PiglinWaveSpawner::spawnPiglinWave)
+			.setTraits(FactionTraits.HORDE)
 		);
 		
 		NEUTRAL = register("neutral", new Faction()
@@ -92,6 +95,7 @@ public class Factions {
 			.setIcon(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/flowering_azalea_leaves.png"))
 			.setPreview()
 			.noCubeMap()
+			.setTraits(FactionTraits.VERDANT)
 		);
 
 		registerUnits();

@@ -1,6 +1,6 @@
 package com.solegendary.reignofnether.unit;
 
-import com.solegendary.reignofnether.faction.Faction;
+import com.solegendary.reignofnether.faction.FactionTraits;
 import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.unit.interfaces.Unit;
 import com.solegendary.reignofnether.unit.interfaces.WorkerUnit;
@@ -60,8 +60,7 @@ public class MomentumServerEvents {
     static boolean isHordeFighter(LivingEntity le) {
         if (!(le instanceof Unit u) || le instanceof WorkerUnit)
             return false;
-        Faction f = Factions.getFaction(u);
-        return f != null && f.equals(Factions.PIGLINS);
+        return FactionTraits.of(Factions.getFaction(u)).momentum;
     }
 
     @SubscribeEvent

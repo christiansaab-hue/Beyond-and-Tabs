@@ -70,7 +70,9 @@ public class CommanderServerEvents {
             if (a instanceof com.solegendary.reignofnether.ability.abilities.SunriseSortie)
                 hasSortie = true;
         }
-        if (!hasSignature)
+        // factions without a designed signature (FactionTraits: Kind.NONE) get none rather than the Kingdom's Rally
+        if (!hasSignature && com.solegendary.reignofnether.ability.abilities.CommanderAbility.kindFor(unit)
+                != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.NONE)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderAbility());
         if (!hasDGun)
             unit.getAbilities().add(new com.solegendary.reignofnether.ability.abilities.CommanderDGun());

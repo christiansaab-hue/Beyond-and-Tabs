@@ -41,35 +41,48 @@ public class BotPlayer {
 
     /**
      * What each faction uses for each job. T2 lives in its own lab (needs Tier 2 research): it trains the T2 army
-     * and the T2 constructor, the only worker that may raise the T3 lab.
+     * and the T2 constructor, the only worker that may raise the T3 lab, which makes the experimental.
      */
     public record Kit(Building capitol, Building house, Building farm, Building extractor, Building wind, Building armyBuilding,
                Building tower, ProductionItem worker, List<ProductionItem> army,
-               Building t2Lab, ProductionItem t2Worker, List<ProductionItem> t2Army) { }
+               Building t2Lab, ProductionItem t2Worker, List<ProductionItem> t2Army,
+               Building t3Building, ProductionItem t3Unit, Building converter) { }
 
+    /**
+     * The faction's kit, or null if bots cannot play it yet. Every faction is listed explicitly: the old version
+     * returned the villager kit for anything unknown, so a Verdant Court bot would have built Sunforged buildings.
+     */
     public static Kit kitFor(Faction faction) {
+        if (faction == null)
+            return null;
         if (faction.equals(Factions.PIGLINS))
             return new Kit(Buildings.CENTRAL_PORTAL, Buildings.PORTAL_POCKET, Buildings.NETHERWART_FARM,
                     Buildings.METAL_EXTRACTOR_PIGLINS, Buildings.WIND_GENERATOR_PIGLINS, Buildings.BASTION,
                     null, ProductionItems.GRUNT, List.of(ProductionItems.BRUTE, ProductionItems.HEADHUNTER),
                     Buildings.FLAME_SANCTUARY, ProductionItems.BONEWRIGHT,
-                    List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST));
+                    List.of(ProductionItems.BLAZE, ProductionItems.WITHER_SKELETON, ProductionItems.MAGMA_CUBE, ProductionItems.GHAST),
+                    Buildings.FORTRESS, ProductionItems.WAR_MAMMOTH, Buildings.ENERGY_CONVERTER_PIGLINS);
         if (faction.equals(Factions.MONSTERS))
             return new Kit(Buildings.MAUSOLEUM, Buildings.HAUNTED_HOUSE, Buildings.PUMPKIN_FARM,
                     Buildings.METAL_EXTRACTOR_MONSTERS, Buildings.WIND_GENERATOR_MONSTERS, Buildings.GRAVEYARD,
                     Buildings.DARK_WATCHTOWER, ProductionItems.ZOMBIE_VILLAGER, List.of(ProductionItems.ZOMBIE, ProductionItems.SKELETON),
                     Buildings.DUNGEON, ProductionItems.EMBALMER,
-                    List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN));
-        return new Kit(Buildings.TOWN_CENTRE, Buildings.VILLAGER_HOUSE, Buildings.WHEAT_FARM,
+                    List.of(ProductionItems.CREEPER, ProductionItems.WRAITH, ProductionItems.WARDEN),
+                    Buildings.STRONGHOLD, ProductionItems.BONE_DRAGON, Buildings.ENERGY_CONVERTER_MONSTERS);
+        if (faction.equals(Factions.VILLAGERS))
+            return new Kit(Buildings.TOWN_CENTRE, Buildings.VILLAGER_HOUSE, Buildings.WHEAT_FARM,
                 Buildings.METAL_EXTRACTOR_VILLAGERS, Buildings.WIND_GENERATOR_VILLAGERS, Buildings.BARRACKS,
                 Buildings.WATCHTOWER, ProductionItems.VILLAGER, List.of(ProductionItems.VINDICATOR, ProductionItems.PILLAGER),
                 Buildings.ARCANE_TOWER, ProductionItems.ROYAL_ARCHITECT,
-                List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER));
+                List.of(ProductionItems.WITCH, ProductionItems.IRON_GOLEM, ProductionItems.RAVAGER),
+                Buildings.CASTLE, ProductionItems.SUN_COLOSSUS, Buildings.ENERGY_CONVERTER_VILLAGERS);
+        return null;
     }
 
     public final String name;
     public final Faction faction;
     public final Difficulty difficulty;
+    /** null when bots can't play this faction (kitFor); think() then does nothing. */
     final Kit kit;
     int capitolFailures = 0;
     final Random rng = new Random();
@@ -105,6 +118,8 @@ public class BotPlayer {
     // ------------------------------------------------------------------ the think step, about once a second
 
     public void think(ServerLevel level, long gameTime) {
+        if (kit == null)
+            return;
         if (startedAt < 0)
             startedAt = gameTime;
         minutesIn = (gameTime - startedAt) / (20 * 60);
@@ -651,19 +666,11 @@ public class BotPlayer {
 
     /** The faction's T3 building and the experimental it makes. */
     Building t3Building() {
-        if (faction.equals(Factions.PIGLINS))
-            return Buildings.FORTRESS;
-        if (faction.equals(Factions.MONSTERS))
-            return Buildings.STRONGHOLD;
-        return Buildings.CASTLE;
+        return kit.t3Building();
     }
 
     ProductionItem t3Unit() {
-        if (faction.equals(Factions.PIGLINS))
-            return com.solegendary.reignofnether.building.production.ProductionItems.WAR_MAMMOTH;
-        if (faction.equals(Factions.MONSTERS))
-            return com.solegendary.reignofnether.building.production.ProductionItems.BONE_DRAGON;
-        return com.solegendary.reignofnether.building.production.ProductionItems.SUN_COLOSSUS;
+        return kit.t3Unit();
     }
 
     /**
@@ -721,11 +728,7 @@ public class BotPlayer {
     }
 
     Building converterFor() {
-        if (faction.equals(Factions.PIGLINS))
-            return Buildings.ENERGY_CONVERTER_PIGLINS;
-        if (faction.equals(Factions.MONSTERS))
-            return Buildings.ENERGY_CONVERTER_MONSTERS;
-        return Buildings.ENERGY_CONVERTER_VILLAGERS;
+        return kit.converter();
     }
 
     /** Energy over 80% of storage: the bot is floating energy, so a converter pays (what BAR players do). */

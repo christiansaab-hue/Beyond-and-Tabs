@@ -7,6 +7,8 @@ import com.solegendary.reignofnether.building.BuildingBlockData;
 import com.solegendary.reignofnether.building.BuildingValidators;
 import com.solegendary.reignofnether.building.Buildings;
 import com.solegendary.reignofnether.building.buildings.shared.AbstractBridge;
+import com.solegendary.reignofnether.faction.FactionTraits;
+import com.solegendary.reignofnether.faction.Factions;
 import com.solegendary.reignofnether.player.PlayerPalette;
 import com.solegendary.reignofnether.resources.MetalPatches;
 
@@ -1978,6 +1980,59 @@ public class SkirmishGameTests {
         if (ReignOfNetherRegistries.FACTIONS.getId(verdant)
                 < ReignOfNetherRegistries.FACTIONS.getId(com.solegendary.reignofnether.faction.Factions.NONE))
             helper.fail("Verdant Court was registered before the original factions and shifted their ids");
+        helper.succeed();
+    }
+
+    /**
+     * Faction look/mechanics come from one FactionTraits entry per faction. Each live faction and the Verdant preview
+     * must have its own entry, Verdant must not borrow Sunforged's D-gun, wreck or scaffold (the old "otherwise
+     * villagers" fall-through, design/verdant_court_plan.md), and a faction without an entry gets the neutral one.
+     * Static data only, no world state.
+     */
+    @GameTest(template = ARENA)
+    public static void every_faction_has_its_own_traits_and_verdant_is_not_sunforged(GameTestHelper helper) {
+        var factions = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT);
+        for (var f : factions)
+            if (!FactionTraits.hasExplicit(f))
+                helper.fail(f.getName() + " has no explicit FactionTraits entry");
+        var sun = FactionTraits.of(Factions.VILLAGERS);
+        var grave = FactionTraits.of(Factions.MONSTERS);
+        var horde = FactionTraits.of(Factions.PIGLINS);
+        var verdant = FactionTraits.of(Factions.VERDANT_COURT);
+        var neutral = FactionTraits.NEUTRAL;
+        if (verdant.dgunKind == sun.dgunKind)
+            helper.fail("Verdant Court uses the Sunforged D-gun");
+        if (com.solegendary.reignofnether.resources.WreckServerEvents.lookFor(Factions.VERDANT_COURT)
+                == com.solegendary.reignofnether.resources.WreckServerEvents.lookFor(Factions.VILLAGERS))
+            helper.fail("Verdant Court leaves Sunforged wrecks");
+        if (verdant.scaffoldPole == sun.scaffoldPole || verdant.scaffoldRail == sun.scaffoldRail
+                || verdant.scaffoldDecor == sun.scaffoldDecor)
+            helper.fail("Verdant Court builds with Sunforged scaffold materials");
+        // behaviours Verdant has not designed yet stay off
+        if (verdant.formation || verdant.momentum
+                || verdant.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.NONE
+                || com.solegendary.reignofnether.bot.BotPlayer.kitFor(Factions.VERDANT_COURT) != null)
+            helper.fail("Verdant Court picked up an undesigned behaviour (formation/momentum/signature/bot kit)");
+        // the live three keep what the old if/else chains gave them
+        if (sun.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SUNFIRE
+                || grave.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.SOULREAPER
+                || horde.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.BLOODSTORM)
+            helper.fail("a live faction's D-gun kind changed");
+        if (!sun.formation || grave.formation || horde.formation || !horde.momentum || sun.momentum || grave.momentum)
+            helper.fail("Formation must stay Sunforged-only and Momentum Horde-only");
+        if (sun.reclaimMultiplier != 1f || grave.reclaimMultiplier != 2f || horde.reclaimMultiplier != 1.5f)
+            helper.fail("a live faction's reclaim multiplier changed");
+        if (sun.wreckBlock != Blocks.IRON_BLOCK.defaultBlockState() || grave.wreckBlock != Blocks.BONE_BLOCK.defaultBlockState()
+                || horde.wreckBlock != Blocks.EXPOSED_CUT_COPPER.defaultBlockState())
+            helper.fail("a live faction's wreck look changed");
+        for (var f : List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS))
+            if (com.solegendary.reignofnether.bot.BotPlayer.kitFor(f) == null)
+                helper.fail(f.getName() + " lost its bot kit");
+        // no entry -> neutral, never Sunforged
+        if (FactionTraits.of(Factions.NEUTRAL) != neutral || FactionTraits.of(null) != neutral)
+            helper.fail("a faction without an entry did not get the neutral traits");
+        if (neutral.dgunKind == sun.dgunKind || neutral.formation || neutral.livery != null || neutral.wreckBlock == sun.wreckBlock)
+            helper.fail("the neutral traits fall back to Sunforged behaviour");
         helper.succeed();
     }
 

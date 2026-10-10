@@ -32,7 +32,8 @@ public final class BarFx {
             SCORCH = 7;
 
     // ---- nanolathe beam tints (NANO kind): one per faction so a glance tells whose builders are at work
-    public static final byte N_SUNFORGED = 0, N_GRAVEBOUND = 1, N_HORDE = 2;
+    // (N_NEUTRAL: factions without their own tint - they used to borrow Sunforged gold; see FactionTraits)
+    public static final byte N_SUNFORGED = 0, N_GRAVEBOUND = 1, N_HORDE = 2, N_NEUTRAL = 3, N_VERDANT = 4;
 
     /** Minimum ticks between two nano beams from the same worker (a beam lives a little longer, so they overlap). */
     public static final int NANO_INTERVAL = 8;
@@ -208,15 +209,11 @@ public final class BarFx {
         double hx = worker.getX() - Math.sin(yaw) * reach;
         double hy = worker.getY() + worker.getBbHeight() * .55;
         double hz = worker.getZ() + Math.cos(yaw) * reach;
-        byte tint = N_SUNFORGED;
+        byte tint = N_SUNFORGED;   // non-unit workers keep the old golden beam
         try {
-            if (worker instanceof com.solegendary.reignofnether.unit.interfaces.Unit u) {
-                var f = com.solegendary.reignofnether.faction.Factions.getFaction(u);
-                if (f != null && f.equals(com.solegendary.reignofnether.faction.Factions.MONSTERS))
-                    tint = N_GRAVEBOUND;
-                else if (f != null && f.equals(com.solegendary.reignofnether.faction.Factions.PIGLINS))
-                    tint = N_HORDE;
-            }
+            if (worker instanceof com.solegendary.reignofnether.unit.interfaces.Unit u)
+                tint = com.solegendary.reignofnether.faction.FactionTraits.of(
+                    com.solegendary.reignofnether.faction.Factions.getFaction(u)).nanoTint;
         } catch (Exception ignored) { }
         emit(sl, new Event(NANO, tint, (byte) Math.max(1, Math.min(lifeTicks, 100)),
                 (float) hx, (float) hy, (float) hz, (float) tx, (float) ty, (float) tz));
