@@ -2172,6 +2172,68 @@ public class SkirmishGameTests {
         helper.succeed();
     }
 
+    /**
+     * Tidewrought slice 0 (design/tidewrought_plan.md): announced as a preview after the Court. The four live factions
+     * must be untouched, and the Tidewrought must be impossible to play - not playable, not live, never picked by
+     * "Random", refused by the bot start - while already wearing its own teal-and-brass traits, not anyone else's.
+     * Static data plus one refused bot start under a unique name, so it is safe to run in parallel.
+     */
+    @GameTest(template = ARENA)
+    public static void tidewrought_is_a_preview_and_the_four_live_factions_are_intact(GameTestHelper helper) {
+        var tide = Factions.TIDEWROUGHT;
+        if (tide == null) {
+            helper.fail("the Tidewrought is not registered");
+            return;
+        }
+        var live = List.of(Factions.VILLAGERS, Factions.MONSTERS, Factions.PIGLINS, Factions.VERDANT_COURT);
+        for (var f : live) {
+            if (!Factions.isLive(f))
+                helper.fail(f.getName() + " is no longer a live faction");
+            if (!Factions.PLAYABLE_FACTIONS.contains(f.key))
+                helper.fail(f.getName() + " dropped out of the playable list");
+            if (com.solegendary.reignofnether.bot.BotPlayer.kitFor(f) == null)
+                helper.fail(f.getName() + " lost its bot kit");
+        }
+        if (!tide.preview || tide.playable || Factions.isLive(tide))
+            helper.fail("the Tidewrought must be a preview, unplayable and not live");
+        if (Factions.PLAYABLE_FACTIONS.contains(tide.key) || Factions.CLASSIC_FACTIONS.contains(tide.key)
+                || Factions.SURVIVAL_FACTIONS.contains(tide.key))
+            helper.fail("the Tidewrought leaked into the playable, classic or survival list");
+        if (tide.capitolBuilding != null || tide.workerEntityType != null)
+            helper.fail("the preview Tidewrought already has a capitol or worker");
+        if (Factions.getFaction(tide.key) != tide || !"tidewrought".equals(tide.getName()))
+            helper.fail("the Tidewrought does not resolve by its key");
+        if (ReignOfNetherRegistries.FACTIONS.getId(tide) < ReignOfNetherRegistries.FACTIONS.getId(Factions.VERDANT_COURT))
+            helper.fail("the Tidewrought was registered before the Verdant Court and shifted its id");
+        var rng = new java.util.Random(5);
+        for (int i = 0; i < 400; i++)
+            if (Factions.randomLive(rng) == tide) {
+                helper.fail("Random picked the preview Tidewrought");
+                break;
+            }
+        // its own look, never another faction's (the old "otherwise villagers" fall-through)
+        if (!FactionTraits.hasExplicit(tide))
+            helper.fail("the Tidewrought has no explicit FactionTraits entry");
+        var t = FactionTraits.of(tide);
+        for (var f : live) {
+            var o = FactionTraits.of(f);
+            if (t == o || t.wreckBlock == o.wreckBlock || t.scaffoldPole == o.scaffoldPole
+                    || (t.bannerCloth == o.bannerCloth && t.bannerTrim == o.bannerTrim))
+                helper.fail("the Tidewrought borrows " + f.getName() + "'s look");
+        }
+        if (t.dgunKind != com.solegendary.reignofnether.ability.abilities.CommanderDGun.Kind.PLAIN
+                || t.commanderAbility != com.solegendary.reignofnether.ability.abilities.CommanderAbility.Kind.NONE
+                || t.formation || t.momentum || t.metalExtractor.get() != null)
+            helper.fail("the preview Tidewrought picked up another faction's commander kit or mechanic");
+        // the server refuses to start one, even when asked directly (bots skip the lobby's greyed tile)
+        String botName = "tide_preview_" + helper.absolutePos(BlockPos.ZERO).asLong();
+        com.solegendary.reignofnether.player.PlayerServerEvents.startRTSBot(helper.getLevel(), botName,
+            net.minecraft.world.phys.Vec3.atCenterOf(helper.absolutePos(BlockPos.ZERO)), tide, 0);
+        if (com.solegendary.reignofnether.player.PlayerServerEvents.isRTSPlayer(botName))
+            helper.fail("a bot was started as the preview Tidewrought");
+        helper.succeed();
+    }
+
     /** A Horde commander's D-gun / War-Drums must stay on the commander: Grunts used to share one static ability set. */
     @GameTest(template = ARENA)
     public static void commander_abilities_do_not_leak_to_plain_grunts(GameTestHelper helper) {

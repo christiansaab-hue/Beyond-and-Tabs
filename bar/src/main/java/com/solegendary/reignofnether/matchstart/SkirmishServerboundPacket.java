@@ -92,6 +92,8 @@ public class SkirmishServerboundPacket {
             case 1 -> Factions.MONSTERS;
             case 2 -> Factions.PIGLINS;
             case 4 -> Factions.VERDANT_COURT;
+            // 5 is reserved for the Tidewrought (design/tidewrought_plan.md); while it is a preview the code falls to
+            // random like any unknown one, so a modified client can't start it from the skirmish screen either
             default -> Factions.randomLive(rng);
         };
     }
