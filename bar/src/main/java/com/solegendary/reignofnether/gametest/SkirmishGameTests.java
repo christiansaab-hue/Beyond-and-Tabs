@@ -108,7 +108,7 @@ public class SkirmishGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int y = 210;
-        int cx = base.getX() + 40, cz = base.getZ() + 40;   // away from the other platform test
+        int cx = base.getX(), cz = base.getZ();   // its own column: an offset column lands over whichever arena the grid puts there (it broke the stamped-patch test)
         for (int dx = -10; dx <= 10; dx++)
             for (int dz = -10; dz <= 10; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
