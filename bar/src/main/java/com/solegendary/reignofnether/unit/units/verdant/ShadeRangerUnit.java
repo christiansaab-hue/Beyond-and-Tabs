@@ -117,6 +117,11 @@ public class ShadeRangerUnit extends ThornbowUnit {
         }
     }
 
+    /** Ticks it has stood still with no target, capped at the cloak delay (read by the game test's failure message). */
+    public int getStillTicks() {
+        return stillTicks;
+    }
+
     /** Drops its cover now (it moved, took a target or fired). Public for the game test. */
     public void reveal() {
         stillTicks = 0;

@@ -1201,7 +1201,10 @@ public class SkirmishGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
         final int g = 245;
-        int cx = base.getX() - 40, cz = base.getZ() - 40;   // away from the other platform tests
+        // its own column (the four pads span cx-2..cx+12, inside this arena): the old -40/-40 offset dropped dirt
+        // columns at y=238-246 over whichever arena the grid put there, above any platform test's pad
+        int cx = base.getX() - 6, cz = base.getZ() - 6;
+        final int step = 8;   // pads 7 wide, one air column between them
         Building wind = Buildings.WIND_GENERATOR_VILLAGERS;
 
         // 1) step, placed on the LOW side: columns x+1..x+2 are one block higher (inside the bottom layer)
@@ -1216,7 +1219,7 @@ public class SkirmishGameTests {
             helper.fail("1-block step refused from the low side: " + err);
 
         // 2) step, placed on the HIGH side: only column x is high, x+1..x+2 have a 1-block gap under them
-        int bx = cx + 12, bz = cz;
+        int bx = cx + step, bz = cz;
         for (int dx = -2; dx <= 4; dx++)
             for (int dz = -2; dz <= 4; dz++)
                 groundColumn(level, bx + dx, bz + dz, g - 3, dx <= 0 ? g + 1 : g);
@@ -1226,7 +1229,7 @@ public class SkirmishGameTests {
             helper.fail("1-block step refused from the high side: " + err);
 
         // 3) 4-block cliff, placed on TOP: column x+2 hangs over a 4-block drop
-        int ccx = cx, ccz = cz + 12;
+        int ccx = cx, ccz = cz + step;
         for (int dx = -2; dx <= 4; dx++)
             for (int dz = -2; dz <= 4; dz++)
                 groundColumn(level, ccx + dx, ccz + dz, g - 7, dx <= 1 ? g : g - 4);
@@ -1236,7 +1239,7 @@ public class SkirmishGameTests {
             helper.fail("wind generator accepted hanging over a 4-block cliff");
 
         // 4) the same cliff from the BOTTOM: the footprint would be buried 4 blocks into the cliff face
-        int dxo = cx + 12, dzo = cz + 12;
+        int dxo = cx + step, dzo = cz + step;
         for (int dx = -2; dx <= 4; dx++)
             for (int dz = -2; dz <= 4; dz++)
                 groundColumn(level, dxo + dx, dzo + dz, g - 7, dx >= 1 ? g : g - 4);
@@ -2496,8 +2499,11 @@ public class SkirmishGameTests {
         var verdant = Factions.VERDANT_COURT;
         String owner = "gametest_verdant_start";
         BlockPos base = helper.absolutePos(new BlockPos(8, 1, 8));
-        final int y = 220;
-        int cx = base.getX() - 60, cz = base.getZ() + 60;   // clear of the other platform tests
+        // its own column at its own height: the old -60/+60 offset at y=220 put this pad over whichever arena the grid
+        // placed there - the same bug the nano and capture point tests had (a pad above the stamped-patch test breaks
+        // its heightmap, and the capture point test's own pad is at y=220)
+        final int y = 260;
+        int cx = base.getX(), cz = base.getZ();
         for (int dx = -9; dx <= 9; dx++)
             for (int dz = -9; dz <= 9; dz++) {
                 level.setBlock(new BlockPos(cx + dx, y - 1, cz + dz), Blocks.DIRT.defaultBlockState(), 3);
@@ -2550,13 +2556,60 @@ public class SkirmishGameTests {
     }
 
     /**
-     * Every Verdant unit can be made and fights: each one, ordered onto its own enemy Villager, lands a blow (melee or
-     * arrow) within a few seconds, and the Thornbow's arrows root what they hit. One row of the arena per attacker.
+     * A glass floor over this test's whole arena footprint at height y (its own column, so it never lands over another
+     * test's arena). For tests whose units fight on their own: the grid packs arenas ~21 blocks apart, well inside an
+     * archer's aggro range, so on the arena floor a unit picks (or is shot by) a neighbouring test's units - the flaky
+     * verdant_units_are_made_and_attack and shade_ranger_cloaks_when_idle_and_reveals_on_fire. Each caller takes its
+     * own height, far enough from every other pad (3D distance) to be out of its units' aggro range. Glass, because no
+     * mob spawns on it (a night-time zombie, or neutralAggro wildlife, would be one more stranger to target).
      */
-    @GameTest(template = ARENA, timeoutTicks = 240)
+    private static BlockPos skyPad(GameTestHelper helper, int y) {
+        BlockPos corner = helper.absolutePos(BlockPos.ZERO);
+        for (int dx = 0; dx < 16; dx++)
+            for (int dz = 0; dz < 16; dz++)
+                helper.getLevel().setBlock(new BlockPos(corner.getX() + dx, y, corner.getZ() + dz), Blocks.GLASS.defaultBlockState(), 3);
+        return new BlockPos(corner.getX(), y + 1, corner.getZ());   // standing height at the arena's corner
+    }
+
+    /** "type#id(owner)" for a failure message; "none" for null. */
+    private static String describe(net.minecraft.world.entity.Entity e) {
+        if (e == null)
+            return "none";
+        String owner = e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u ? u.getOwnerName() : "wild";
+        return net.minecraft.world.entity.EntityType.getKey(e.getType()).getPath() + "#" + e.getId() + "(" + owner + ")";
+    }
+
+    /** The closest living thing within range not owned by owner (and not in ignore), with its distance - or "none". */
+    private static String nearestStranger(net.minecraft.world.entity.Entity from, String owner, double range,
+                                          List<? extends net.minecraft.world.entity.Entity> ignore) {
+        net.minecraft.world.entity.LivingEntity best = null;
+        double bestD = Double.MAX_VALUE;
+        for (var e : from.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
+                from.getBoundingBox().inflate(range))) {
+            if (e == from || ignore.contains(e)
+                    || (e instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && owner.equals(u.getOwnerName())))
+                continue;
+            double d = e.distanceTo(from);
+            if (d < bestD) {
+                bestD = d;
+                best = e;
+            }
+        }
+        return best == null ? "none" : describe(best) + String.format(" at %.1f", bestD);
+    }
+
+    /**
+     * Every Verdant unit can be made and fights: each one, ordered onto its own enemy Villager, lands a blow (melee or
+     * arrow) within a few seconds, and the Thornbow's arrows root what they hit. One row per attacker, on a sky pad of
+     * this test's own (see skyPad: on the arena floor the Thornbow, aggro 13 from 2 blocks off the edge, was picking
+     * and being shot by a neighbouring test's units - "Thornbow never hit its target"). The order is re-asserted every
+     * tick and any stray target is reported, so a future failure says what the unit was doing instead.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 340)
     public static void verdant_units_are_made_and_attack(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        String owner = "gametest_verdant_atk", foeOwner = "gametest_verdant_foe";
+        String owner = "gametest_verdant_atk", foeOwner = "gametest_verdant_atk_foe";
+        BlockPos pad = skyPad(helper, 285);   // 25+ above the capitol test's pad (260) and 27 below the shade ranger's (312)
         List<net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.Mob>> types = List.of(
             com.solegendary.reignofnether.registrars.EntityRegistrar.SEEDSHAPER_UNIT.get(),
             com.solegendary.reignofnether.registrars.EntityRegistrar.FOX_COURIER_UNIT.get(),
@@ -2574,9 +2627,9 @@ public class SkirmishGameTests {
                 return;
             }
             boolean ranged = atk instanceof com.solegendary.reignofnether.unit.units.verdant.ThornbowUnit;
-            BlockPos row = helper.absolutePos(new BlockPos(ranged ? 2 : 4, 2, 1 + i * 3));
-            atk.moveTo(row.getX() + 0.5, row.getY(), row.getZ() + 0.5, -90, 0);
-            foe.moveTo(row.getX() + (ranged ? 7.5 : 2.5), row.getY(), row.getZ() + 0.5, 90, 0);
+            // rows 3 apart in the middle of the pad, clear of its edges (x 4..11.5, z 2..14)
+            atk.moveTo(pad.getX() + (ranged ? 4.5 : 6.5), pad.getY(), pad.getZ() + 2.5 + i * 3, -90, 0);
+            foe.moveTo(pad.getX() + (ranged ? 11.5 : 8.5), pad.getY(), pad.getZ() + 2.5 + i * 3, 90, 0);
             ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).setOwnerName(owner);
             foe.setOwnerName(foeOwner);
             level.addFreshEntity(atk);
@@ -2584,41 +2637,82 @@ public class SkirmishGameTests {
             attackers.add(atk);
             foes.add(foe);
         }
-        helper.runAfterDelay(3, () -> {
-            for (int i = 0; i < attackers.size(); i++)
-                ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) attackers.get(i)).setUnitAttackTarget(foes.get(i));
-        });
+        List<net.minecraft.world.entity.Mob> all = new ArrayList<>(attackers);
+        all.addAll(foes);
         boolean[] landed = new boolean[attackers.size()];
         boolean[] rooted = { false };
+        boolean[] done = { false };
+        int[] strays = new int[attackers.size()];
+        String[] lastStray = new String[attackers.size()];
         int thornbow = 3;
-        for (int t = 4; t < 200; t++)
+        final int last = 300;
+        for (int t = 3; t <= last; t++) {
+            final int tick = t;
             helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
                 for (int i = 0; i < attackers.size(); i++) {
                     var atk = attackers.get(i);
-                    var hit = atk.getLastHurtMob();
-                    if (hit instanceof com.solegendary.reignofnether.unit.interfaces.Unit u && foeOwner.equals(u.getOwnerName()))
-                        landed[i] = true;
-                    if (foes.get(i).getLastHurtByMob() == atk)
+                    var foe = foes.get(i);
+                    // keep each attacker on its own Villager: a retaliation or an aggro pick must not pull it away
+                    var goal = ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).getTargetGoal();
+                    net.minecraft.world.entity.LivingEntity cur = goal == null ? null : goal.getTarget();
+                    if (cur != foe && foe.isAlive()) {
+                        if (cur != null && tick > 3) {
+                            strays[i]++;
+                            lastStray[i] = describe(cur);
+                        }
+                        ((com.solegendary.reignofnether.unit.interfaces.AttackerUnit) atk).setUnitAttackTarget(foe);
+                    }
+                    // a blow on any of this test's Villagers counts (foeOwner is unique to this test)
+                    if ((atk.getLastHurtMob() instanceof com.solegendary.reignofnether.unit.interfaces.Unit u
+                            && foeOwner.equals(u.getOwnerName())) || foe.getLastHurtByMob() == atk)
                         landed[i] = true;
                 }
                 var mark = foes.get(thornbow).getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
                 if (mark != null && mark.getAmplifier()
                         >= com.solegendary.reignofnether.unit.units.verdant.ThornbowUnit.ROOT_AMPLIFIER)
                     rooted[0] = true;
-            });
-        helper.runAfterDelay(200, () -> {
-            List<String> problems = new ArrayList<>();
-            for (int i = 0; i < attackers.size(); i++)
-                if (!landed[i])
-                    problems.add(net.minecraft.world.entity.EntityType.getKey(types.get(i)).getPath() + " never hit its target");
-            if (!rooted[0])
-                problems.add("the Thornbow's arrows did not root their target");
-            for (var e : attackers) e.discard();
-            for (var e : foes) e.discard();
-            if (!problems.isEmpty())
+                boolean allLanded = true;
+                for (boolean b : landed)
+                    allLanded &= b;
+                if (allLanded && rooted[0]) {
+                    done[0] = true;
+                    for (var e : all) e.discard();
+                    helper.succeed();
+                    return;
+                }
+                if (tick < last)
+                    return;
+                done[0] = true;
+                List<String> problems = new ArrayList<>();
+                for (int i = 0; i < attackers.size(); i++) {
+                    if (landed[i])
+                        continue;
+                    var atk = attackers.get(i);
+                    var foe = foes.get(i);
+                    var goal = ((com.solegendary.reignofnether.unit.interfaces.Unit) atk).getTargetGoal();
+                    problems.add(net.minecraft.world.entity.EntityType.getKey(types.get(i)).getPath()
+                        + " never hit its target " + describe(foe) + String.format(" (dist %.1f, foe hp %.1f%s;", atk.distanceTo(foe),
+                            foe.getHealth(), foe.isAlive() ? "" : " dead")
+                        + " attacker " + (atk.isAlive() ? String.format("hp %.1f", atk.getHealth()) : "dead")
+                        + String.format(" at %.1f/%.1f/%.1f", atk.getX(), atk.getY(), atk.getZ())
+                        + ", targeting " + describe(goal == null ? null : goal.getTarget())
+                        + ", last hurt " + describe(atk.getLastHurtMob()) + ", hurt by " + describe(atk.getLastHurtByMob())
+                        + ", foe hurt by " + describe(foe.getLastHurtByMob())
+                        + ", strays " + strays[i] + (lastStray[i] == null ? "" : " last " + lastStray[i])
+                        + ", nearest stranger " + nearestStranger(atk, owner, 30, foes) + ")");
+                }
+                if (!rooted[0]) {
+                    var foe = foes.get(thornbow);
+                    var slow = foe.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+                    problems.add("the Thornbow's arrows did not root their target (hit " + landed[thornbow] + ", foe "
+                        + (foe.isAlive() ? "alive" : "dead") + ", slowness " + (slow == null ? "none" : "amp " + slow.getAmplifier()) + ")");
+                }
+                for (var e : all) e.discard();
                 helper.fail(String.join("; ", problems));
-            helper.succeed();
-        });
+            });
+        }
     }
 
     /**
@@ -2881,37 +2975,63 @@ public class SkirmishGameTests {
     /**
      * The Shade Ranger cloaks after standing still for 3 s (invisible, and an enemy's target search skips it) and is
      * revealed the moment it fires. The enemy is never added to the level, so the ranger can't see it and break cover.
+     * It stands on a sky pad of this test's own (see skyPad): on the arena floor its 24-block aggro reached the units of
+     * neighbouring tests, and an engaged ranger never cloaks - the intermittent "did not cloak" failure. Polls for the
+     * cloak with margin, and a failure says what kept it visible (target, still ticks, drift, nearest stranger).
      */
-    @GameTest(template = ARENA, timeoutTicks = 200)
+    @GameTest(template = ARENA, timeoutTicks = 260)
     public static void shade_ranger_cloaks_when_idle_and_reveals_on_fire(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
+        String owner = "gametest_shade_owner";
         var ranger = com.solegendary.reignofnether.registrars.EntityRegistrar.SHADE_RANGER_UNIT.get().create(level);
         var foe = com.solegendary.reignofnether.registrars.EntityRegistrar.VINDICATOR_UNIT.get().create(level);
         if (ranger == null || foe == null) {
             helper.fail("could not create the units");
             return;
         }
-        BlockPos at = helper.absolutePos(new BlockPos(4, 2, 4));
-        ranger.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
-        foe.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5, 0, 0);
-        ranger.setOwnerName("gametest_shade_owner");
+        BlockPos pad = skyPad(helper, 312);   // the highest pad: 27 above verdant_units_are_made_and_attack's (285)
+        double sx = pad.getX() + 8.5, sz = pad.getZ() + 8.5;   // the middle of the pad
+        ranger.moveTo(sx, pad.getY(), sz, 0, 0);
+        foe.moveTo(sx + 3, pad.getY(), sz, 0, 0);
+        ranger.setOwnerName(owner);
         foe.setOwnerName("gametest_shade_foe");
         level.addFreshEntity(ranger);
+        final int cloakBy = 5 + com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.CLOAK_DELAY_TICKS + 20;
+        final int last = cloakBy + 120;   // margin: a stray tick of movement on landing restarts the 3 s count
+        boolean[] seenVisible = { false };
+        boolean[] done = { false };
         helper.runAfterDelay(5, () -> {
             if (ranger.isInvisible()) {
+                done[0] = true;
                 ranger.discard();
                 helper.fail("the Shade Ranger cloaked straight away");
                 return;
             }
             // control: while visible, the enemy's target search finds it
-            boolean seenVisible = com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 8, level) == ranger;
-            helper.runAfterDelay(com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.CLOAK_DELAY_TICKS + 20, () -> {
+            seenVisible[0] = com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 8, level) == ranger;
+        });
+        for (int t = cloakBy; t <= last; t++) {
+            final int tick = t;
+            helper.runAfterDelay(t, () -> {
+                if (done[0])
+                    return;
+                boolean cloaked = ranger.isInvisible()
+                    && com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.isCloaked(ranger);
+                if (!cloaked && tick < last)
+                    return;
+                done[0] = true;
                 try {
-                    if (!ranger.isInvisible() || !com.solegendary.reignofnether.unit.units.verdant.ShadeRangerUnit.isCloaked(ranger)) {
-                        helper.fail("the Shade Ranger did not cloak after standing still");
+                    if (!cloaked) {
+                        var goal = ranger.getTargetGoal();
+                        helper.fail("the Shade Ranger did not cloak after standing still (" + tick + " ticks: alive "
+                            + ranger.isAlive() + ", invisible " + ranger.isInvisible() + ", still ticks "
+                            + ranger.getStillTicks() + ", targeting " + describe(goal == null ? null : goal.getTarget())
+                            + String.format(", drifted %.2f", Math.hypot(ranger.getX() - sx, ranger.getZ() - sz))
+                            + ", passenger " + ranger.isPassenger() + ", hurt by " + describe(ranger.getLastHurtByMob())
+                            + ", nearest stranger " + nearestStranger(ranger, owner, 30, List.of()) + ")");
                         return;
                     }
-                    if (seenVisible && com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 8, level) == ranger)
+                    if (seenVisible[0] && com.solegendary.reignofnether.util.MiscUtil.findClosestAttackableEntity(foe, 8, level) == ranger)
                         helper.fail("an enemy can still pick the cloaked Shade Ranger as a target");
                     ranger.performUnitRangedAttack(foe, 1f);
                     if (ranger.isInvisible())
@@ -2923,7 +3043,7 @@ public class SkirmishGameTests {
                     foe.discard();
                 }
             });
-        });
+        }
     }
 
     /**
@@ -3112,7 +3232,11 @@ public class SkirmishGameTests {
         });
     }
 
-    /** The Hive Keeper's swarm: three bees owned by the keeper's player that fly at a nearby enemy and sting it. */
+    /**
+     * The Hive Keeper's swarm: three bees owned by the keeper's player that fly at a nearby enemy and sting it. On a sky
+     * pad of its own (see skyPad): the bees pick their own target, and on the arena floor a neighbouring test's unit
+     * (the keeper stood 3 blocks off the edge) is one more candidate.
+     */
     @GameTest(template = ARENA, timeoutTicks = 220)
     public static void verdant_hive_keeper_bees_sting_a_foe(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
@@ -3123,7 +3247,9 @@ public class SkirmishGameTests {
             helper.fail("could not create the Hive Keeper test units");
             return;
         }
-        BlockPos at = helper.absolutePos(new BlockPos(3, 2, 4));
+        // 12 above the capitol test's pad (260), 13 below verdant_units_are_made_and_attack's (285): bee aggro is 10
+        BlockPos pad = skyPad(helper, 272);
+        BlockPos at = pad.offset(5, 0, 8);
         keeper.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
         foe.moveTo(at.getX() + 5.5, at.getY(), at.getZ() + 0.5, 0, 0);
         keeper.setOwnerName(owner);
@@ -3163,8 +3289,15 @@ public class SkirmishGameTests {
                         + com.solegendary.reignofnether.unit.units.verdant.HiveKeeperUnit.SWARM_SIZE);
             else if (!owned || !summoned)
                 helper.fail("the swarm's bees must be summoned and owned by the keeper's player");
-            else if (!stung[0])
-                helper.fail("no bee from the swarm stung the enemy");
+            else if (!stung[0]) {
+                StringBuilder why = new StringBuilder();
+                for (var b : bees)
+                    why.append(" ").append(describe(b)).append(String.format(" hp %.1f", b.getHealth())).append(" targeting ")
+                        .append(describe(b.getTargetGoal() == null ? null : b.getTargetGoal().getTarget()))
+                        .append(String.format(" at %.1f from the foe;", b.distanceTo(foe)));
+                helper.fail("no bee from the swarm stung the enemy (foe hurt by " + describe(foe.getLastHurtByMob())
+                    + ";" + why + ")");
+            }
             else
                 helper.succeed();
         });
