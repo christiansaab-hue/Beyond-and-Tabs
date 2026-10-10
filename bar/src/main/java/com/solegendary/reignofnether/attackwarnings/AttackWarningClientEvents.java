@@ -86,7 +86,13 @@ public class AttackWarningClientEvents {
         if (lastAttackPos != null)
             lastAttackPos = attackPos;
 
-        if (dist2dSqr > Math.pow(OrthoviewClientEvents.getZoom() * 2, 2) && attackWarningCd <= 0) {
+        boolean offScreen = dist2dSqr > Math.pow(OrthoviewClientEvents.getZoom() * 2, 2);
+        // "base / units under attack" announcer lines, only for fights the player isn't already looking at; they
+        // keep their own cooldowns, the commander has its own line above
+        if (offScreen && !isCommander)
+            com.solegendary.reignofnether.hud.NotificationClientEvents.onOwnAssetAttacked(attackPos);
+
+        if (offScreen && attackWarningCd <= 0) {
             HudClientEvents.showTemporaryMessage(I18n.get("attack_warning.reignofnether.danger"), 200);
             lastAttackPos = attackPos;
             if (MC.player != null && !alertCovered)

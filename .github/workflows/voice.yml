@@ -36,6 +36,12 @@ jobs:
         run: |
           pip install -q torch --index-url https://download.pytorch.org/whl/cpu
           pip install -q "kokoro>=0.9.4" soundfile numpy
+      # the game is published, so refuse to generate anything if the model card's licence ever changes
+      - name: Verify the model licence (Apache-2.0)
+        run: |
+          curl -fsSL https://huggingface.co/hexgrad/Kokoro-82M/raw/main/README.md -o model_card.md
+          head -40 model_card.md
+          grep -qiE '^license: *apache-2\.0' model_card.md
       - name: Synthesise raw lines
         run: python3 tools/voice_synth.py tools/voice_lines.txt raw "$VOICE" "$SPEED"
       - name: Post-process into the ship's-computer announcer
@@ -67,6 +73,8 @@ jobs:
           done
           ls -l out
           du -ch out/*.ogg | tail -1
+          # the mod jar budget: all lines together stay under 3 MB
+          test "$(du -cb out/*.ogg | tail -1 | cut -f1)" -lt 3000000
       - uses: actions/upload-artifact@v4
         with:
           name: announcer-voice

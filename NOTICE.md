@@ -16,6 +16,18 @@ No Beyond All Reason models, textures, animations, sounds, icons or unit picture
 licences that forbid derivative works). All unit skins, building plans and effects in this mod are original.
 Totally Accurate Battle Simulator is an inspiration only; no TABS assets are included.
 
+## Announcer voice
+
+The spoken alerts in `bar/src/main/resources/assets/reignofnether/sounds/announcer/` are synthetic speech generated
+by [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (hexgrad), voice `af_heart`, released under the
+**Apache License 2.0** (model card `license: apache-2.0`; the generation workflow re-checks this before every run and
+refuses to synthesise if it changes). The model card states it was trained only on permissive/non-copyrighted audio
+(public domain, Apache/MIT-licensed and synthetic audio), and Apache-2.0 places no restriction on distributing the
+generated audio, commercially or otherwise. The voice is one of Kokoro's stock voices; it is not modelled on, cloned
+from or meant to imitate any real person or any other game's narrator, and no third-party game audio was used.
+Post-processing (pitch, filtering, chorus, reverb, chime) is done with ffmpeg in `.github/workflows/voice.yml`; the
+two-tone chime is generated from sine waves. The lines themselves are in `tools/voice_lines.txt`.
+
 ## Reign of Nether
 
 `bar/` is a fork of [Reign of Nether](https://github.com/SoLegendary/reignofnether) by SoLegendary and contributors,

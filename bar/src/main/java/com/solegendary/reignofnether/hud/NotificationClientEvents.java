@@ -1,12 +1,16 @@
 package com.solegendary.reignofnether.hud;
 
+import com.solegendary.reignofnether.ReignOfNether;
 import com.solegendary.reignofnether.alliance.AlliancesClient;
 import com.solegendary.reignofnether.building.BuildingPlacement;
+import com.solegendary.reignofnether.building.BuildingUtils;
 import com.solegendary.reignofnether.config.ReignOfNetherClientConfigs;
 import com.solegendary.reignofnether.faction.Faction;
 import com.solegendary.reignofnether.guiscreen.TopdownGui;
 import com.solegendary.reignofnether.orthoview.OrthoviewClientEvents;
+import com.solegendary.reignofnether.player.CommanderServerEvents;
 import com.solegendary.reignofnether.player.PlayerClientEvents;
+import com.solegendary.reignofnether.registrars.SoundRegistrar;
 import com.solegendary.reignofnether.resources.EconomyClientEvents;
 import com.solegendary.reignofnether.resources.Resources;
 import com.solegendary.reignofnether.resources.ResourcesClientEvents;
@@ -18,8 +22,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.LivingEntity;
@@ -40,33 +47,50 @@ import java.util.List;
  * isBuilt transitions, unit deaths, economy syncs, idle-worker syncs, capture-site syncs and the T3 chat line).
  *
  * Rendering keeps a fixed 3-slot ring and pre-measured widths, so drawing allocates nothing per frame.
+ *
+ * Announcer voice: when on (and the line's ogg is present), each alert is spoken by a calm synthetic assistant voice
+ * instead of the chord. There is exactly one voice channel: lines wait in a tiny priority queue (commander attacked
+ * first, storage-full last), never overlap, and are dropped if they waited more than VOICE_STALE_MS - a "unit lost"
+ * from five seconds ago is noise, not information.
  */
 public class NotificationClientEvents {
 
     private static final Minecraft MC = Minecraft.getInstance();
 
     public enum Alert {
-        COMMANDER_ATTACKED("commander_attacked", 10_000, 0xFF5A5A),
-        ALLY_NEEDS_HELP("ally_needs_help", 20_000, 0xFFA040),
-        UNIT_LOST("unit_lost", 8_000, 0xC8C8C8),
-        CONSTRUCTION_COMPLETE("construction_complete", 4_000, 0x8CFF8C),
-        IDLE_CONSTRUCTOR("idle_constructor", 15_000, 0xFFE070),
-        METAL_FULL("metal_full", 30_000, 0xB4BEC8),
-        ENERGY_FULL("energy_full", 30_000, 0xF0C83C),
-        METAL_STALL("metal_stall", 20_000, 0xFF8A6A),
-        ENERGY_STALL("energy_stall", 20_000, 0xFF8A6A),
-        EXPERIMENTAL_DETECTED("experimental_detected", 15_000, 0xFF60FF),
-        CAPTURE_TAKEN("capture_taken", 5_000, 0x80E0FF),
-        CAPTURE_LOST("capture_lost", 5_000, 0xFF7070);
+        // key, cooldown, text colour (-1 = voice only, no text line), voice priority (higher speaks first)
+        COMMANDER_ATTACKED("commander_attacked", 10_000, 0xFF5A5A, 100),
+        COMMANDER_KILLED("commander_killed", 5_000, 0xFF3030, 95),
+        EXPERIMENTAL_DETECTED("experimental_detected", 15_000, 0xFF60FF, 90),
+        BASE_ATTACKED("base_attacked", 20_000, 0xFF7A5A, 80),
+        ALLY_NEEDS_HELP("ally_needs_help", 20_000, 0xFFA040, 70),
+        UNITS_ATTACKED("units_attacked", 20_000, 0xFF9A7A, 65),
+        UNIT_LOST("unit_lost", 8_000, 0xC8C8C8, 60),
+        CAPTURE_LOST("capture_lost", 5_000, 0xFF7070, 55),
+        METAL_STALL("metal_stall", 20_000, 0xFF8A6A, 50),
+        ENERGY_STALL("energy_stall", 20_000, 0xFF8A6A, 50),
+        EXPERIMENTAL_READY("experimental_ready", 10_000, 0xE0A0FF, 45),
+        CAPTURE_TAKEN("capture_taken", 5_000, 0x80E0FF, 40),
+        CONSTRUCTION_COMPLETE("construction_complete", 4_000, 0x8CFF8C, 30),
+        RESEARCH_COMPLETE("research_complete", 4_000, -1, 30),   // ResearchClient already shows its own line
+        IDLE_CONSTRUCTOR("idle_constructor", 15_000, 0xFFE070, 25),
+        METAL_FULL("metal_full", 30_000, 0xB4BEC8, 20),
+        ENERGY_FULL("energy_full", 30_000, 0xF0C83C, 20),
+        // match moments: the game already shows a title for these, so voice only
+        VICTORY("victory", 0, -1, 110),
+        DEFEAT("defeat", 0, -1, 110),
+        GAME_START("game_start", 0, -1, 110);
 
         public final String key;
         public final long cooldownMs;
         public final int color;
+        public final int priority;
 
-        Alert(String key, long cooldownMs, int color) {
+        Alert(String key, long cooldownMs, int color, int priority) {
             this.key = key;
             this.cooldownMs = cooldownMs;
             this.color = color;
+            this.priority = priority;
         }
     }
 
@@ -101,6 +125,20 @@ public class NotificationClientEvents {
     private static int metalFullPolls = 0, energyFullPolls = 0, stallPolls = 0;
     private static int prevIdleWorkers = 0;
 
+    // --- announcer voice: one channel, a small priority queue, stale lines dropped ---
+    private static final long VOICE_STALE_MS = 3000;
+    // isActive can lag the play() call by a tick while the channel spins up; this guard covers that gap
+    private static final long VOICE_MIN_GAP_MS = 350;
+    private static final int VOICE_QUEUE = 6;
+    private static final Alert[] voiceQueue = new Alert[VOICE_QUEUE];
+    private static final long[] voiceDueMs = new long[VOICE_QUEUE];   // may start from here; stale VOICE_STALE_MS later
+    private static SoundInstance voiceNow = null;
+    private static long voiceBusyUntilMs = 0;
+    // per alert: 0 = not checked yet, 1 = ogg present, 2 = missing (fall back to the chord). Checked once, lazily,
+    // so a build without the generated oggs still has working alerts.
+    private static final byte[] voiceFileState = new byte[ALERTS.length];
+    private static final SoundEvent[] voiceEvents = new SoundEvent[ALERTS.length];
+
     // ------------------------------------------------------------------------------------------------------------
     // public entry points (hooks)
     // ------------------------------------------------------------------------------------------------------------
@@ -122,6 +160,40 @@ public class NotificationClientEvents {
         if (AlliancesClient.isAllied(myName, ownerName))
             fire(Alert.ALLY_NEEDS_HELP, ownerName);
         return false;
+    }
+
+    /**
+     * From AttackWarningClientEvents: something of ours that is not the commander was hit somewhere off-screen
+     * (the warning packets are already rate-limited per player by the server). A hit inside one of our buildings
+     * means the base, anything else our units.
+     */
+    public static void onOwnAssetAttacked(BlockPos pos) {
+        if (!canAlert() || pos == null)
+            return;
+        fire(BuildingUtils.findBuilding(true, pos) != null ? Alert.BASE_ATTACKED : Alert.UNITS_ATTACKED, null);
+    }
+
+    /** From ResearchClient.addResearch, for our own newly finished research. */
+    public static void onResearchComplete() {
+        if (canAlert())
+            fire(Alert.RESEARCH_COMPLETE, null);
+    }
+
+    // Match moments bypass the warm-up (they happen exactly while it runs) and the cooldowns, and wait for the
+    // game's own fanfare to finish so the voice doesn't talk over it.
+    /** From PlayerClientEvents.addRTSPlayer, when we become an RTS player with a faction. */
+    public static void onGameStart() {
+        announce(Alert.GAME_START, 1000);
+    }
+
+    /** From PlayerClientEvents.victory (victory.ogg is ~3.6 s). */
+    public static void onVictory() {
+        announce(Alert.VICTORY, 3600);
+    }
+
+    /** From PlayerClientEvents.defeat (defeat.ogg is ~5.2 s). */
+    public static void onDefeat() {
+        announce(Alert.DEFEAT, 5300);
     }
 
     /** From BuildingPlacement.onBuilt (client side). */
@@ -167,8 +239,9 @@ public class NotificationClientEvents {
         if (!evt.getLevel().isClientSide() || !(evt.getEntity() instanceof Unit unit)
                 || !(evt.getEntity() instanceof LivingEntity le) || !le.isDeadOrDying())
             return;
+        // the commander's death is its own, louder line: it also means the com-blast is about to go off
         if (canAlert() && myName.equals(unit.getOwnerName()))
-            fire(Alert.UNIT_LOST, null);
+            fire(CommanderServerEvents.looksLikeCommander(le) ? Alert.COMMANDER_KILLED : Alert.UNIT_LOST, null);
     }
 
     // The T3 announcement is a plain translatable chat line; reading its key avoids adding a packet for it.
@@ -182,9 +255,11 @@ public class NotificationClientEvents {
         if (args.length < 1)
             return;
         String owner = argString(args[0]);
-        if (owner.equals(myName) || AlliancesClient.isAllied(myName, owner))
-            return;
-        fire(Alert.EXPERIMENTAL_DETECTED, args.length > 1 ? argString(args[1]) : "");
+        String unitName = args.length > 1 ? argString(args[1]) : "";
+        if (owner.equals(myName))
+            fire(Alert.EXPERIMENTAL_READY, unitName);
+        else if (!AlliancesClient.isAllied(myName, owner))
+            fire(Alert.EXPERIMENTAL_DETECTED, unitName);
     }
 
     // args survive the network either as raw strings or as components, depending on how they were serialised
@@ -197,6 +272,7 @@ public class NotificationClientEvents {
         if (evt.phase != TickEvent.Phase.END)
             return;
         tickPendingSounds();
+        tickVoice();
 
         if (--pollTicks > 0)
             return;
@@ -254,8 +330,97 @@ public class NotificationClientEvents {
         if (lastFiredMs[i] != 0 && now - lastFiredMs[i] < alert.cooldownMs)
             return;
         lastFiredMs[i] = now;
-        pushLine(lineFor(alert, arg), alert.color, now);
-        playSound(alert);
+        if (alert.color >= 0)
+            pushLine(lineFor(alert, arg), alert.color, now);
+        // the voice replaces the chord; the chord stays as the fallback (voice off, muted, or line not shipped)
+        if (!queueVoice(alert, now))
+            playSound(alert);
+    }
+
+    private static void announce(Alert alert, long delayMs) {
+        if (ReignOfNetherClientConfigs.ALERTS_ENABLED.get())
+            queueVoice(alert, System.currentTimeMillis() + delayMs);
+    }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // announcer voice
+    // ------------------------------------------------------------------------------------------------------------
+
+    private static boolean voiceOn() {
+        return ReignOfNetherClientConfigs.ANNOUNCER_VOICE.get() && ReignOfNetherClientConfigs.VOICE_VOLUME.get() > 0;
+    }
+
+    private static SoundEvent voiceFor(Alert alert) {
+        int i = alert.ordinal();
+        if (voiceFileState[i] == 0) {
+            SoundEvent ev = SoundRegistrar.announcer(alert.key);
+            boolean present = ev != null && MC.getResourceManager().getResource(ResourceLocation.fromNamespaceAndPath(
+                ReignOfNether.MOD_ID, "sounds/announcer/" + alert.key + ".ogg")).isPresent();
+            voiceEvents[i] = ev;
+            voiceFileState[i] = present ? (byte) 1 : (byte) 2;
+        }
+        return voiceFileState[i] == 1 ? voiceEvents[i] : null;
+    }
+
+    /** Queues the alert's line; false if it won't be spoken (voice off, no file, queue full of more urgent lines). */
+    private static boolean queueVoice(Alert alert, long dueMs) {
+        if (!voiceOn() || voiceFor(alert) == null)
+            return false;
+        int free = -1, lowest = -1;
+        for (int q = 0; q < VOICE_QUEUE; q++) {
+            Alert a = voiceQueue[q];
+            if (a == alert) {          // already waiting: refresh it rather than saying it twice
+                voiceDueMs[q] = dueMs;
+                return true;
+            }
+            if (a == null) {
+                if (free < 0)
+                    free = q;
+            } else if (lowest < 0 || a.priority < voiceQueue[lowest].priority) {
+                lowest = q;
+            }
+        }
+        if (free < 0) {
+            if (voiceQueue[lowest].priority >= alert.priority)
+                return false;
+            free = lowest;             // evict the least urgent waiting line
+        }
+        voiceQueue[free] = alert;
+        voiceDueMs[free] = dueMs;
+        return true;
+    }
+
+    // One voice channel: the most urgent due line starts only once the previous one has finished.
+    private static void tickVoice() {
+        if (!voiceOn()) {
+            for (int q = 0; q < VOICE_QUEUE; q++)
+                voiceQueue[q] = null;
+            return;
+        }
+        long now = System.currentTimeMillis();
+        int best = -1;
+        for (int q = 0; q < VOICE_QUEUE; q++) {
+            Alert a = voiceQueue[q];
+            if (a == null || now < voiceDueMs[q])
+                continue;
+            if (now - voiceDueMs[q] > VOICE_STALE_MS) {
+                voiceQueue[q] = null;
+                continue;
+            }
+            if (best < 0 || a.priority > voiceQueue[best].priority)
+                best = q;
+        }
+        if (best < 0 || now < voiceBusyUntilMs
+                || (voiceNow != null && MC.getSoundManager().isActive(voiceNow)))
+            return;
+        SoundEvent ev = voiceFor(voiceQueue[best]);
+        voiceQueue[best] = null;
+        if (ev == null)
+            return;
+        float v = Math.max(0, Math.min(100, ReignOfNetherClientConfigs.VOICE_VOLUME.get())) / 100f;
+        voiceNow = SimpleSoundInstance.forUI(ev, 1.0f, v);
+        MC.getSoundManager().play(voiceNow);
+        voiceBusyUntilMs = now + VOICE_MIN_GAP_MS;
     }
 
     // faction-flavoured line if the lang file has one ("notification.reignofnether.<key>.<faction>"), else default
@@ -296,6 +461,23 @@ public class NotificationClientEvents {
                 note(SoundEvents.NOTE_BLOCK_BASS.value(), 0.5f, 0.8f * v, 0);
                 note(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.6f, 1.0f * v, 6);
             }
+            case COMMANDER_KILLED -> {     // dragon roar over a sinking horn: the blast is coming
+                note(SoundEvents.ENDER_DRAGON_GROWL, 0.9f, 0.35f * v, 0);
+                note(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.5f, 1.0f * v, 0);
+                note(SoundEvents.NOTE_BLOCK_BASS.value(), 0.5f, 1.0f * v, 6);
+            }
+            case BASE_ATTACKED -> {        // horn, then a bell alarm
+                note(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.6f, 0.9f * v, 0);
+                note(SoundEvents.BELL_BLOCK, 0.8f, 0.5f * v, 5);
+            }
+            case UNITS_ATTACKED ->         // short horn
+                note(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.7f, 0.8f * v, 0);
+            case EXPERIMENTAL_READY -> {   // beacon swell
+                note(SoundEvents.BEACON_POWER_SELECT, 1.0f, 0.6f * v, 0);
+                note(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.2f, 0.6f * v, 4);
+            }
+            case RESEARCH_COMPLETE ->      // enchanting-table shimmer
+                note(SoundEvents.ENCHANTMENT_TABLE_USE, 1.2f, 0.6f * v, 0);
             case ALLY_NEEDS_HELP -> {      // higher horn answered by a pling
                 note(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.75f, 0.8f * v, 0);
                 note(SoundEvents.NOTE_BLOCK_PLING.value(), 0.6f, 0.6f * v, 5);
