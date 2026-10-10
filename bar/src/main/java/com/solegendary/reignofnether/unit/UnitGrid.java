@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A shared spatial bucket of every live server-side unit, keyed by 16x16 column (chunk) cell. At 8v8 several
+ * A shared spatial bucket of every live server-side unit, keyed by 8x8 column cell. At 8v8 several
  * systems ask "which units are within r blocks of here?" for many points (formation guards per crossbow, capture
  * sites, bot power checks, guard threats), and each used to scan {@link UnitServerEvents#getAllUnits()} - hundreds
  * of units times hundreds of queries. The grid turns that into a look at the few cells the radius touches.
@@ -23,7 +23,9 @@ import java.util.List;
 public final class UnitGrid {
     private UnitGrid() { }
 
-    static final int SHIFT = 4;   // 16-block cells
+    // 8-block cells: a dense 8v8 brawl puts dozens of units in a chunk, and the typical query radius (6-14) then
+    // touches 3-4 cells a side instead of pulling in whole 16x16 chunks of bystanders
+    static final int SHIFT = 3;
     // a unit moves well under a block per tick, but queries pad by this much so a unit that crossed a cell edge since
     // the rebuild is still found
     static final double PAD = 2.0;
