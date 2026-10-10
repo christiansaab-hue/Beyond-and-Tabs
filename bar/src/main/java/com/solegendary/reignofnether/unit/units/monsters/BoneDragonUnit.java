@@ -36,6 +36,18 @@ public class BoneDragonUnit extends GhastUnit {
         super(entityType, level);
     }
 
+    /** GhastUnit rebuilds its abilities from the shared static set here; add this unit's own faction power on top. */
+    @Override
+    public void updateAbilityButtons() {
+        super.updateAbilityButtons();
+        if (getAbilities() == null)
+            return;
+        for (var a : getAbilities().get())
+            if (a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog)
+                return;
+        getAbilities().add(new com.solegendary.reignofnether.ability.abilities.WitheringFog());
+    }
+
     @Nullable
     @Override
     public ResourceCost getCost() { return ResourceCosts.BONE_DRAGON; }

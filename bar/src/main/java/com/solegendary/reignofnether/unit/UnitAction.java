@@ -165,5 +165,9 @@ public enum UnitAction {
     CRYPT_TIDE,           // Beyond and Tabs: Gravebound Wraith bone-hand root
     WAR_DRUMS,            // Beyond and Tabs: Horde Warlord speed rally
     BASTION_AEGIS,        // Beyond and Tabs: Sunforged Evoker projectile dome
-    RECLAIM               // Beyond and Tabs: walk a worker to one wreck and stay on it until it is stripped (area reclaim)
+    RECLAIM,              // Beyond and Tabs: walk a worker to one wreck and stay on it until it is stripped (area reclaim)
+    TOTEM_OF_THE_PACK,    // Beyond and Tabs: Horde Bonewright wolf totem
+    MAGMA_RUPTURE,        // Beyond and Tabs: Horde Blaze ground-crack eruption
+    HOLY_BELL,            // Beyond and Tabs: Sunforged Royal Architect reveal pulse
+    WITHERING_FOG         // Beyond and Tabs: Gravebound Bone Dragon lingering fog line
 }

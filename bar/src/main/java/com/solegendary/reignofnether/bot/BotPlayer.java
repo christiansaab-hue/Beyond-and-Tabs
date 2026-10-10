@@ -430,9 +430,10 @@ public class BotPlayer {
     }
 
     /**
-     * Faction powers (Crypt Tide, War-Drums, Bastion Aegis) on any unit that carries one: same rule as the
-     * commander's signature - only once three or more enemy units are within 12 blocks. Crypt Tide is aimed at the
-     * nearest of them; the other two are cast where the unit stands. The enemy scan only runs for a unit with a
+     * Faction powers (Crypt Tide, War-Drums, Bastion Aegis, Totem of the Pack, Magma Rupture, Holy Bell, Withering
+     * Fog) on any unit that carries one: same rule as the commander's signature - only once three or more enemy
+     * units are within 12 blocks. The ground-targeted ones (Crypt Tide, Magma Rupture, Withering Fog) are aimed at
+     * the nearest of them; the rest are cast where the unit stands. The enemy scan only runs for a unit with a
      * power off cooldown, so an idle army costs nothing here.
      */
     void useFactionPowers(ServerLevel level, List<LivingEntity> mine) {
@@ -440,19 +441,26 @@ public class BotPlayer {
             if (!(le instanceof Unit u) || u.getAbilities() == null)
                 continue;
             for (com.solegendary.reignofnether.ability.Ability a : u.getAbilities().get()) {
-                boolean tide = a instanceof com.solegendary.reignofnether.ability.abilities.CryptTide;
-                if (!tide && !(a instanceof com.solegendary.reignofnether.ability.abilities.WarDrums)
-                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.BastionAegis))
+                boolean aimed = a instanceof com.solegendary.reignofnether.ability.abilities.CryptTide
+                        || a instanceof com.solegendary.reignofnether.ability.abilities.MagmaRupture
+                        || a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog;
+                if (!aimed && !(a instanceof com.solegendary.reignofnether.ability.abilities.WarDrums)
+                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.BastionAegis)
+                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.TotemOfThePack)
+                        && !(a instanceof com.solegendary.reignofnether.ability.abilities.HolyBell))
                     continue;
                 if (!a.isOffCooldown(u))
                     continue;
+                boolean flyer = a instanceof com.solegendary.reignofnether.ability.abilities.WitheringFog;
                 int enemies = 0;
                 LivingEntity nearest = null;
                 double best = Double.MAX_VALUE;
                 for (LivingEntity other : UnitServerEvents.getAllUnits()) {
                     if (!(other instanceof Unit ou) || !other.isAlive())
                         continue;
-                    double d = other.distanceToSqr(le);
+                    // the Bone Dragon flies high over the fight: measure its scan flat, or it never sees one
+                    double d = flyer ? Math.pow(other.getX() - le.getX(), 2) + Math.pow(other.getZ() - le.getZ(), 2)
+                            : other.distanceToSqr(le);
                     if (d > 12 * 12)
                         continue;
                     String o = ou.getOwnerName();
@@ -465,7 +473,7 @@ public class BotPlayer {
                     }
                 }
                 if (enemies >= 3)
-                    a.use(level, u, tide ? nearest.blockPosition() : le.blockPosition());
+                    a.use(level, u, aimed ? nearest.blockPosition() : le.blockPosition());
             }
         }
     }

@@ -1,5 +1,8 @@
 package com.solegendary.reignofnether.unit.units.piglins;
 
+import com.solegendary.reignofnether.ability.Abilities;
+import com.solegendary.reignofnether.ability.abilities.TotemOfThePack;
+import com.solegendary.reignofnether.keybinds.Keybindings;
 import com.solegendary.reignofnether.resources.ResourceCost;
 import com.solegendary.reignofnether.resources.ResourceCosts;
 
@@ -18,6 +21,25 @@ import javax.annotation.Nullable;
 public class BonewrightUnit extends GruntUnit {
 
     public static final float BUILD_POWER = 2.0f;
+
+    // GruntUnit hands out its shared static set from getAbilities(), so adding to that would give every Grunt the
+    // totem: the Bonewright keeps its own. No initializer on purpose - GruntUnit's constructor fills it through
+    // updateAbilityButtons() before this class' field initializers would run, and one would wipe it again.
+    private Abilities bonewrightAbilities;
+
+    @Override
+    public void updateAbilityButtons() {
+        super.updateAbilityButtons();
+        bonewrightAbilities = GruntUnit.ABILITIES.clone();
+        bonewrightAbilities.add(new TotemOfThePack(), Keybindings.abilitySlot1);
+    }
+
+    @Override
+    public Abilities getAbilities() {
+        if (bonewrightAbilities == null)
+            updateAbilityButtons();
+        return bonewrightAbilities;
+    }
 
     public BonewrightUnit(EntityType<? extends Piglin> entityType, Level level) {
         super(entityType, level);
